@@ -64,8 +64,10 @@
     <Compile Include="Models\FolderItemModel.cs" />
     <Compile Include="Models\LogEntryModel.cs" />
     <Compile Include="Models\OperationResult.cs" />
+    <Compile Include="Models\RecycleBinItemModel.cs" />
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\FolderService.cs" />
+    <Compile Include="Services\RecycleBinService.cs" />
     <Compile Include="Services\SearchService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Properties\Resources.resx">
