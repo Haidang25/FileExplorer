@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
 namespace FileExplorerApp.Services
@@ -74,12 +76,33 @@ namespace FileExplorerApp.Services
         /// <param name="folderName">Ten thu muc moi.</param>
         public OperationResult CreateFolder(string parentPath, string folderName)
         {
-            // TODO:
-            // 1. Kiem tra FileHelper.IsValidFileName(folderName)
-            // 2. Kiem tra PermissionHelper.HasWritePermission(parentPath)
-            // 3. Kiem tra ten trung lap (Skipped/Failed neu da ton tai)
-            // 4. Directory.CreateDirectory(...)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(parentPath) || !Directory.Exists(parentPath))
+                return OperationResult.NotFound;
+
+            if (!FileHelper.IsValidFileName(folderName))
+                return OperationResult.Failed;
+
+            string fullPath = Path.Combine(parentPath, folderName);
+
+            if (Directory.Exists(fullPath) || File.Exists(fullPath))
+                return OperationResult.Skipped; // Da ton tai muc trung ten.
+
+            if (!PermissionHelper.HasWritePermission(parentPath))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                Directory.CreateDirectory(fullPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>

@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
 namespace FileExplorerApp.Services
@@ -61,12 +63,36 @@ namespace FileExplorerApp.Services
         /// <param name="fileName">Ten file moi (bao gom phan mo rong).</param>
         public OperationResult CreateFile(string parentPath, string fileName)
         {
-            // TODO:
-            // 1. Kiem tra FileHelper.IsValidFileName(fileName)
-            // 2. Kiem tra PermissionHelper.HasWritePermission(parentPath)
-            // 3. Kiem tra file trung ten (Skipped/Failed neu da ton tai)
-            // 4. File.Create(...)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(parentPath) || !Directory.Exists(parentPath))
+                return OperationResult.NotFound;
+
+            if (!FileHelper.IsValidFileName(fileName))
+                return OperationResult.Failed;
+
+            string fullPath = Path.Combine(parentPath, fileName);
+
+            if (File.Exists(fullPath) || Directory.Exists(fullPath))
+                return OperationResult.Skipped; // Da ton tai muc trung ten.
+
+            if (!PermissionHelper.HasWritePermission(parentPath))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                using (File.Create(fullPath))
+                {
+                    // Chi can tao file rong - dong ngay sau khi tao.
+                }
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
