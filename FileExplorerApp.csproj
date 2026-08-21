@@ -57,6 +57,7 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Models\FileItemModel.cs" />
+    <Compile Include="Models\FileOperationType.cs" />
     <Compile Include="Models\FolderItemModel.cs" />
     <Compile Include="Models\LogEntryModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
