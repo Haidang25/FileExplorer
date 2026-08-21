@@ -5,6 +5,7 @@ using System.Data;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -388,12 +389,45 @@ namespace FileExplorerApp.Forms
 
         private void mnuHelpAbout_Click(object sender, EventArgs e)
         {
-            // TODO: hien hop thoai/Form gioi thieu ung dung (ten, phien ban tu AssemblyInfo, tac gia).
+            Assembly assembly = Assembly.GetExecutingAssembly();
+
+            string productName = GetAssemblyAttribute<AssemblyProductAttribute>(assembly)?.Product
+                ?? assembly.GetName().Name;
+            string version = assembly.GetName().Version?.ToString() ?? "1.0.0.0";
+            string copyright = GetAssemblyAttribute<AssemblyCopyrightAttribute>(assembly)?.Copyright;
+            string company = GetAssemblyAttribute<AssemblyCompanyAttribute>(assembly)?.Company;
+            string description = GetAssemblyAttribute<AssemblyDescriptionAttribute>(assembly)?.Description;
+
+            var lines = new List<string>
+            {
+                productName,
+                $"Phiên bản {version}"
+            };
+
+            if (!string.IsNullOrWhiteSpace(description))
+                lines.Add(description);
+
+            if (!string.IsNullOrWhiteSpace(company))
+                lines.Add(company);
+
+            if (!string.IsNullOrWhiteSpace(copyright))
+                lines.Add(copyright);
+
             MessageBox.Show(
-                "SFileManager\nPhien ban 1.0.0.0",
-                "Gioi thieu",
+                string.Join(Environment.NewLine, lines),
+                "Giới thiệu",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// Doc mot custom attribute cap assembly (VD: AssemblyProductAttribute,
+        /// AssemblyCopyrightAttribute...) de hien thi trong hop thoai About, tranh
+        /// phai ghi cung (hardcode) thong tin phien ban/ten san pham trong code.
+        /// </summary>
+        private static T GetAssemblyAttribute<T>(Assembly assembly) where T : Attribute
+        {
+            return Attribute.GetCustomAttribute(assembly, typeof(T)) as T;
         }
 
         #endregion
