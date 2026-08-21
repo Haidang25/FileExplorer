@@ -63,7 +63,7 @@ FileExplorerApp/
 
 ## Tác giả
 
-- Nhan Nguyen Huu
+- Hai Dang Nguyen
 
 ## Giấy phép
 
