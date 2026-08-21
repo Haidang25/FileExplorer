@@ -52,8 +52,12 @@
 
         private System.Windows.Forms.ToolStripMenuItem mnuTools;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsSearch;
+        private System.Windows.Forms.ToolStripMenuItem mnuToolsFindDuplicates;
+        private System.Windows.Forms.ToolStripSeparator mnuToolsSeparator1;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsRecycleBin;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsLogs;
+        private System.Windows.Forms.ToolStripSeparator mnuToolsSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem mnuToolsSettings;
 
         private System.Windows.Forms.ToolStripMenuItem mnuHelp;
         private System.Windows.Forms.ToolStripMenuItem mnuHelpAbout;
@@ -94,8 +98,12 @@
 
             this.mnuTools = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsSearch = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuToolsFindDuplicates = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuToolsSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.mnuToolsRecycleBin = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsLogs = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuToolsSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.mnuToolsSettings = new System.Windows.Forms.ToolStripMenuItem();
 
             this.mnuHelp = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuHelpAbout = new System.Windows.Forms.ToolStripMenuItem();
@@ -250,8 +258,12 @@
             // 
             this.mnuTools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.mnuToolsSearch,
+                this.mnuToolsFindDuplicates,
+                this.mnuToolsSeparator1,
                 this.mnuToolsRecycleBin,
-                this.mnuToolsLogs});
+                this.mnuToolsLogs,
+                this.mnuToolsSeparator2,
+                this.mnuToolsSettings});
             this.mnuTools.Name = "mnuTools";
             this.mnuTools.Text = "&Công cụ";
 
@@ -260,13 +272,25 @@
             this.mnuToolsSearch.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F;
             this.mnuToolsSearch.Click += new System.EventHandler(this.mnuToolsSearch_Click);
 
+            this.mnuToolsFindDuplicates.Name = "mnuToolsFindDuplicates";
+            this.mnuToolsFindDuplicates.Text = "Tìm file &trùng lặp...";
+            this.mnuToolsFindDuplicates.Click += new System.EventHandler(this.mnuToolsFindDuplicates_Click);
+
+            this.mnuToolsSeparator1.Name = "mnuToolsSeparator1";
+
             this.mnuToolsRecycleBin.Name = "mnuToolsRecycleBin";
             this.mnuToolsRecycleBin.Text = "Thùng &rác";
             this.mnuToolsRecycleBin.Click += new System.EventHandler(this.mnuToolsRecycleBin_Click);
 
             this.mnuToolsLogs.Name = "mnuToolsLogs";
-            this.mnuToolsLogs.Text = "Nhật &ký hoạt động";
+            this.mnuToolsLogs.Text = "&Xem nhật ký hoạt động";
             this.mnuToolsLogs.Click += new System.EventHandler(this.mnuToolsLogs_Click);
+
+            this.mnuToolsSeparator2.Name = "mnuToolsSeparator2";
+
+            this.mnuToolsSettings.Name = "mnuToolsSettings";
+            this.mnuToolsSettings.Text = "&Cài đặt...";
+            this.mnuToolsSettings.Click += new System.EventHandler(this.mnuToolsSettings_Click);
 
             // 
             // mnuHelp ("Trợ giúp")

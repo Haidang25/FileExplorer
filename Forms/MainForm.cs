@@ -354,6 +354,14 @@ namespace FileExplorerApp.Forms
             // TODO: mo form/hop thoai tim kiem, dung SearchService de tim va hien ket qua.
         }
 
+        private void mnuToolsFindDuplicates_Click(object sender, EventArgs e)
+        {
+            // TODO: mo form hien thi tien trinh + ket qua, goi
+            // SearchService.FindDuplicateFiles(_currentPath) (nen chay tren luong rieng
+            // hoac async vi co the mat thoi gian voi thu muc lon), sau do hien tung
+            // nhom file trung lap de nguoi dung chon xoa bot ban trung.
+        }
+
         private void mnuToolsRecycleBin_Click(object sender, EventArgs e)
         {
             // TODO: mo man hinh xem noi dung Thung rac, dung RecycleBinService.GetRecycleBinItems.
@@ -362,6 +370,16 @@ namespace FileExplorerApp.Forms
         private void mnuToolsLogs_Click(object sender, EventArgs e)
         {
             // TODO: mo man hinh xem lich su thao tac, dung LogService.GetLogs.
+        }
+
+        private void mnuToolsSettings_Click(object sender, EventArgs e)
+        {
+            // TODO: mo Form cai dat (VD: Forms/SettingsForm) cho phep chinh:
+            // - Che do xem mac dinh (_currentViewMode), co hien file an mac dinh (_showHiddenItems)
+            // - Thu muc mac dinh khi mo ung dung (thay _currentPath)
+            // - Xoa vinh vien hay chuyen vao Thung rac khi Delete
+            // - Vi tri/gioi han dung luong file log (LogService)
+            // Cac lua chon nen luu qua Properties.Settings.Default de nho giua cac lan chay.
         }
 
         #endregion

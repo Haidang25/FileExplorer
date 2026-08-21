@@ -88,5 +88,24 @@ namespace FileExplorerApp.Services
             // (hoac ThrowIfCancellationRequested()) sau moi buoc de dung som khi bi huy.
             throw new NotImplementedException();
         }
+
+        /// <summary>
+        /// Tim cac file trung lap (noi dung giong nhau) trong mot thu muc.
+        /// Moi phan tu ket qua la mot nhom (>= 2 file) duoc xac dinh la trung lap.
+        /// </summary>
+        /// <param name="rootPath">Thu muc goc bat dau tim kiem.</param>
+        /// <param name="recursive">True: tim ca trong thu muc con.</param>
+        /// <remarks>
+        /// Goi y trien khai (de hieu qua voi thu muc lon, tranh hash tat ca file):
+        /// 1. Liet ke toan bo file, nhom theo Size truoc (2 file kich thuoc khac nhau
+        ///    chac chan khong trung noi dung -> loai ngay, khong can hash).
+        /// 2. Voi moi nhom co >= 2 file cung Size, tinh hash noi dung (VD: SHA256 qua
+        ///    System.Security.Cryptography) va nhom tiep theo hash.
+        /// 3. Chi giu lai cac nhom (theo hash) co >= 2 file - do la cac nhom trung lap thuc su.
+        /// </remarks>
+        public List<List<FileItemModel>> FindDuplicateFiles(string rootPath, bool recursive = true)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
