@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using FileExplorerApp.Helpers;
 
 namespace FileExplorerApp.Models
 {
@@ -56,7 +57,7 @@ namespace FileExplorerApp.Models
         /// Kich thuoc da dinh dang de hien thi (VD: "1.25 MB").
         /// Voi thu muc mac dinh tra ve rong tru khi Size duoc gan (VD: tinh tong dung luong).
         /// </summary>
-        public string SizeFormatted => IsDirectory && Size == 0 ? string.Empty : FormatSize(Size);
+        public string SizeFormatted => IsDirectory && Size == 0 ? string.Empty : FormatHelper.FormatSize(Size);
 
         public FileItemModel()
         {
@@ -121,26 +122,6 @@ namespace FileExplorerApp.Models
                 return FromFileInfo(new FileInfo(path));
 
             throw new FileNotFoundException("Khong tim thay file hoac thu muc.", path);
-        }
-
-        /// <summary>
-        /// Dinh dang kich thuoc byte sang chuoi de doc (B, KB, MB, GB, TB).
-        /// </summary>
-        public static string FormatSize(long bytes)
-        {
-            string[] units = { "B", "KB", "MB", "GB", "TB", "PB" };
-            double size = bytes;
-            int unitIndex = 0;
-
-            while (size >= 1024 && unitIndex < units.Length - 1)
-            {
-                size /= 1024;
-                unitIndex++;
-            }
-
-            return unitIndex == 0
-                ? $"{size:0} {units[unitIndex]}"
-                : $"{size:0.##} {units[unitIndex]}";
         }
 
         public override string ToString()
