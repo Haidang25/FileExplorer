@@ -56,6 +56,7 @@
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
+    <Compile Include="Helpers\FileHelper.cs" />
     <Compile Include="Helpers\FormatHelper.cs" />
     <Compile Include="Models\FileItemModel.cs" />
     <Compile Include="Models\FileOperationType.cs" />
