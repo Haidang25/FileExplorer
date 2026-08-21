@@ -1,0 +1,12 @@
+root = true
+
+[*.cs]
+# Namespace phai khop voi cau truc thu muc (VD: Forms\LoginForm.cs -> FileExplorerApp.Forms)
+dotnet_style_namespace_match_folder = true:warning
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+indent_style = space
+indent_size = 4
+charset = utf-8-bom
+end_of_line = crlf
+insert_final_newline = true

@@ -29,15 +29,21 @@ Mục tiêu của đồ án là vận dụng kiến thức lập trình hướng
 ## Cấu trúc dự án
 
 ```
-FileExplorer/
-├── FileExplorer.sln           # Solution file
-├── FileExplorer/              # Source code chính
-│   ├── Forms/                 # Các form giao diện
-│   ├── Models/                 # Các lớp mô hình dữ liệu
-│   ├── Services/                # Xử lý logic thao tác file/folder
-│   └── Program.cs
+FileExplorerApp/
+├── FileExplorerApp.slnx        # Solution file
+├── FileExplorerApp.csproj      # Project file
+├── Program.cs
+├── Form1.cs / Form1.Designer.cs
+├── Forms/                      # Các form giao diện        -> namespace FileExplorerApp.Forms
+├── Models/                     # Các lớp mô hình dữ liệu    -> namespace FileExplorerApp.Models
+├── Services/                   # Xử lý logic thao tác file/folder -> namespace FileExplorerApp.Services
+├── Helpers/                    # Các hàm/lớp hỗ trợ dùng chung -> namespace FileExplorerApp.Helpers
+├── Utilities/                  # Các lớp tiện ích chung      -> namespace FileExplorerApp.Utilities
+├── Resources/                  # Tài nguyên tĩnh (icon, ảnh...) -> namespace FileExplorerApp.Resources
 └── README.md
 ```
+
+> Quy ước namespace: mỗi thư mục con tương ứng với một namespace con theo `RootNamespace` (`FileExplorerApp`). Ví dụ file `Forms/LoginForm.cs` phải khai báo `namespace FileExplorerApp.Forms`. Quy ước này được kiểm tra tự động qua `.editorconfig` (`dotnet_style_namespace_match_folder`).
 
 ## Yêu cầu hệ thống
 
