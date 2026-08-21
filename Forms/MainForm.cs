@@ -37,6 +37,13 @@ namespace FileExplorerApp.Forms
         private List<string> _clipboardPaths = new List<string>();
         private bool _clipboardIsCut;
 
+        // Che do hien thi hien tai (tuong ung System.Windows.Forms.View de gan truc tiep
+        // cho ListView.View khi da co ListView). Mac dinh la Details, giong Windows Explorer.
+        private View _currentViewMode = View.Details;
+
+        // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
+        private bool _showHiddenItems;
+
         public MainForm()
         {
             InitializeComponent();
@@ -291,8 +298,51 @@ namespace FileExplorerApp.Forms
 
         private void mnuViewShowHidden_Click(object sender, EventArgs e)
         {
-            // TODO: luu trang thai mnuViewShowHidden.Checked (VD: vao Properties.Settings),
-            // loc/hien lai cac muc co IsHidden theo trang thai moi.
+            _showHiddenItems = mnuViewShowHidden.Checked;
+
+            // TODO: luu trang thai _showHiddenItems (VD: vao Properties.Settings) de nho
+            // giua cac lan mo ung dung, roi loc/hien lai cac muc co IsHidden tren ListView
+            // theo trang thai moi (mnuViewRefresh_Click(sender, e)).
+            mnuViewRefresh_Click(sender, e);
+        }
+
+        /// <summary>
+        /// Chon mot che do hien thi (Large Icon/Small Icon/List/Details), bo chon
+        /// 3 che do con lai (hanh xu nhu radio button) va luu vao _currentViewMode.
+        /// </summary>
+        /// <param name="mode">Che do hien thi vua duoc chon.</param>
+        /// <param name="selectedItem">Muc menu tuong ung voi mode (se duoc danh dau Checked).</param>
+        private void SetViewMode(View mode, ToolStripMenuItem selectedItem)
+        {
+            foreach (ToolStripMenuItem item in mnuViewMode.DropDownItems.OfType<ToolStripMenuItem>())
+            {
+                item.Checked = item == selectedItem;
+            }
+
+            _currentViewMode = mode;
+
+            // TODO: gan truc tiep cho ListView khi da co giao dien duyet file, VD:
+            // listViewFiles.View = _currentViewMode;
+        }
+
+        private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)
+        {
+            SetViewMode(View.LargeIcon, mnuViewModeLargeIcon);
+        }
+
+        private void mnuViewModeSmallIcon_Click(object sender, EventArgs e)
+        {
+            SetViewMode(View.SmallIcon, mnuViewModeSmallIcon);
+        }
+
+        private void mnuViewModeList_Click(object sender, EventArgs e)
+        {
+            SetViewMode(View.List, mnuViewModeList);
+        }
+
+        private void mnuViewModeDetails_Click(object sender, EventArgs e)
+        {
+            SetViewMode(View.Details, mnuViewModeDetails);
         }
 
         #endregion

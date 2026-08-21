@@ -43,6 +43,12 @@
         private System.Windows.Forms.ToolStripMenuItem mnuView;
         private System.Windows.Forms.ToolStripMenuItem mnuViewRefresh;
         private System.Windows.Forms.ToolStripMenuItem mnuViewShowHidden;
+        private System.Windows.Forms.ToolStripSeparator mnuViewSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem mnuViewMode;
+        private System.Windows.Forms.ToolStripMenuItem mnuViewModeLargeIcon;
+        private System.Windows.Forms.ToolStripMenuItem mnuViewModeSmallIcon;
+        private System.Windows.Forms.ToolStripMenuItem mnuViewModeList;
+        private System.Windows.Forms.ToolStripMenuItem mnuViewModeDetails;
 
         private System.Windows.Forms.ToolStripMenuItem mnuTools;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsSearch;
@@ -79,6 +85,12 @@
             this.mnuView = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuViewRefresh = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuViewShowHidden = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.mnuViewMode = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewModeLargeIcon = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewModeSmallIcon = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewModeList = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuViewModeDetails = new System.Windows.Forms.ToolStripMenuItem();
 
             this.mnuTools = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsSearch = new System.Windows.Forms.ToolStripMenuItem();
@@ -187,7 +199,9 @@
             // 
             this.mnuView.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.mnuViewRefresh,
-                this.mnuViewShowHidden});
+                this.mnuViewShowHidden,
+                this.mnuViewSeparator1,
+                this.mnuViewMode});
             this.mnuView.Name = "mnuView";
             this.mnuView.Text = "&Xem";
 
@@ -200,6 +214,36 @@
             this.mnuViewShowHidden.Text = "Hiện file/thư mục ẩn";
             this.mnuViewShowHidden.CheckOnClick = true;
             this.mnuViewShowHidden.Click += new System.EventHandler(this.mnuViewShowHidden_Click);
+
+            this.mnuViewSeparator1.Name = "mnuViewSeparator1";
+
+            //
+            // mnuViewMode ("Chế độ xem") - submenu chon 1 trong 4 kieu hien thi, dang radio.
+            //
+            this.mnuViewMode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.mnuViewModeLargeIcon,
+                this.mnuViewModeSmallIcon,
+                this.mnuViewModeList,
+                this.mnuViewModeDetails});
+            this.mnuViewMode.Name = "mnuViewMode";
+            this.mnuViewMode.Text = "Chế độ xem";
+
+            this.mnuViewModeLargeIcon.Name = "mnuViewModeLargeIcon";
+            this.mnuViewModeLargeIcon.Text = "Biểu tượng lớn";
+            this.mnuViewModeLargeIcon.Click += new System.EventHandler(this.mnuViewModeLargeIcon_Click);
+
+            this.mnuViewModeSmallIcon.Name = "mnuViewModeSmallIcon";
+            this.mnuViewModeSmallIcon.Text = "Biểu tượng nhỏ";
+            this.mnuViewModeSmallIcon.Click += new System.EventHandler(this.mnuViewModeSmallIcon_Click);
+
+            this.mnuViewModeList.Name = "mnuViewModeList";
+            this.mnuViewModeList.Text = "Danh sách";
+            this.mnuViewModeList.Click += new System.EventHandler(this.mnuViewModeList_Click);
+
+            this.mnuViewModeDetails.Name = "mnuViewModeDetails";
+            this.mnuViewModeDetails.Text = "Chi tiết";
+            this.mnuViewModeDetails.Checked = true; // Mac dinh giong Windows Explorer.
+            this.mnuViewModeDetails.Click += new System.EventHandler(this.mnuViewModeDetails_Click);
 
             // 
             // mnuTools ("Công cụ")
