@@ -112,11 +112,34 @@ namespace FileExplorerApp.Services
         /// <param name="newName">Ten moi (chi ten, khong bao gom duong dan).</param>
         public OperationResult RenameFolder(string folderPath, string newName)
         {
-            // TODO:
-            // 1. Kiem tra FileHelper.IsValidFileName(newName)
-            // 2. Kiem tra thu muc dich (cung ten) chua ton tai
-            // 3. Directory.Move(folderPath, duongDanMoi)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return OperationResult.NotFound;
+
+            if (!FileHelper.IsValidFileName(newName))
+                return OperationResult.Failed;
+
+            string parentPath = Directory.GetParent(folderPath)?.FullName;
+            string newPath = Path.Combine(parentPath ?? string.Empty, newName);
+
+            if (Directory.Exists(newPath) || File.Exists(newPath))
+                return OperationResult.Skipped; // Da co muc trung ten moi.
+
+            if (!PermissionHelper.HasWritePermission(parentPath))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                Directory.Move(folderPath, newPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
@@ -140,8 +163,29 @@ namespace FileExplorerApp.Services
         /// <param name="destinationPath">Duong dan thu muc dich (thu muc cha se chua thu muc nguon).</param>
         public OperationResult MoveFolder(string sourcePath, string destinationPath)
         {
-            // TODO: kiem tra quyen ghi tai dich, kiem tra trung ten, Directory.Move(...)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
+                return OperationResult.NotFound;
+
+            if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
+                return OperationResult.Skipped; // Da co muc trung ten tai dich.
+
+            string destinationParent = Directory.GetParent(destinationPath)?.FullName;
+            if (!PermissionHelper.HasWritePermission(destinationParent))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                Directory.Move(sourcePath, destinationPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
@@ -151,8 +195,49 @@ namespace FileExplorerApp.Services
         /// <param name="destinationPath">Duong dan thu muc dich.</param>
         public OperationResult CopyFolder(string sourcePath, string destinationPath)
         {
-            // TODO: de quy tao thu muc dich va copy tung file/thu muc con (File.Copy / Directory.CreateDirectory).
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
+                return OperationResult.NotFound;
+
+            if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
+                return OperationResult.Skipped; // Da co muc trung ten tai dich.
+
+            string destinationParent = Directory.GetParent(destinationPath)?.FullName;
+            if (!PermissionHelper.HasWritePermission(destinationParent))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                CopyDirectoryRecursive(sourcePath, destinationPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
+        }
+
+        /// <summary>
+        /// Sao chep de quy toan bo noi dung mot thu muc (bao gom thu muc con) sang vi tri moi.
+        /// </summary>
+        private static void CopyDirectoryRecursive(string sourceDir, string destinationDir)
+        {
+            Directory.CreateDirectory(destinationDir);
+
+            foreach (string filePath in Directory.GetFiles(sourceDir))
+            {
+                string destFilePath = Path.Combine(destinationDir, Path.GetFileName(filePath));
+                File.Copy(filePath, destFilePath, overwrite: false);
+            }
+
+            foreach (string subDir in Directory.GetDirectories(sourceDir))
+            {
+                string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                CopyDirectoryRecursive(subDir, destSubDir);
+            }
         }
     }
 }

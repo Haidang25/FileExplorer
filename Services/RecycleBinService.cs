@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using Microsoft.VisualBasic.FileIO;
 using FileExplorerApp.Models;
 
 namespace FileExplorerApp.Services
@@ -33,10 +35,38 @@ namespace FileExplorerApp.Services
         /// <param name="path">Duong dan file/thu muc can chuyen vao thung rac.</param>
         public OperationResult MoveToRecycleBin(string path)
         {
-            // TODO: kiem tra path la file hay thu muc, goi
-            // Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile/DeleteDirectory
-            // voi UIOption.OnlyErrorDialogs va RecycleOption.SendToRecycleBin.
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(path))
+                return OperationResult.Failed;
+
+            try
+            {
+                if (Directory.Exists(path))
+                {
+                    FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                    return OperationResult.Success;
+                }
+
+                if (File.Exists(path))
+                {
+                    FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
+                    return OperationResult.Success;
+                }
+
+                return OperationResult.NotFound;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (OperationCanceledException)
+            {
+                // Nguoi dung bam Cancel tren hop thoai loi (neu UIOption khac OnlyErrorDialogs).
+                return OperationResult.Cancelled;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>

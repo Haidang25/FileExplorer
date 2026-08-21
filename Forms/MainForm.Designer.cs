@@ -37,6 +37,8 @@
         private System.Windows.Forms.ToolStripSeparator mnuEditSeparator1;
         private System.Windows.Forms.ToolStripMenuItem mnuEditDelete;
         private System.Windows.Forms.ToolStripMenuItem mnuEditRename;
+        private System.Windows.Forms.ToolStripSeparator mnuEditSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem mnuEditSelectAll;
 
         private System.Windows.Forms.ToolStripMenuItem mnuView;
         private System.Windows.Forms.ToolStripMenuItem mnuViewRefresh;
@@ -71,6 +73,8 @@
             this.mnuEditSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.mnuEditDelete = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuEditRename = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuEditSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.mnuEditSelectAll = new System.Windows.Forms.ToolStripMenuItem();
 
             this.mnuView = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuViewRefresh = new System.Windows.Forms.ToolStripMenuItem();
@@ -138,7 +142,9 @@
                 this.mnuEditPaste,
                 this.mnuEditSeparator1,
                 this.mnuEditDelete,
-                this.mnuEditRename});
+                this.mnuEditRename,
+                this.mnuEditSeparator2,
+                this.mnuEditSelectAll});
             this.mnuEdit.Name = "mnuEdit";
             this.mnuEdit.Text = "&Chỉnh sửa";
 
@@ -168,6 +174,13 @@
             this.mnuEditRename.Text = "Đổi &tên";
             this.mnuEditRename.ShortcutKeys = System.Windows.Forms.Keys.F2;
             this.mnuEditRename.Click += new System.EventHandler(this.mnuEditRename_Click);
+
+            this.mnuEditSeparator2.Name = "mnuEditSeparator2";
+
+            this.mnuEditSelectAll.Name = "mnuEditSelectAll";
+            this.mnuEditSelectAll.Text = "Chọn tất &cả";
+            this.mnuEditSelectAll.ShortcutKeys = System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A;
+            this.mnuEditSelectAll.Click += new System.EventHandler(this.mnuEditSelectAll_Click);
 
             // 
             // mnuView ("Xem")

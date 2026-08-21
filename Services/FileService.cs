@@ -102,11 +102,34 @@ namespace FileExplorerApp.Services
         /// <param name="newName">Ten moi (bao gom phan mo rong, khong bao gom duong dan).</param>
         public OperationResult RenameFile(string filePath, string newName)
         {
-            // TODO:
-            // 1. Kiem tra FileHelper.IsValidFileName(newName)
-            // 2. Kiem tra file dich (cung ten) chua ton tai
-            // 3. File.Move(filePath, duongDanMoi)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return OperationResult.NotFound;
+
+            if (!FileHelper.IsValidFileName(newName))
+                return OperationResult.Failed;
+
+            string directory = Path.GetDirectoryName(filePath);
+            string newPath = Path.Combine(directory ?? string.Empty, newName);
+
+            if (File.Exists(newPath) || Directory.Exists(newPath))
+                return OperationResult.Skipped; // Da co muc trung ten moi.
+
+            if (!PermissionHelper.HasWritePermission(directory))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                File.Move(filePath, newPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
@@ -130,8 +153,29 @@ namespace FileExplorerApp.Services
         /// <param name="destinationPath">Duong dan file dich (bao gom ten file).</param>
         public OperationResult MoveFile(string sourcePath, string destinationPath)
         {
-            // TODO: kiem tra quyen ghi tai dich, kiem tra trung ten, File.Move(...)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                return OperationResult.NotFound;
+
+            if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+                return OperationResult.Skipped; // Da co muc trung ten tai dich.
+
+            string destinationDir = Path.GetDirectoryName(destinationPath);
+            if (!PermissionHelper.HasWritePermission(destinationDir))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                File.Move(sourcePath, destinationPath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
@@ -142,9 +186,29 @@ namespace FileExplorerApp.Services
         /// <param name="overwrite">True neu cho phep ghi de file dich da ton tai.</param>
         public OperationResult CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
         {
-            // TODO: kiem tra quyen ghi tai dich, xu ly truong hop trung ten
-            // (ghi de/doi ten tu dong/bo qua tuy overwrite), File.Copy(...)
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
+                return OperationResult.NotFound;
+
+            if (!overwrite && (File.Exists(destinationPath) || Directory.Exists(destinationPath)))
+                return OperationResult.Skipped; // Da co muc trung ten tai dich.
+
+            string destinationDir = Path.GetDirectoryName(destinationPath);
+            if (!PermissionHelper.HasWritePermission(destinationDir))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                File.Copy(sourcePath, destinationPath, overwrite);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>
