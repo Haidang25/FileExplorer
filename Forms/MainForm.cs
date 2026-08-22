@@ -64,10 +64,75 @@ namespace FileExplorerApp.Forms
             // khong phu thuoc duong dan tuong doi luc chay.
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
+            LoadIconImages();
             LoadTreeViewFolders();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung listViewFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
             mnuViewRefresh_Click(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Ve va nap 2 icon placeholder ("folder"/"file") vao imageListIcons, dung
+        /// chung cho treeViewFolders va listViewFiles. Ve bang code thay vi nhung
+        /// san file .ico/.png de khong phai quan ly them tai nguyen nhi phan.
+        /// </summary>
+        private void LoadIconImages()
+        {
+            imageListIcons.Images.Add("folder", CreateFolderIcon());
+            imageListIcons.Images.Add("file", CreateFileIcon());
+        }
+
+        /// <summary>
+        /// Icon thu muc placeholder: hinh cai cap mau cam, cung tong mau voi
+        /// Resources/app.ico da tao truoc do.
+        /// </summary>
+        private static Bitmap CreateFolderIcon()
+        {
+            var bitmap = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                using (var tabBrush = new SolidBrush(Color.FromArgb(255, 214, 148, 46)))
+                using (var bodyBrush = new SolidBrush(Color.FromArgb(255, 230, 168, 62)))
+                using (var borderPen = new Pen(Color.FromArgb(255, 160, 104, 28)))
+                {
+                    g.FillRectangle(tabBrush, 1, 3, 6, 2);
+                    g.FillRectangle(bodyBrush, 1, 5, 14, 9);
+                    g.DrawRectangle(borderPen, 1, 5, 13, 8);
+                }
+            }
+
+            return bitmap;
+        }
+
+        /// <summary>
+        /// Icon file placeholder: hinh to giay trang, goc tren-phai gap lai, vien xam.
+        /// </summary>
+        private static Bitmap CreateFileIcon()
+        {
+            var bitmap = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                Point[] outline =
+                {
+                    new Point(3, 1), new Point(10, 1), new Point(13, 4),
+                    new Point(13, 15), new Point(3, 15)
+                };
+
+                using (var bodyBrush = new SolidBrush(Color.White))
+                using (var borderPen = new Pen(Color.FromArgb(255, 120, 120, 120)))
+                {
+                    g.FillPolygon(bodyBrush, outline);
+                    g.DrawPolygon(borderPen, outline);
+                    g.DrawLine(borderPen, 10, 1, 10, 4);
+                    g.DrawLine(borderPen, 10, 4, 13, 4);
+                }
+            }
+
+            return bitmap;
         }
 
         #region Menu Tep (File)
@@ -342,7 +407,7 @@ namespace FileExplorerApp.Forms
                     if (folder == null || (folder.IsHidden && !_showHiddenItems))
                         continue;
 
-                    var item = new ListViewItem(folder.Name) { Tag = folder.FullPath };
+                    var item = new ListViewItem(folder.Name, "folder") { Tag = folder.FullPath };
                     item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
                     item.SubItems.Add("Thư mục tệp");
                     item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
@@ -356,7 +421,7 @@ namespace FileExplorerApp.Forms
                     if (file == null || (file.IsHidden && !_showHiddenItems))
                         continue;
 
-                    var item = new ListViewItem(file.Name) { Tag = file.FullPath };
+                    var item = new ListViewItem(file.Name, "file") { Tag = file.FullPath };
                     item.SubItems.Add(file.SizeFormatted);
                     item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
                     item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
@@ -741,6 +806,8 @@ namespace FileExplorerApp.Forms
                     continue;
 
                 var driveNode = new TreeNode(drive.Name) { Tag = drive.RootDirectory.FullName };
+                driveNode.ImageKey = "folder";
+                driveNode.SelectedImageKey = "folder";
                 driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
                 treeViewFolders.Nodes.Add(driveNode);
             }
@@ -778,6 +845,8 @@ namespace FileExplorerApp.Forms
                         continue;
 
                     var childNode = new TreeNode(subFolderInfo.Name) { Tag = subFolderInfo.FullName };
+                    childNode.ImageKey = "folder";
+                    childNode.SelectedImageKey = "folder";
                     childNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
                     node.Nodes.Add(childNode);
                 }

@@ -68,6 +68,8 @@
         private System.Windows.Forms.ToolStripMenuItem cmsNewFolder;
         private System.Windows.Forms.ToolStripMenuItem cmsRefresh;
 
+        private System.Windows.Forms.ImageList imageListIcons;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -158,6 +160,8 @@
             this.cmsSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.cmsNewFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.cmsRefresh = new System.Windows.Forms.ToolStripMenuItem();
+
+            this.imageListIcons = new System.Windows.Forms.ImageList(this.components);
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -530,6 +534,9 @@
             this.treeViewFolders.TabIndex = 0;
             this.treeViewFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewFolders_AfterSelect);
             this.treeViewFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeViewFolders_BeforeExpand);
+            this.treeViewFolders.ImageList = this.imageListIcons;
+            this.treeViewFolders.ImageKey = "folder";
+            this.treeViewFolders.SelectedImageKey = "folder";
 
             //
             // listViewFiles (danh sach file/thu muc ben phai, che do Details)
@@ -549,6 +556,7 @@
             this.listViewFiles.UseCompatibleStateImageBehavior = false;
             this.listViewFiles.View = System.Windows.Forms.View.Details;
             this.listViewFiles.ContextMenuStrip = this.cmsListView;
+            this.listViewFiles.SmallImageList = this.imageListIcons;
             this.listViewFiles.DoubleClick += new System.EventHandler(this.listViewFiles_DoubleClick);
             this.listViewFiles.SelectedIndexChanged += new System.EventHandler(this.listViewFiles_SelectedIndexChanged);
 
@@ -620,6 +628,15 @@
             this.cmsRefresh.Name = "cmsRefresh";
             this.cmsRefresh.Text = "&Làm mới";
             this.cmsRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
+
+            //
+            // imageListIcons (icon "folder"/"file" dung cho treeViewFolders va listViewFiles).
+            // Anh thuc te duoc ve dong luc bang code (LoadIconImages trong MainForm.cs),
+            // khong nhung san file .ico/.png de tranh phai quan ly them tai nguyen nhi phan.
+            //
+            this.imageListIcons.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
+            this.imageListIcons.ImageSize = new System.Drawing.Size(16, 16);
+            this.imageListIcons.TransparentColor = System.Drawing.Color.Transparent;
 
             //
             // statusStrip1 (so muc, dung luong, trang thai o duoi cung cua so)
