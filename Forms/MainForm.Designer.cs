@@ -53,6 +53,7 @@
         private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
         private System.Windows.Forms.ToolStripStatusLabel tsslItemCount;
         private System.Windows.Forms.ToolStripStatusLabel tsslTotalSize;
+        private System.Windows.Forms.ToolStripProgressBar tsProgressBar;
 
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
@@ -129,6 +130,7 @@
             this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslItemCount = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslTotalSize = new System.Windows.Forms.ToolStripStatusLabel();
+            this.tsProgressBar = new System.Windows.Forms.ToolStripProgressBar();
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -540,6 +542,7 @@
             //
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.tsslStatus,
+                this.tsProgressBar,
                 this.tsslItemCount,
                 this.tsslTotalSize});
             this.statusStrip1.Name = "statusStrip1";
@@ -549,6 +552,11 @@
             this.tsslStatus.Text = "Sẵn sàng";
             this.tsslStatus.Spring = true; // Choan het khoang trong con lai, day 2 nhan sau ve ben phai.
             this.tsslStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+
+            this.tsProgressBar.Name = "tsProgressBar";
+            this.tsProgressBar.Size = new System.Drawing.Size(120, 16);
+            this.tsProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this.tsProgressBar.Visible = false; // Mac dinh an, chi hien khi co thao tac dang chay (VD: sao chep, tim kiem).
 
             this.tsslItemCount.Name = "tsslItemCount";
             this.tsslItemCount.Text = "0 mục";
