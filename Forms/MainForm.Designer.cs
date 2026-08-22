@@ -42,6 +42,7 @@
         private System.Windows.Forms.TextBox txtPath;
 
         private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.TreeView treeViewFolders;
 
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
@@ -107,6 +108,7 @@
             this.txtPath = new System.Windows.Forms.TextBox();
 
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.treeViewFolders = new System.Windows.Forms.TreeView();
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -460,11 +462,23 @@
             this.splitContainer1.SplitterWidth = 4;
             this.splitContainer1.TabIndex = 3;
 
-            // Panel1 (trai) - danh cho cay thu muc (TreeView) sau nay.
+            // Panel1 (trai) - chua treeViewFolders (cay thu muc).
+            this.splitContainer1.Panel1.Controls.Add(this.treeViewFolders);
             this.splitContainer1.Panel1.Name = "splitContainer1.Panel1";
 
             // Panel2 (phai) - danh cho danh sach file (ListView) sau nay.
             this.splitContainer1.Panel2.Name = "splitContainer1.Panel2";
+
+            //
+            // treeViewFolders (cay thu muc ben trai)
+            //
+            this.treeViewFolders.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.treeViewFolders.Name = "treeViewFolders";
+            this.treeViewFolders.HideSelection = false;
+            this.treeViewFolders.PathSeparator = System.IO.Path.DirectorySeparatorChar.ToString();
+            this.treeViewFolders.TabIndex = 0;
+            this.treeViewFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewFolders_AfterSelect);
+            this.treeViewFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeViewFolders_BeforeExpand);
 
             // 
             // MainForm

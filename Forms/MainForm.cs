@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -49,6 +49,11 @@ namespace FileExplorerApp.Forms
         // duoc goi, duong dan hien tai (truoc khi doi) duoc day vao day.
         private readonly Stack<string> _backHistory = new Stack<string>();
 
+        // True trong luc dang chon node tren treeViewFolders bang code (VD: khi NavigateTo
+        // duoc goi tu noi khac, khong phai tu chinh nguoi dung bam vao cay thu muc), de
+        // tranh treeViewFolders_AfterSelect goi lai NavigateTo va gay vong lap/History sai.
+        private bool _isSyncingTreeView;
+
         public MainForm()
         {
             InitializeComponent();
@@ -58,6 +63,7 @@ namespace FileExplorerApp.Forms
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             txtPath.Text = _currentPath;
+            LoadTreeViewFolders();
         }
 
         #region Menu Tep (File)
@@ -148,10 +154,10 @@ namespace FileExplorerApp.Forms
         /// Lay danh sach duong dan day du dang duoc chon tren giao dien.
         /// </summary>
         /// <remarks>
-        /// TODO: hien tai MainForm chua co ListView/TreeView duyet noi dung thu muc,
-        /// nen luon tra ve danh sach rong. Khi da xay giao dien duyet file, thay phan
-        /// than ham nay bang viec doc tu (VD) listViewFiles.SelectedItems va tra ve
-        /// FullPath cua tung FileItemModel/FolderItemModel tuong ung.
+        /// TODO: hien tai MainForm chua co ListView duyet noi dung thu muc (chi moi co
+        /// treeViewFolders ben trai), nen luon tra ve danh sach rong. Khi da xay ListView,
+        /// thay phan than ham nay bang viec doc tu (VD) listViewFiles.SelectedItems va
+        /// tra ve FullPath cua tung FileItemModel/FolderItemModel tuong ung.
         /// </remarks>
         private List<string> GetSelectedPaths()
         {
@@ -457,9 +463,13 @@ namespace FileExplorerApp.Forms
             _backHistory.Push(_currentPath);
             _currentPath = path;
 
-            // TODO: khi da co ListView/TreeView duyet thu muc thuc te, ham nay se la
+            // TODO: khi da co ListView duyet thu muc thuc te, ham nay se la
             // noi trung tam de cap nhat dia chi hien thi (VD: mot TextBox address bar).
             mnuViewRefresh_Click(this, EventArgs.Empty);
+
+            // Dong bo lai lua chon tren treeViewFolders (VD: khi NavigateTo duoc goi tu
+            // Back/Up/txtPath thay vi tu chinh nguoi dung bam vao cay thu muc).
+            SelectTreeViewNodeForPath(path);
         }
 
         private void tsbBack_Click(object sender, EventArgs e)
@@ -473,6 +483,7 @@ namespace FileExplorerApp.Forms
 
             _currentPath = _backHistory.Pop();
             mnuViewRefresh_Click(sender, e);
+            SelectTreeViewNodeForPath(_currentPath);
         }
 
         private void tsbUp_Click(object sender, EventArgs e)
@@ -532,6 +543,112 @@ namespace FileExplorerApp.Forms
                 e.SuppressKeyPress = true; // Tranh tieng "beep" va xuong dong trong TextBox.
                 btnGo_Click(sender, e);
             }
+        }
+
+        #endregion
+
+        #region TreeView thu muc (treeViewFolders, panel trai cua splitContainer1)
+
+        // Nhan gia tri "..." dung lam node "gia" (dummy) de bao TreeView node do co the
+        // mo rong duoc, ma chua can doc thuc te noi dung thu muc con ngay tu dau (lazy
+        // loading) - tranh doc toan bo cay thu muc cung mot luc, rat nang voi o dia lon.
+        private const string LazyLoadPlaceholder = "...";
+
+        /// <summary>
+        /// Nap danh sach cac o dia (drive) san sang (IsReady) lam node goc cua
+        /// treeViewFolders. Moi node o dia duoc them mot node "gia" ben trong de
+        /// mui ten mo rong xuat hien, noi dung thuc su chi duoc doc khi nguoi dung
+        /// bam mo rong (xem treeViewFolders_BeforeExpand).
+        /// </summary>
+        private void LoadTreeViewFolders()
+        {
+            treeViewFolders.Nodes.Clear();
+
+            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady)
+                    continue;
+
+                var driveNode = new TreeNode(drive.Name) { Tag = drive.RootDirectory.FullName };
+                driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+                treeViewFolders.Nodes.Add(driveNode);
+            }
+        }
+
+        /// <summary>
+        /// Doc danh sach thu muc con thuc su cua mot node (thay the node "gia"), duoc
+        /// goi khi nguoi dung sap mo rong node do lan dau tien.
+        /// </summary>
+        private void treeViewFolders_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        {
+            TreeNode node = e.Node;
+
+            bool isLazyPlaceholder = node.Nodes.Count == 1
+                && node.Nodes[0].Text == LazyLoadPlaceholder
+                && node.Nodes[0].Tag == null;
+
+            if (!isLazyPlaceholder)
+                return; // Da nap that roi (hoac khong co thu muc con), khong can lam lai.
+
+            node.Nodes.Clear();
+
+            string path = node.Tag as string;
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            try
+            {
+                foreach (string subFolderPath in Directory.GetDirectories(path))
+                {
+                    var subFolderInfo = new DirectoryInfo(subFolderPath);
+
+                    bool isHidden = (subFolderInfo.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
+                    if (isHidden && !_showHiddenItems)
+                        continue;
+
+                    var childNode = new TreeNode(subFolderInfo.Name) { Tag = subFolderInfo.FullName };
+                    childNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+                    node.Nodes.Add(childNode);
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // Khong du quyen doc thu muc nay (VD: System Volume Information) - bo qua,
+                // de node hien thi khong co thu muc con thay vi bao loi lam gian doan nguoi dung.
+            }
+            catch (IOException)
+            {
+                // O dia thao ra, duong dan mang bi ngat... - bo qua tuong tu.
+            }
+        }
+
+        /// <summary>
+        /// Khi nguoi dung chon mot node tren cay thu muc, dieu huong ung dung den
+        /// thu muc tuong ung (dung chung NavigateTo voi txtPath/Back/Up).
+        /// </summary>
+        private void treeViewFolders_AfterSelect(object sender, TreeViewEventArgs e)
+        {
+            if (_isSyncingTreeView)
+                return; // Dang tu dong chon lai node do NavigateTo goi, khong can dieu huong lai.
+
+            string path = e.Node.Tag as string;
+            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+            {
+                NavigateTo(path);
+            }
+        }
+
+        /// <summary>
+        /// Tim va chon node tren treeViewFolders tuong ung voi mot duong dan cho truoc
+        /// (neu node do da duoc nap), de cay thu muc luon dong bo voi _currentPath khi
+        /// dieu huong tu noi khac (txtPath, Back, Up) thay vi tu chinh cay thu muc.
+        /// </summary>
+        /// <param name="path">Duong dan can dong bo len treeViewFolders.</param>
+        private void SelectTreeViewNodeForPath(string path)
+        {
+            // TODO: hien tai chi la khung don gian, chua tu mo rong (expand) cac node
+            // cha con thieu de lam lo node dich khi duong dan nam sau trong cay. Se
+            // hoan thien khi can dong bo chinh xac hai chieu giua txtPath/ListView/TreeView.
         }
 
         #endregion
