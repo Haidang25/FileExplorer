@@ -426,6 +426,23 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void listViewFiles_DoubleClick(object sender, EventArgs e)
         {
+            OpenSelectedItem();
+        }
+
+        /// <summary>
+        /// Muc "Mở" tren cmsListView (menu chuot phai) - dung chung logic voi nhap doi.
+        /// </summary>
+        private void cmsOpen_Click(object sender, EventArgs e)
+        {
+            OpenSelectedItem();
+        }
+
+        /// <summary>
+        /// Mo muc dang duoc chon (dung duy nhat 1 muc): dieu huong vao neu la thu muc,
+        /// hoac mo bang ung dung mac dinh cua he thong neu la file.
+        /// </summary>
+        private void OpenSelectedItem()
+        {
             if (listViewFiles.SelectedItems.Count != 1)
                 return;
 
@@ -449,6 +466,24 @@ namespace FileExplorerApp.Forms
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        /// <summary>
+        /// Bat/tat cac muc tren cmsListView (menu chuot phai) truoc khi hien ra, tuy
+        /// theo dang co muc nao duoc chon tren listViewFiles va clipboard noi bo co
+        /// gi de dan hay khong - tranh nguoi dung bam vao muc khong the thuc hien duoc.
+        /// </summary>
+        private void cmsListView_Opening(object sender, CancelEventArgs e)
+        {
+            bool hasSelection = listViewFiles.SelectedItems.Count > 0;
+            bool hasSingleSelection = listViewFiles.SelectedItems.Count == 1;
+
+            cmsOpen.Enabled = hasSingleSelection;
+            cmsCut.Enabled = hasSelection;
+            cmsCopy.Enabled = hasSelection;
+            cmsPaste.Enabled = _clipboardPaths.Count > 0;
+            cmsDelete.Enabled = hasSelection;
+            cmsRename.Enabled = hasSingleSelection;
         }
 
         private void mnuViewShowHidden_Click(object sender, EventArgs e)

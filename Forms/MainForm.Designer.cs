@@ -55,6 +55,19 @@
         private System.Windows.Forms.ToolStripStatusLabel tsslTotalSize;
         private System.Windows.Forms.ToolStripProgressBar tsProgressBar;
 
+        private System.Windows.Forms.ContextMenuStrip cmsListView;
+        private System.Windows.Forms.ToolStripMenuItem cmsOpen;
+        private System.Windows.Forms.ToolStripSeparator cmsSeparator1;
+        private System.Windows.Forms.ToolStripMenuItem cmsCut;
+        private System.Windows.Forms.ToolStripMenuItem cmsCopy;
+        private System.Windows.Forms.ToolStripMenuItem cmsPaste;
+        private System.Windows.Forms.ToolStripSeparator cmsSeparator2;
+        private System.Windows.Forms.ToolStripMenuItem cmsDelete;
+        private System.Windows.Forms.ToolStripMenuItem cmsRename;
+        private System.Windows.Forms.ToolStripSeparator cmsSeparator3;
+        private System.Windows.Forms.ToolStripMenuItem cmsNewFolder;
+        private System.Windows.Forms.ToolStripMenuItem cmsRefresh;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -99,6 +112,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
 
             this.toolStrip1 = new System.Windows.Forms.ToolStrip();
@@ -131,6 +145,19 @@
             this.tsslItemCount = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslTotalSize = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsProgressBar = new System.Windows.Forms.ToolStripProgressBar();
+
+            this.cmsListView = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.cmsOpen = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.cmsCut = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsCopy = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsPaste = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.cmsDelete = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsRename = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.cmsNewFolder = new System.Windows.Forms.ToolStripMenuItem();
+            this.cmsRefresh = new System.Windows.Forms.ToolStripMenuItem();
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -521,6 +548,7 @@
             this.listViewFiles.TabIndex = 0;
             this.listViewFiles.UseCompatibleStateImageBehavior = false;
             this.listViewFiles.View = System.Windows.Forms.View.Details;
+            this.listViewFiles.ContextMenuStrip = this.cmsListView;
             this.listViewFiles.DoubleClick += new System.EventHandler(this.listViewFiles_DoubleClick);
             this.listViewFiles.SelectedIndexChanged += new System.EventHandler(this.listViewFiles_SelectedIndexChanged);
 
@@ -536,6 +564,62 @@
 
             this.colModified.Text = "Ngày sửa đổi";
             this.colModified.Width = 140;
+
+            //
+            // cmsListView (menu chuot phai tren listViewFiles)
+            //
+            this.cmsListView.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.cmsOpen,
+                this.cmsSeparator1,
+                this.cmsCut,
+                this.cmsCopy,
+                this.cmsPaste,
+                this.cmsSeparator2,
+                this.cmsDelete,
+                this.cmsRename,
+                this.cmsSeparator3,
+                this.cmsNewFolder,
+                this.cmsRefresh});
+            this.cmsListView.Name = "cmsListView";
+            this.cmsListView.Opening += new System.ComponentModel.CancelEventHandler(this.cmsListView_Opening);
+
+            this.cmsOpen.Name = "cmsOpen";
+            this.cmsOpen.Text = "&Mở";
+            this.cmsOpen.Click += new System.EventHandler(this.cmsOpen_Click);
+
+            this.cmsSeparator1.Name = "cmsSeparator1";
+
+            this.cmsCut.Name = "cmsCut";
+            this.cmsCut.Text = "&Cắt";
+            this.cmsCut.Click += new System.EventHandler(this.mnuEditCut_Click);
+
+            this.cmsCopy.Name = "cmsCopy";
+            this.cmsCopy.Text = "Sao &chép";
+            this.cmsCopy.Click += new System.EventHandler(this.mnuEditCopy_Click);
+
+            this.cmsPaste.Name = "cmsPaste";
+            this.cmsPaste.Text = "&Dán";
+            this.cmsPaste.Click += new System.EventHandler(this.mnuEditPaste_Click);
+
+            this.cmsSeparator2.Name = "cmsSeparator2";
+
+            this.cmsDelete.Name = "cmsDelete";
+            this.cmsDelete.Text = "&Xóa";
+            this.cmsDelete.Click += new System.EventHandler(this.mnuEditDelete_Click);
+
+            this.cmsRename.Name = "cmsRename";
+            this.cmsRename.Text = "Đổi &tên";
+            this.cmsRename.Click += new System.EventHandler(this.mnuEditRename_Click);
+
+            this.cmsSeparator3.Name = "cmsSeparator3";
+
+            this.cmsNewFolder.Name = "cmsNewFolder";
+            this.cmsNewFolder.Text = "Tạo thư mục &mới";
+            this.cmsNewFolder.Click += new System.EventHandler(this.mnuFileNewFolder_Click);
+
+            this.cmsRefresh.Name = "cmsRefresh";
+            this.cmsRefresh.Text = "&Làm mới";
+            this.cmsRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
 
             //
             // statusStrip1 (so muc, dung luong, trang thai o duoi cung cua so)
@@ -571,7 +655,6 @@
             //
             // MainForm
             //
-            this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.menuStrip1);
