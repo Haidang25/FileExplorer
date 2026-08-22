@@ -41,6 +41,8 @@
         private System.Windows.Forms.Button btnGo;
         private System.Windows.Forms.TextBox txtPath;
 
+        private System.Windows.Forms.SplitContainer splitContainer1;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -104,6 +106,8 @@
             this.btnGo = new System.Windows.Forms.Button();
             this.txtPath = new System.Windows.Forms.TextBox();
 
+            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFile = new System.Windows.Forms.ToolStripMenuItem();
@@ -144,6 +148,10 @@
 
             this.menuStrip1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
+            this.splitContainer1.Panel1.SuspendLayout();
+            this.splitContainer1.Panel2.SuspendLayout();
+            this.splitContainer1.SuspendLayout();
             this.SuspendLayout();
 
             // 
@@ -442,6 +450,23 @@
             this.txtPath.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPath_KeyDown);
 
             // 
+            // splitContainer1 (chia 2 vung lam viec: Panel1 = cay thu muc, Panel2 = danh sach file)
+            // 
+            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitContainer1.Location = new System.Drawing.Point(0, 77);
+            this.splitContainer1.Name = "splitContainer1";
+            this.splitContainer1.Size = new System.Drawing.Size(800, 373);
+            this.splitContainer1.SplitterDistance = 220;
+            this.splitContainer1.SplitterWidth = 4;
+            this.splitContainer1.TabIndex = 3;
+
+            // Panel1 (trai) - danh cho cay thu muc (TreeView) sau nay.
+            this.splitContainer1.Panel1.Name = "splitContainer1.Panel1";
+
+            // Panel2 (phai) - danh cho danh sach file (ListView) sau nay.
+            this.splitContainer1.Panel2.Name = "splitContainer1.Panel2";
+
+            // 
             // MainForm
             // 
             this.components = new System.ComponentModel.Container();
@@ -450,6 +475,7 @@
             this.Controls.Add(this.menuStrip1);
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.pnlAddressBar);
+            this.Controls.Add(this.splitContainer1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.Text = "MainForm";
@@ -458,6 +484,10 @@
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
             this.pnlAddressBar.ResumeLayout(false);
+            this.splitContainer1.Panel1.ResumeLayout(false);
+            this.splitContainer1.Panel2.ResumeLayout(false);
+            this.splitContainer1.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
