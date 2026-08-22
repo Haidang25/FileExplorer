@@ -24,6 +24,18 @@
 
         private System.Windows.Forms.MenuStrip menuStrip1;
 
+        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStripButton tsbBack;
+        private System.Windows.Forms.ToolStripButton tsbUp;
+        private System.Windows.Forms.ToolStripButton tsbRefresh;
+        private System.Windows.Forms.ToolStripSeparator tsbSeparator1;
+        private System.Windows.Forms.ToolStripButton tsbNewFolder;
+        private System.Windows.Forms.ToolStripSeparator tsbSeparator2;
+        private System.Windows.Forms.ToolStripButton tsbCopy;
+        private System.Windows.Forms.ToolStripButton tsbPaste;
+        private System.Windows.Forms.ToolStripSeparator tsbSeparator3;
+        private System.Windows.Forms.ToolStripButton tsbDelete;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -70,6 +82,18 @@
         {
             this.menuStrip1 = new System.Windows.Forms.MenuStrip();
 
+            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.tsbBack = new System.Windows.Forms.ToolStripButton();
+            this.tsbUp = new System.Windows.Forms.ToolStripButton();
+            this.tsbRefresh = new System.Windows.Forms.ToolStripButton();
+            this.tsbSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+            this.tsbNewFolder = new System.Windows.Forms.ToolStripButton();
+            this.tsbSeparator2 = new System.Windows.Forms.ToolStripSeparator();
+            this.tsbCopy = new System.Windows.Forms.ToolStripButton();
+            this.tsbPaste = new System.Windows.Forms.ToolStripButton();
+            this.tsbSeparator3 = new System.Windows.Forms.ToolStripSeparator();
+            this.tsbDelete = new System.Windows.Forms.ToolStripButton();
+
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFile = new System.Windows.Forms.ToolStripMenuItem();
@@ -109,6 +133,7 @@
             this.mnuHelpAbout = new System.Windows.Forms.ToolStripMenuItem();
 
             this.menuStrip1.SuspendLayout();
+            this.toolStrip1.SuspendLayout();
             this.SuspendLayout();
 
             // 
@@ -305,17 +330,88 @@
             this.mnuHelpAbout.Click += new System.EventHandler(this.mnuHelpAbout_Click);
 
             // 
+            // toolStrip1
+            // 
+            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.tsbBack,
+                this.tsbUp,
+                this.tsbRefresh,
+                this.tsbSeparator1,
+                this.tsbNewFolder,
+                this.tsbSeparator2,
+                this.tsbCopy,
+                this.tsbPaste,
+                this.tsbSeparator3,
+                this.tsbDelete});
+            this.toolStrip1.Location = new System.Drawing.Point(0, 24);
+            this.toolStrip1.Name = "toolStrip1";
+            this.toolStrip1.Size = new System.Drawing.Size(800, 25);
+            this.toolStrip1.TabIndex = 1;
+            this.toolStrip1.Text = "toolStrip1";
+
+            this.tsbBack.Name = "tsbBack";
+            this.tsbBack.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbBack.Text = "◄ Back";
+            this.tsbBack.ToolTipText = "Quay lại thư mục trước";
+            this.tsbBack.Click += new System.EventHandler(this.tsbBack_Click);
+
+            this.tsbUp.Name = "tsbUp";
+            this.tsbUp.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbUp.Text = "▲ Up";
+            this.tsbUp.ToolTipText = "Lên thư mục cha";
+            this.tsbUp.Click += new System.EventHandler(this.tsbUp_Click);
+
+            this.tsbRefresh.Name = "tsbRefresh";
+            this.tsbRefresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbRefresh.Text = "⟲ Refresh";
+            this.tsbRefresh.ToolTipText = "Làm mới (F5)";
+            this.tsbRefresh.Click += new System.EventHandler(this.tsbRefresh_Click);
+
+            this.tsbSeparator1.Name = "tsbSeparator1";
+
+            this.tsbNewFolder.Name = "tsbNewFolder";
+            this.tsbNewFolder.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbNewFolder.Text = "New Folder";
+            this.tsbNewFolder.ToolTipText = "Tạo thư mục mới";
+            this.tsbNewFolder.Click += new System.EventHandler(this.tsbNewFolder_Click);
+
+            this.tsbSeparator2.Name = "tsbSeparator2";
+
+            this.tsbCopy.Name = "tsbCopy";
+            this.tsbCopy.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbCopy.Text = "Copy";
+            this.tsbCopy.ToolTipText = "Sao chép (Ctrl+C)";
+            this.tsbCopy.Click += new System.EventHandler(this.tsbCopy_Click);
+
+            this.tsbPaste.Name = "tsbPaste";
+            this.tsbPaste.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbPaste.Text = "Paste";
+            this.tsbPaste.ToolTipText = "Dán (Ctrl+V)";
+            this.tsbPaste.Click += new System.EventHandler(this.tsbPaste_Click);
+
+            this.tsbSeparator3.Name = "tsbSeparator3";
+
+            this.tsbDelete.Name = "tsbDelete";
+            this.tsbDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this.tsbDelete.Text = "Delete";
+            this.tsbDelete.ToolTipText = "Xóa (Del)";
+            this.tsbDelete.Click += new System.EventHandler(this.tsbDelete_Click);
+
+            // 
             // MainForm
             // 
             this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.menuStrip1);
+            this.Controls.Add(this.toolStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.Text = "MainForm";
 
             this.menuStrip1.ResumeLayout(false);
+            this.toolStrip1.ResumeLayout(false);
+            this.toolStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
         }

@@ -45,6 +45,10 @@ namespace FileExplorerApp.Forms
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
+        // Lich su cac thu muc da tham (cho nut Back tren ToolStrip). Moi lan NavigateTo
+        // duoc goi, duong dan hien tai (truoc khi doi) duoc day vao day.
+        private readonly Stack<string> _backHistory = new Stack<string>();
+
         public MainForm()
         {
             InitializeComponent();
@@ -429,6 +433,67 @@ namespace FileExplorerApp.Forms
         {
             return Attribute.GetCustomAttribute(assembly, typeof(T)) as T;
         }
+
+        #endregion
+
+        #region ToolStrip (Back/Up/Refresh/New Folder/Copy/Paste/Delete)
+
+        /// <summary>
+        /// Di chuyen den mot thu muc moi: day thu muc hien tai vao lich su Back,
+        /// cap nhat _currentPath, roi lam moi noi dung hien thi.
+        /// </summary>
+        /// <param name="path">Duong dan thu muc can di chuyen den.</param>
+        private void NavigateTo(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                return;
+
+            _backHistory.Push(_currentPath);
+            _currentPath = path;
+
+            // TODO: khi da co ListView/TreeView duyet thu muc thuc te, ham nay se la
+            // noi trung tam de cap nhat dia chi hien thi (VD: mot TextBox address bar).
+            mnuViewRefresh_Click(this, EventArgs.Empty);
+        }
+
+        private void tsbBack_Click(object sender, EventArgs e)
+        {
+            if (_backHistory.Count == 0)
+            {
+                MessageBox.Show("Không có gì để quay lại.", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _currentPath = _backHistory.Pop();
+            mnuViewRefresh_Click(sender, e);
+        }
+
+        private void tsbUp_Click(object sender, EventArgs e)
+        {
+            DirectoryInfo parent = Directory.GetParent(_currentPath);
+            if (parent == null)
+            {
+                MessageBox.Show("Đã ở thư mục gốc (ổ đĩa), không thể lên cao hơn.",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            NavigateTo(parent.FullName);
+        }
+
+        // Cac nut con lai chi la loi tat cua menu tuong ung, dung lai dung 1 noi
+        // xu ly logic (menu MenuStrip) de tranh trung lap code.
+
+        private void tsbRefresh_Click(object sender, EventArgs e) => mnuViewRefresh_Click(sender, e);
+
+        private void tsbNewFolder_Click(object sender, EventArgs e) => mnuFileNewFolder_Click(sender, e);
+
+        private void tsbCopy_Click(object sender, EventArgs e) => mnuEditCopy_Click(sender, e);
+
+        private void tsbPaste_Click(object sender, EventArgs e) => mnuEditPaste_Click(sender, e);
+
+        private void tsbDelete_Click(object sender, EventArgs e) => mnuEditDelete_Click(sender, e);
 
         #endregion
     }
