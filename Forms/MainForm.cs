@@ -51,9 +51,9 @@ namespace FileExplorerApp.Forms
         // duoc goi, duong dan hien tai (truoc khi doi) duoc day vao day.
         private readonly Stack<string> _backHistory = new Stack<string>();
 
-        // True trong luc dang chon node tren treeViewFolders bang code (VD: khi NavigateTo
+        // True trong luc dang chon node tren trvFolders bang code (VD: khi NavigateTo
         // duoc goi tu noi khac, khong phai tu chinh nguoi dung bam vao cay thu muc), de
-        // tranh treeViewFolders_AfterSelect goi lai NavigateTo va gay vong lap/History sai.
+        // tranh trvFolders_AfterSelect goi lai NavigateTo va gay vong lap/History sai.
         private bool _isSyncingTreeView;
 
         public MainForm()
@@ -66,20 +66,20 @@ namespace FileExplorerApp.Forms
 
             LoadIconImages();
             LoadTreeViewFolders();
-            // mnuViewRefresh_Click dong bo txtPath VA nap noi dung listViewFiles cho
+            // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
             mnuViewRefresh_Click(this, EventArgs.Empty);
         }
 
         /// <summary>
-        /// Ve va nap 2 icon placeholder ("folder"/"file") vao imageListIcons, dung
-        /// chung cho treeViewFolders va listViewFiles. Ve bang code thay vi nhung
+        /// Ve va nap 2 icon placeholder ("folder"/"file") vao imlIcons, dung
+        /// chung cho trvFolders va lvwFiles. Ve bang code thay vi nhung
         /// san file .ico/.png de khong phai quan ly them tai nguyen nhi phan.
         /// </summary>
         private void LoadIconImages()
         {
-            imageListIcons.Images.Add("folder", CreateFolderIcon());
-            imageListIcons.Images.Add("file", CreateFileIcon());
+            imlIcons.Images.Add("folder", CreateFolderIcon());
+            imlIcons.Images.Add("file", CreateFileIcon());
         }
 
         /// <summary>
@@ -223,12 +223,12 @@ namespace FileExplorerApp.Forms
         /// Lay danh sach duong dan day du dang duoc chon tren giao dien.
         /// </summary>
         /// <remarks>
-        /// Doc truc tiep tu listViewFiles.SelectedItems - moi ListViewItem duoc tao trong
+        /// Doc truc tiep tu lvwFiles.SelectedItems - moi ListViewItem duoc tao trong
         /// LoadListViewFiles() da gan Tag la duong dan day du (FullPath) tuong ung.
         /// </remarks>
         private List<string> GetSelectedPaths()
         {
-            return listViewFiles.SelectedItems
+            return lvwFiles.SelectedItems
                 .Cast<ListViewItem>()
                 .Select(item => item.Tag as string)
                 .Where(path => !string.IsNullOrEmpty(path))
@@ -366,12 +366,12 @@ namespace FileExplorerApp.Forms
 
         private void mnuEditSelectAll_Click(object sender, EventArgs e)
         {
-            foreach (ListViewItem item in listViewFiles.Items)
+            foreach (ListViewItem item in lvwFiles.Items)
             {
                 item.Selected = true;
             }
 
-            listViewFiles.Focus();
+            lvwFiles.Focus();
         }
 
         #endregion
@@ -389,12 +389,12 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Nap lai toan bo noi dung (thu muc con + file) cua _currentPath vao
-        /// listViewFiles: thu muc liet ke truoc, sau do den file, giong Windows Explorer.
+        /// lvwFiles: thu muc liet ke truoc, sau do den file, giong Windows Explorer.
         /// </summary>
         private void LoadListViewFiles()
         {
-            listViewFiles.BeginUpdate();
-            listViewFiles.Items.Clear();
+            lvwFiles.BeginUpdate();
+            lvwFiles.Items.Clear();
 
             int itemCount = 0;
             long totalSize = 0;
@@ -411,7 +411,7 @@ namespace FileExplorerApp.Forms
                     item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
                     item.SubItems.Add("Thư mục tệp");
                     item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
-                    listViewFiles.Items.Add(item);
+                    lvwFiles.Items.Add(item);
                     itemCount++;
                 }
 
@@ -425,7 +425,7 @@ namespace FileExplorerApp.Forms
                     item.SubItems.Add(file.SizeFormatted);
                     item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
                     item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
-                    listViewFiles.Items.Add(item);
+                    lvwFiles.Items.Add(item);
                     itemCount++;
                     totalSize += file.Size;
                 }
@@ -442,7 +442,7 @@ namespace FileExplorerApp.Forms
             }
             finally
             {
-                listViewFiles.EndUpdate();
+                lvwFiles.EndUpdate();
             }
 
             tsslItemCount.Text = $"{itemCount} mục";
@@ -452,11 +452,11 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Cap nhat nhan trang thai (tsslStatus) theo so muc/kich thuoc dang duoc chon
-        /// tren listViewFiles, giong thanh trang thai cua Windows Explorer.
+        /// tren lvwFiles, giong thanh trang thai cua Windows Explorer.
         /// </summary>
-        private void listViewFiles_SelectedIndexChanged(object sender, EventArgs e)
+        private void lvwFiles_SelectedIndexChanged(object sender, EventArgs e)
         {
-            int selectedCount = listViewFiles.SelectedItems.Count;
+            int selectedCount = lvwFiles.SelectedItems.Count;
             if (selectedCount == 0)
             {
                 tsslStatus.Text = "Sẵn sàng";
@@ -464,7 +464,7 @@ namespace FileExplorerApp.Forms
             }
 
             long selectedSize = 0;
-            foreach (ListViewItem item in listViewFiles.SelectedItems)
+            foreach (ListViewItem item in lvwFiles.SelectedItems)
             {
                 string path = item.Tag as string;
                 if (!string.IsNullOrEmpty(path) && File.Exists(path))
@@ -486,10 +486,10 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Nhap doi vao mot muc trong listViewFiles: mo thu muc (dieu huong den) neu
+        /// Nhap doi vao mot muc trong lvwFiles: mo thu muc (dieu huong den) neu
         /// la thu muc, hoac mo file bang ung dung mac dinh cua he thong neu la file.
         /// </summary>
-        private void listViewFiles_DoubleClick(object sender, EventArgs e)
+        private void lvwFiles_DoubleClick(object sender, EventArgs e)
         {
             OpenSelectedItem();
         }
@@ -508,10 +508,10 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void OpenSelectedItem()
         {
-            if (listViewFiles.SelectedItems.Count != 1)
+            if (lvwFiles.SelectedItems.Count != 1)
                 return;
 
-            string path = listViewFiles.SelectedItems[0].Tag as string;
+            string path = lvwFiles.SelectedItems[0].Tag as string;
             if (string.IsNullOrEmpty(path))
                 return;
 
@@ -535,13 +535,13 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Bat/tat cac muc tren cmsListView (menu chuot phai) truoc khi hien ra, tuy
-        /// theo dang co muc nao duoc chon tren listViewFiles va clipboard noi bo co
+        /// theo dang co muc nao duoc chon tren lvwFiles va clipboard noi bo co
         /// gi de dan hay khong - tranh nguoi dung bam vao muc khong the thuc hien duoc.
         /// </summary>
         private void cmsListView_Opening(object sender, CancelEventArgs e)
         {
-            bool hasSelection = listViewFiles.SelectedItems.Count > 0;
-            bool hasSingleSelection = listViewFiles.SelectedItems.Count == 1;
+            bool hasSelection = lvwFiles.SelectedItems.Count > 0;
+            bool hasSingleSelection = lvwFiles.SelectedItems.Count == 1;
 
             cmsOpen.Enabled = hasSingleSelection;
             cmsCut.Enabled = hasSelection;
@@ -575,7 +575,7 @@ namespace FileExplorerApp.Forms
             }
 
             _currentViewMode = mode;
-            listViewFiles.View = _currentViewMode;
+            lvwFiles.View = _currentViewMode;
         }
 
         private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)
@@ -703,7 +703,7 @@ namespace FileExplorerApp.Forms
             // noi trung tam de cap nhat dia chi hien thi (VD: mot TextBox address bar).
             mnuViewRefresh_Click(this, EventArgs.Empty);
 
-            // Dong bo lai lua chon tren treeViewFolders (VD: khi NavigateTo duoc goi tu
+            // Dong bo lai lua chon tren trvFolders (VD: khi NavigateTo duoc goi tu
             // Back/Up/txtPath thay vi tu chinh nguoi dung bam vao cay thu muc).
             SelectTreeViewNodeForPath(path);
         }
@@ -783,7 +783,7 @@ namespace FileExplorerApp.Forms
 
         #endregion
 
-        #region TreeView thu muc (treeViewFolders, panel trai cua splitContainer1)
+        #region TreeView thu muc (trvFolders, panel trai cua spcMain)
 
         // Nhan gia tri "..." dung lam node "gia" (dummy) de bao TreeView node do co the
         // mo rong duoc, ma chua can doc thuc te noi dung thu muc con ngay tu dau (lazy
@@ -792,13 +792,13 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Nap danh sach cac o dia (drive) san sang (IsReady) lam node goc cua
-        /// treeViewFolders. Moi node o dia duoc them mot node "gia" ben trong de
+        /// trvFolders. Moi node o dia duoc them mot node "gia" ben trong de
         /// mui ten mo rong xuat hien, noi dung thuc su chi duoc doc khi nguoi dung
-        /// bam mo rong (xem treeViewFolders_BeforeExpand).
+        /// bam mo rong (xem trvFolders_BeforeExpand).
         /// </summary>
         private void LoadTreeViewFolders()
         {
-            treeViewFolders.Nodes.Clear();
+            trvFolders.Nodes.Clear();
 
             foreach (DriveInfo drive in DriveInfo.GetDrives())
             {
@@ -809,7 +809,7 @@ namespace FileExplorerApp.Forms
                 driveNode.ImageKey = "folder";
                 driveNode.SelectedImageKey = "folder";
                 driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
-                treeViewFolders.Nodes.Add(driveNode);
+                trvFolders.Nodes.Add(driveNode);
             }
         }
 
@@ -817,7 +817,7 @@ namespace FileExplorerApp.Forms
         /// Doc danh sach thu muc con thuc su cua mot node (thay the node "gia"), duoc
         /// goi khi nguoi dung sap mo rong node do lan dau tien.
         /// </summary>
-        private void treeViewFolders_BeforeExpand(object sender, TreeViewCancelEventArgs e)
+        private void trvFolders_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
             TreeNode node = e.Node;
 
@@ -866,7 +866,7 @@ namespace FileExplorerApp.Forms
         /// Khi nguoi dung chon mot node tren cay thu muc, dieu huong ung dung den
         /// thu muc tuong ung (dung chung NavigateTo voi txtPath/Back/Up).
         /// </summary>
-        private void treeViewFolders_AfterSelect(object sender, TreeViewEventArgs e)
+        private void trvFolders_AfterSelect(object sender, TreeViewEventArgs e)
         {
             if (_isSyncingTreeView)
                 return; // Dang tu dong chon lai node do NavigateTo goi, khong can dieu huong lai.
@@ -879,11 +879,11 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Tim va chon node tren treeViewFolders tuong ung voi mot duong dan cho truoc
+        /// Tim va chon node tren trvFolders tuong ung voi mot duong dan cho truoc
         /// (neu node do da duoc nap), de cay thu muc luon dong bo voi _currentPath khi
         /// dieu huong tu noi khac (txtPath, Back, Up) thay vi tu chinh cay thu muc.
         /// </summary>
-        /// <param name="path">Duong dan can dong bo len treeViewFolders.</param>
+        /// <param name="path">Duong dan can dong bo len trvFolders.</param>
         private void SelectTreeViewNodeForPath(string path)
         {
             // TODO: hien tai chi la khung don gian, chua tu mo rong (expand) cac node

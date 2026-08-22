@@ -22,9 +22,9 @@
 
         #region Windows Form Designer generated code
 
-        private System.Windows.Forms.MenuStrip menuStrip1;
+        private System.Windows.Forms.MenuStrip mnsMain;
 
-        private System.Windows.Forms.ToolStrip toolStrip1;
+        private System.Windows.Forms.ToolStrip tlsMain;
         private System.Windows.Forms.ToolStripButton tsbBack;
         private System.Windows.Forms.ToolStripButton tsbUp;
         private System.Windows.Forms.ToolStripButton tsbRefresh;
@@ -41,19 +41,19 @@
         private System.Windows.Forms.Button btnGo;
         private System.Windows.Forms.TextBox txtPath;
 
-        private System.Windows.Forms.SplitContainer splitContainer1;
-        private System.Windows.Forms.TreeView treeViewFolders;
-        private System.Windows.Forms.ListView listViewFiles;
+        private System.Windows.Forms.SplitContainer spcMain;
+        private System.Windows.Forms.TreeView trvFolders;
+        private System.Windows.Forms.ListView lvwFiles;
         private System.Windows.Forms.ColumnHeader colName;
         private System.Windows.Forms.ColumnHeader colSize;
         private System.Windows.Forms.ColumnHeader colType;
         private System.Windows.Forms.ColumnHeader colModified;
 
-        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.StatusStrip stsMain;
         private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
         private System.Windows.Forms.ToolStripStatusLabel tsslItemCount;
         private System.Windows.Forms.ToolStripStatusLabel tsslTotalSize;
-        private System.Windows.Forms.ToolStripProgressBar tsProgressBar;
+        private System.Windows.Forms.ToolStripProgressBar tspProgress;
 
         private System.Windows.Forms.ContextMenuStrip cmsListView;
         private System.Windows.Forms.ToolStripMenuItem cmsOpen;
@@ -68,7 +68,7 @@
         private System.Windows.Forms.ToolStripMenuItem cmsNewFolder;
         private System.Windows.Forms.ToolStripMenuItem cmsRefresh;
 
-        private System.Windows.Forms.ImageList imageListIcons;
+        private System.Windows.Forms.ImageList imlIcons;
 
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
@@ -115,9 +115,9 @@
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            this.menuStrip1 = new System.Windows.Forms.MenuStrip();
+            this.mnsMain = new System.Windows.Forms.MenuStrip();
 
-            this.toolStrip1 = new System.Windows.Forms.ToolStrip();
+            this.tlsMain = new System.Windows.Forms.ToolStrip();
             this.tsbBack = new System.Windows.Forms.ToolStripButton();
             this.tsbUp = new System.Windows.Forms.ToolStripButton();
             this.tsbRefresh = new System.Windows.Forms.ToolStripButton();
@@ -134,19 +134,19 @@
             this.btnGo = new System.Windows.Forms.Button();
             this.txtPath = new System.Windows.Forms.TextBox();
 
-            this.splitContainer1 = new System.Windows.Forms.SplitContainer();
-            this.treeViewFolders = new System.Windows.Forms.TreeView();
-            this.listViewFiles = new System.Windows.Forms.ListView();
+            this.spcMain = new System.Windows.Forms.SplitContainer();
+            this.trvFolders = new System.Windows.Forms.TreeView();
+            this.lvwFiles = new System.Windows.Forms.ListView();
             this.colName = new System.Windows.Forms.ColumnHeader();
             this.colSize = new System.Windows.Forms.ColumnHeader();
             this.colType = new System.Windows.Forms.ColumnHeader();
             this.colModified = new System.Windows.Forms.ColumnHeader();
 
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.stsMain = new System.Windows.Forms.StatusStrip();
             this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslItemCount = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslTotalSize = new System.Windows.Forms.ToolStripStatusLabel();
-            this.tsProgressBar = new System.Windows.Forms.ToolStripProgressBar();
+            this.tspProgress = new System.Windows.Forms.ToolStripProgressBar();
 
             this.cmsListView = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.cmsOpen = new System.Windows.Forms.ToolStripMenuItem();
@@ -161,7 +161,7 @@
             this.cmsNewFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.cmsRefresh = new System.Windows.Forms.ToolStripMenuItem();
 
-            this.imageListIcons = new System.Windows.Forms.ImageList(this.components);
+            this.imlIcons = new System.Windows.Forms.ImageList(this.components);
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -201,29 +201,29 @@
             this.mnuHelp = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuHelpAbout = new System.Windows.Forms.ToolStripMenuItem();
 
-            this.menuStrip1.SuspendLayout();
-            this.toolStrip1.SuspendLayout();
-            this.statusStrip1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
-            this.splitContainer1.Panel1.SuspendLayout();
-            this.splitContainer1.Panel2.SuspendLayout();
-            this.splitContainer1.SuspendLayout();
+            this.mnsMain.SuspendLayout();
+            this.tlsMain.SuspendLayout();
+            this.stsMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.spcMain)).BeginInit();
+            this.spcMain.Panel1.SuspendLayout();
+            this.spcMain.Panel2.SuspendLayout();
+            this.spcMain.SuspendLayout();
             this.SuspendLayout();
 
             // 
-            // menuStrip1
+            // mnsMain
             // 
-            this.menuStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.mnsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.mnuFile,
                 this.mnuEdit,
                 this.mnuView,
                 this.mnuTools,
                 this.mnuHelp});
-            this.menuStrip1.Location = new System.Drawing.Point(0, 0);
-            this.menuStrip1.Name = "menuStrip1";
-            this.menuStrip1.Size = new System.Drawing.Size(800, 24);
-            this.menuStrip1.TabIndex = 0;
-            this.menuStrip1.Text = "menuStrip1";
+            this.mnsMain.Location = new System.Drawing.Point(0, 0);
+            this.mnsMain.Name = "mnsMain";
+            this.mnsMain.Size = new System.Drawing.Size(800, 24);
+            this.mnsMain.TabIndex = 0;
+            this.mnsMain.Text = "mnsMain";
 
             // 
             // mnuFile ("Tệp")
@@ -404,9 +404,9 @@
             this.mnuHelpAbout.Click += new System.EventHandler(this.mnuHelpAbout_Click);
 
             // 
-            // toolStrip1
+            // tlsMain
             // 
-            this.toolStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.tlsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.tsbBack,
                 this.tsbUp,
                 this.tsbRefresh,
@@ -417,11 +417,11 @@
                 this.tsbPaste,
                 this.tsbSeparator3,
                 this.tsbDelete});
-            this.toolStrip1.Location = new System.Drawing.Point(0, 24);
-            this.toolStrip1.Name = "toolStrip1";
-            this.toolStrip1.Size = new System.Drawing.Size(800, 25);
-            this.toolStrip1.TabIndex = 1;
-            this.toolStrip1.Text = "toolStrip1";
+            this.tlsMain.Location = new System.Drawing.Point(0, 24);
+            this.tlsMain.Name = "tlsMain";
+            this.tlsMain.Size = new System.Drawing.Size(800, 25);
+            this.tlsMain.TabIndex = 1;
+            this.tlsMain.Text = "tlsMain";
 
             this.tsbBack.Name = "tsbBack";
             this.tsbBack.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
@@ -506,59 +506,59 @@
             this.txtPath.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPath_KeyDown);
 
             // 
-            // splitContainer1 (chia 2 vung lam viec: Panel1 = cay thu muc, Panel2 = danh sach file)
+            // spcMain (chia 2 vung lam viec: Panel1 = cay thu muc, Panel2 = danh sach file)
             // 
-            this.splitContainer1.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.splitContainer1.Location = new System.Drawing.Point(0, 77);
-            this.splitContainer1.Name = "splitContainer1";
-            this.splitContainer1.Size = new System.Drawing.Size(800, 373);
-            this.splitContainer1.SplitterDistance = 220;
-            this.splitContainer1.SplitterWidth = 4;
-            this.splitContainer1.TabIndex = 3;
+            this.spcMain.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.spcMain.Location = new System.Drawing.Point(0, 77);
+            this.spcMain.Name = "spcMain";
+            this.spcMain.Size = new System.Drawing.Size(800, 373);
+            this.spcMain.SplitterDistance = 220;
+            this.spcMain.SplitterWidth = 4;
+            this.spcMain.TabIndex = 3;
 
-            // Panel1 (trai) - chua treeViewFolders (cay thu muc).
-            this.splitContainer1.Panel1.Controls.Add(this.treeViewFolders);
-            this.splitContainer1.Panel1.Name = "splitContainer1.Panel1";
+            // Panel1 (trai) - chua trvFolders (cay thu muc).
+            this.spcMain.Panel1.Controls.Add(this.trvFolders);
+            this.spcMain.Panel1.Name = "spcMain.Panel1";
 
-            // Panel2 (phai) - chua listViewFiles (danh sach file/thu muc).
-            this.splitContainer1.Panel2.Controls.Add(this.listViewFiles);
-            this.splitContainer1.Panel2.Name = "splitContainer1.Panel2";
-
-            //
-            // treeViewFolders (cay thu muc ben trai)
-            //
-            this.treeViewFolders.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.treeViewFolders.Name = "treeViewFolders";
-            this.treeViewFolders.HideSelection = false;
-            this.treeViewFolders.PathSeparator = System.IO.Path.DirectorySeparatorChar.ToString();
-            this.treeViewFolders.TabIndex = 0;
-            this.treeViewFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewFolders_AfterSelect);
-            this.treeViewFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeViewFolders_BeforeExpand);
-            this.treeViewFolders.ImageList = this.imageListIcons;
-            this.treeViewFolders.ImageKey = "folder";
-            this.treeViewFolders.SelectedImageKey = "folder";
+            // Panel2 (phai) - chua lvwFiles (danh sach file/thu muc).
+            this.spcMain.Panel2.Controls.Add(this.lvwFiles);
+            this.spcMain.Panel2.Name = "spcMain.Panel2";
 
             //
-            // listViewFiles (danh sach file/thu muc ben phai, che do Details)
+            // trvFolders (cay thu muc ben trai)
             //
-            this.listViewFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.trvFolders.Name = "trvFolders";
+            this.trvFolders.HideSelection = false;
+            this.trvFolders.PathSeparator = System.IO.Path.DirectorySeparatorChar.ToString();
+            this.trvFolders.TabIndex = 0;
+            this.trvFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.trvFolders_AfterSelect);
+            this.trvFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.trvFolders_BeforeExpand);
+            this.trvFolders.ImageList = this.imlIcons;
+            this.trvFolders.ImageKey = "folder";
+            this.trvFolders.SelectedImageKey = "folder";
+
+            //
+            // lvwFiles (danh sach file/thu muc ben phai, che do Details)
+            //
+            this.lvwFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
                 this.colName,
                 this.colSize,
                 this.colType,
                 this.colModified});
-            this.listViewFiles.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.listViewFiles.FullRowSelect = true;
-            this.listViewFiles.GridLines = true;
-            this.listViewFiles.HideSelection = false;
-            this.listViewFiles.MultiSelect = true;
-            this.listViewFiles.Name = "listViewFiles";
-            this.listViewFiles.TabIndex = 0;
-            this.listViewFiles.UseCompatibleStateImageBehavior = false;
-            this.listViewFiles.View = System.Windows.Forms.View.Details;
-            this.listViewFiles.ContextMenuStrip = this.cmsListView;
-            this.listViewFiles.SmallImageList = this.imageListIcons;
-            this.listViewFiles.DoubleClick += new System.EventHandler(this.listViewFiles_DoubleClick);
-            this.listViewFiles.SelectedIndexChanged += new System.EventHandler(this.listViewFiles_SelectedIndexChanged);
+            this.lvwFiles.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lvwFiles.FullRowSelect = true;
+            this.lvwFiles.GridLines = true;
+            this.lvwFiles.HideSelection = false;
+            this.lvwFiles.MultiSelect = true;
+            this.lvwFiles.Name = "lvwFiles";
+            this.lvwFiles.TabIndex = 0;
+            this.lvwFiles.UseCompatibleStateImageBehavior = false;
+            this.lvwFiles.View = System.Windows.Forms.View.Details;
+            this.lvwFiles.ContextMenuStrip = this.cmsListView;
+            this.lvwFiles.SmallImageList = this.imlIcons;
+            this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
+            this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
 
             this.colName.Text = "Tên";
             this.colName.Width = 240;
@@ -574,7 +574,7 @@
             this.colModified.Width = 140;
 
             //
-            // cmsListView (menu chuot phai tren listViewFiles)
+            // cmsListView (menu chuot phai tren lvwFiles)
             //
             this.cmsListView.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.cmsOpen,
@@ -630,34 +630,34 @@
             this.cmsRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
 
             //
-            // imageListIcons (icon "folder"/"file" dung cho treeViewFolders va listViewFiles).
+            // imlIcons (icon "folder"/"file" dung cho trvFolders va lvwFiles).
             // Anh thuc te duoc ve dong luc bang code (LoadIconImages trong MainForm.cs),
             // khong nhung san file .ico/.png de tranh phai quan ly them tai nguyen nhi phan.
             //
-            this.imageListIcons.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
-            this.imageListIcons.ImageSize = new System.Drawing.Size(16, 16);
-            this.imageListIcons.TransparentColor = System.Drawing.Color.Transparent;
+            this.imlIcons.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
+            this.imlIcons.ImageSize = new System.Drawing.Size(16, 16);
+            this.imlIcons.TransparentColor = System.Drawing.Color.Transparent;
 
             //
-            // statusStrip1 (so muc, dung luong, trang thai o duoi cung cua so)
+            // stsMain (so muc, dung luong, trang thai o duoi cung cua so)
             //
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.stsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
                 this.tsslStatus,
-                this.tsProgressBar,
+                this.tspProgress,
                 this.tsslItemCount,
                 this.tsslTotalSize});
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.TabIndex = 4;
+            this.stsMain.Name = "stsMain";
+            this.stsMain.TabIndex = 4;
 
             this.tsslStatus.Name = "tsslStatus";
             this.tsslStatus.Text = "Sẵn sàng";
             this.tsslStatus.Spring = true; // Choan het khoang trong con lai, day 2 nhan sau ve ben phai.
             this.tsslStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
 
-            this.tsProgressBar.Name = "tsProgressBar";
-            this.tsProgressBar.Size = new System.Drawing.Size(120, 16);
-            this.tsProgressBar.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
-            this.tsProgressBar.Visible = false; // Mac dinh an, chi hien khi co thao tac dang chay (VD: sao chep, tim kiem).
+            this.tspProgress.Name = "tspProgress";
+            this.tspProgress.Size = new System.Drawing.Size(120, 16);
+            this.tspProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this.tspProgress.Visible = false; // Mac dinh an, chi hien khi co thao tac dang chay (VD: sao chep, tim kiem).
 
             this.tsslItemCount.Name = "tsslItemCount";
             this.tsslItemCount.Text = "0 mục";
@@ -674,25 +674,25 @@
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.menuStrip1);
-            this.Controls.Add(this.toolStrip1);
+            this.Controls.Add(this.mnsMain);
+            this.Controls.Add(this.tlsMain);
             this.Controls.Add(this.pnlAddressBar);
-            this.Controls.Add(this.splitContainer1);
-            this.Controls.Add(this.statusStrip1);
-            this.MainMenuStrip = this.menuStrip1;
+            this.Controls.Add(this.spcMain);
+            this.Controls.Add(this.stsMain);
+            this.MainMenuStrip = this.mnsMain;
             this.Name = "MainForm";
             this.Text = "MainForm";
 
-            this.menuStrip1.ResumeLayout(false);
-            this.toolStrip1.ResumeLayout(false);
-            this.toolStrip1.PerformLayout();
+            this.mnsMain.ResumeLayout(false);
+            this.tlsMain.ResumeLayout(false);
+            this.tlsMain.PerformLayout();
             this.pnlAddressBar.ResumeLayout(false);
-            this.splitContainer1.Panel1.ResumeLayout(false);
-            this.splitContainer1.Panel2.ResumeLayout(false);
-            this.splitContainer1.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
+            this.spcMain.Panel1.ResumeLayout(false);
+            this.spcMain.Panel2.ResumeLayout(false);
+            this.spcMain.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.spcMain)).EndInit();
+            this.stsMain.ResumeLayout(false);
+            this.stsMain.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
