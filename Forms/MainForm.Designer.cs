@@ -514,6 +514,11 @@
             this.spcMain.Size = new System.Drawing.Size(800, 373);
             this.spcMain.SplitterDistance = 220;
             this.spcMain.SplitterWidth = 4;
+            // FixedPanel = None (mac dinh): khi form resize, ca 2 panel co gian ti le
+            // voi nhau thay vi chi Panel2 (phai) gianh het phan them/bot - giu duoc ty le
+            // hop ly giua cay thu muc va danh sach file khi phong to/thu nho cua so.
+            this.spcMain.Panel1MinSize = 120; // Du rong toi thieu de thay ten thu muc trong trvFolders.
+            this.spcMain.Panel2MinSize = 200; // Du rong toi thieu de con thay it nhat vai cot cua lvwFiles.
             this.spcMain.TabIndex = 3;
 
             // Panel1 (trai) - chua trvFolders (cay thu muc).
@@ -674,6 +679,11 @@
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            // Gioi han kich thuoc toi thieu de mnsMain/tlsMain/pnlAddressBar/stsMain (cao co dinh,
+            // Dock=Top/Bottom) va Panel1MinSize/Panel2MinSize cua spcMain luon co du cho de hien
+            // thi dung, tranh cac control chong len nhau hoac spcMain bi am kich thuoc khi keo
+            // form qua nho.
+            this.MinimumSize = new System.Drawing.Size(500, 350);
             this.Controls.Add(this.mnsMain);
             this.Controls.Add(this.tlsMain);
             this.Controls.Add(this.pnlAddressBar);
