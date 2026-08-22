@@ -331,6 +331,9 @@ namespace FileExplorerApp.Forms
             listViewFiles.BeginUpdate();
             listViewFiles.Items.Clear();
 
+            int itemCount = 0;
+            long totalSize = 0;
+
             try
             {
                 foreach (string folderPath in Directory.GetDirectories(_currentPath))
@@ -344,6 +347,7 @@ namespace FileExplorerApp.Forms
                     item.SubItems.Add("Thư mục tệp");
                     item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
                     listViewFiles.Items.Add(item);
+                    itemCount++;
                 }
 
                 foreach (string filePath in Directory.GetFiles(_currentPath))
@@ -357,6 +361,8 @@ namespace FileExplorerApp.Forms
                     item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
                     item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
                     listViewFiles.Items.Add(item);
+                    itemCount++;
+                    totalSize += file.Size;
                 }
             }
             catch (UnauthorizedAccessException)
@@ -373,6 +379,45 @@ namespace FileExplorerApp.Forms
             {
                 listViewFiles.EndUpdate();
             }
+
+            tsslItemCount.Text = $"{itemCount} mục";
+            tsslTotalSize.Text = FormatHelper.FormatSize(totalSize);
+            tsslStatus.Text = "Sẵn sàng";
+        }
+
+        /// <summary>
+        /// Cap nhat nhan trang thai (tsslStatus) theo so muc/kich thuoc dang duoc chon
+        /// tren listViewFiles, giong thanh trang thai cua Windows Explorer.
+        /// </summary>
+        private void listViewFiles_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            int selectedCount = listViewFiles.SelectedItems.Count;
+            if (selectedCount == 0)
+            {
+                tsslStatus.Text = "Sẵn sàng";
+                return;
+            }
+
+            long selectedSize = 0;
+            foreach (ListViewItem item in listViewFiles.SelectedItems)
+            {
+                string path = item.Tag as string;
+                if (!string.IsNullOrEmpty(path) && File.Exists(path))
+                {
+                    try
+                    {
+                        selectedSize += new FileInfo(path).Length;
+                    }
+                    catch (IOException)
+                    {
+                        // Bo qua neu file vua bi xoa/khoa giua luc dang tinh tong.
+                    }
+                }
+            }
+
+            tsslStatus.Text = selectedSize > 0
+                ? $"{selectedCount} mục được chọn ({FormatHelper.FormatSize(selectedSize)})"
+                : $"{selectedCount} mục được chọn";
         }
 
         /// <summary>

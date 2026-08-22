@@ -49,6 +49,11 @@
         private System.Windows.Forms.ColumnHeader colType;
         private System.Windows.Forms.ColumnHeader colModified;
 
+        private System.Windows.Forms.StatusStrip statusStrip1;
+        private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
+        private System.Windows.Forms.ToolStripStatusLabel tsslItemCount;
+        private System.Windows.Forms.ToolStripStatusLabel tsslTotalSize;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -120,6 +125,11 @@
             this.colType = new System.Windows.Forms.ColumnHeader();
             this.colModified = new System.Windows.Forms.ColumnHeader();
 
+            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
+            this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
+            this.tsslItemCount = new System.Windows.Forms.ToolStripStatusLabel();
+            this.tsslTotalSize = new System.Windows.Forms.ToolStripStatusLabel();
+
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFile = new System.Windows.Forms.ToolStripMenuItem();
@@ -160,6 +170,7 @@
 
             this.menuStrip1.SuspendLayout();
             this.toolStrip1.SuspendLayout();
+            this.statusStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
             this.splitContainer1.Panel2.SuspendLayout();
@@ -509,6 +520,7 @@
             this.listViewFiles.UseCompatibleStateImageBehavior = false;
             this.listViewFiles.View = System.Windows.Forms.View.Details;
             this.listViewFiles.DoubleClick += new System.EventHandler(this.listViewFiles_DoubleClick);
+            this.listViewFiles.SelectedIndexChanged += new System.EventHandler(this.listViewFiles_SelectedIndexChanged);
 
             this.colName.Text = "Tên";
             this.colName.Width = 240;
@@ -523,9 +535,34 @@
             this.colModified.Text = "Ngày sửa đổi";
             this.colModified.Width = 140;
 
-            // 
+            //
+            // statusStrip1 (so muc, dung luong, trang thai o duoi cung cua so)
+            //
+            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+                this.tsslStatus,
+                this.tsslItemCount,
+                this.tsslTotalSize});
+            this.statusStrip1.Name = "statusStrip1";
+            this.statusStrip1.TabIndex = 4;
+
+            this.tsslStatus.Name = "tsslStatus";
+            this.tsslStatus.Text = "Sẵn sàng";
+            this.tsslStatus.Spring = true; // Choan het khoang trong con lai, day 2 nhan sau ve ben phai.
+            this.tsslStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+
+            this.tsslItemCount.Name = "tsslItemCount";
+            this.tsslItemCount.Text = "0 mục";
+            this.tsslItemCount.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
+            this.tsslItemCount.AutoSize = true;
+
+            this.tsslTotalSize.Name = "tsslTotalSize";
+            this.tsslTotalSize.Text = "0 byte";
+            this.tsslTotalSize.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
+            this.tsslTotalSize.AutoSize = true;
+
+            //
             // MainForm
-            // 
+            //
             this.components = new System.ComponentModel.Container();
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
@@ -533,6 +570,7 @@
             this.Controls.Add(this.toolStrip1);
             this.Controls.Add(this.pnlAddressBar);
             this.Controls.Add(this.splitContainer1);
+            this.Controls.Add(this.statusStrip1);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.Text = "MainForm";
@@ -545,6 +583,8 @@
             this.splitContainer1.Panel2.ResumeLayout(false);
             this.splitContainer1.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).EndInit();
+            this.statusStrip1.ResumeLayout(false);
+            this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
