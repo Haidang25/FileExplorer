@@ -56,6 +56,8 @@ namespace FileExplorerApp.Forms
             // Dung icon da gan cho file .exe (ApplicationIcon) lam icon cua form,
             // khong phu thuoc duong dan tuong doi luc chay.
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+
+            txtPath.Text = _currentPath;
         }
 
         #region Menu Tep (File)
@@ -298,6 +300,10 @@ namespace FileExplorerApp.Forms
 
         private void mnuViewRefresh_Click(object sender, EventArgs e)
         {
+            // Dong bo thanh dia chi voi duong dan hien tai - lam truoc tien de txtPath
+            // luon dung ke ca khi phan duyet noi dung ben duoi chua duoc trien khai.
+            txtPath.Text = _currentPath;
+
             // TODO: nap lai noi dung thu muc dang mo (FileService.GetFiles + FolderService.GetSubFolders).
         }
 
@@ -494,6 +500,39 @@ namespace FileExplorerApp.Forms
         private void tsbPaste_Click(object sender, EventArgs e) => mnuEditPaste_Click(sender, e);
 
         private void tsbDelete_Click(object sender, EventArgs e) => mnuEditDelete_Click(sender, e);
+
+        #endregion
+
+        #region Thanh dia chi (txtPath, Go, Up)
+
+        private void btnUp_Click(object sender, EventArgs e) => tsbUp_Click(sender, e);
+
+        private void btnGo_Click(object sender, EventArgs e)
+        {
+            string path = txtPath.Text.Trim();
+
+            if (string.IsNullOrWhiteSpace(path))
+                return;
+
+            if (!Directory.Exists(path))
+            {
+                MessageBox.Show($"Không tìm thấy thư mục:\n{path}", "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtPath.Text = _currentPath; // Khoi phuc lai duong dan cu tren thanh dia chi.
+                return;
+            }
+
+            NavigateTo(path);
+        }
+
+        private void txtPath_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true; // Tranh tieng "beep" va xuong dong trong TextBox.
+                btnGo_Click(sender, e);
+            }
+        }
 
         #endregion
     }

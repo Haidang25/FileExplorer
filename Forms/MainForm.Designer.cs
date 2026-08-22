@@ -36,6 +36,11 @@
         private System.Windows.Forms.ToolStripSeparator tsbSeparator3;
         private System.Windows.Forms.ToolStripButton tsbDelete;
 
+        private System.Windows.Forms.Panel pnlAddressBar;
+        private System.Windows.Forms.Button btnUp;
+        private System.Windows.Forms.Button btnGo;
+        private System.Windows.Forms.TextBox txtPath;
+
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFile;
@@ -93,6 +98,11 @@
             this.tsbPaste = new System.Windows.Forms.ToolStripButton();
             this.tsbSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.tsbDelete = new System.Windows.Forms.ToolStripButton();
+
+            this.pnlAddressBar = new System.Windows.Forms.Panel();
+            this.btnUp = new System.Windows.Forms.Button();
+            this.btnGo = new System.Windows.Forms.Button();
+            this.txtPath = new System.Windows.Forms.TextBox();
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -398,6 +408,40 @@
             this.tsbDelete.Click += new System.EventHandler(this.tsbDelete_Click);
 
             // 
+            // pnlAddressBar (thanh dia chi: Up + txtPath + Go)
+            // 
+            this.pnlAddressBar.Controls.Add(this.btnUp);
+            this.pnlAddressBar.Controls.Add(this.btnGo);
+            this.pnlAddressBar.Controls.Add(this.txtPath);
+            this.pnlAddressBar.Dock = System.Windows.Forms.DockStyle.Top;
+            this.pnlAddressBar.Location = new System.Drawing.Point(0, 49);
+            this.pnlAddressBar.Name = "pnlAddressBar";
+            this.pnlAddressBar.Padding = new System.Windows.Forms.Padding(2);
+            this.pnlAddressBar.Size = new System.Drawing.Size(800, 28);
+            this.pnlAddressBar.TabIndex = 2;
+
+            this.btnUp.Name = "btnUp";
+            this.btnUp.Dock = System.Windows.Forms.DockStyle.Left;
+            this.btnUp.Width = 32;
+            this.btnUp.Text = "▲";
+            this.btnUp.TabIndex = 0;
+            this.btnUp.UseVisualStyleBackColor = true;
+            this.btnUp.Click += new System.EventHandler(this.btnUp_Click);
+
+            this.btnGo.Name = "btnGo";
+            this.btnGo.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnGo.Width = 60;
+            this.btnGo.Text = "Go";
+            this.btnGo.TabIndex = 2;
+            this.btnGo.UseVisualStyleBackColor = true;
+            this.btnGo.Click += new System.EventHandler(this.btnGo_Click);
+
+            this.txtPath.Name = "txtPath";
+            this.txtPath.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtPath.TabIndex = 1;
+            this.txtPath.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPath_KeyDown);
+
+            // 
             // MainForm
             // 
             this.components = new System.ComponentModel.Container();
@@ -405,6 +449,7 @@
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.menuStrip1);
             this.Controls.Add(this.toolStrip1);
+            this.Controls.Add(this.pnlAddressBar);
             this.MainMenuStrip = this.menuStrip1;
             this.Name = "MainForm";
             this.Text = "MainForm";
@@ -412,6 +457,7 @@
             this.menuStrip1.ResumeLayout(false);
             this.toolStrip1.ResumeLayout(false);
             this.toolStrip1.PerformLayout();
+            this.pnlAddressBar.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
         }
