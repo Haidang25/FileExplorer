@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualBasic;
+using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 using FileExplorerApp.Services;
 
@@ -62,8 +64,10 @@ namespace FileExplorerApp.Forms
             // khong phu thuoc duong dan tuong doi luc chay.
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
-            txtPath.Text = _currentPath;
             LoadTreeViewFolders();
+            // mnuViewRefresh_Click dong bo txtPath VA nap noi dung listViewFiles cho
+            // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
+            mnuViewRefresh_Click(this, EventArgs.Empty);
         }
 
         #region Menu Tep (File)
@@ -154,14 +158,16 @@ namespace FileExplorerApp.Forms
         /// Lay danh sach duong dan day du dang duoc chon tren giao dien.
         /// </summary>
         /// <remarks>
-        /// TODO: hien tai MainForm chua co ListView duyet noi dung thu muc (chi moi co
-        /// treeViewFolders ben trai), nen luon tra ve danh sach rong. Khi da xay ListView,
-        /// thay phan than ham nay bang viec doc tu (VD) listViewFiles.SelectedItems va
-        /// tra ve FullPath cua tung FileItemModel/FolderItemModel tuong ung.
+        /// Doc truc tiep tu listViewFiles.SelectedItems - moi ListViewItem duoc tao trong
+        /// LoadListViewFiles() da gan Tag la duong dan day du (FullPath) tuong ung.
         /// </remarks>
         private List<string> GetSelectedPaths()
         {
-            return new List<string>();
+            return listViewFiles.SelectedItems
+                .Cast<ListViewItem>()
+                .Select(item => item.Tag as string)
+                .Where(path => !string.IsNullOrEmpty(path))
+                .ToList();
         }
 
         private void mnuEditCut_Click(object sender, EventArgs e)
@@ -295,9 +301,12 @@ namespace FileExplorerApp.Forms
 
         private void mnuEditSelectAll_Click(object sender, EventArgs e)
         {
-            // TODO: goi listViewFiles.SelectAll() (hoac tuong duong) khi da co ListView
-            // hien thi noi dung thu muc. Hien tai chua co giao dien liet ke nen chua
-            // co gi de chon.
+            foreach (ListViewItem item in listViewFiles.Items)
+            {
+                item.Selected = true;
+            }
+
+            listViewFiles.Focus();
         }
 
         #endregion
@@ -307,10 +316,94 @@ namespace FileExplorerApp.Forms
         private void mnuViewRefresh_Click(object sender, EventArgs e)
         {
             // Dong bo thanh dia chi voi duong dan hien tai - lam truoc tien de txtPath
-            // luon dung ke ca khi phan duyet noi dung ben duoi chua duoc trien khai.
+            // luon dung ke ca khi phan duyet noi dung ben duoi gap loi.
             txtPath.Text = _currentPath;
 
-            // TODO: nap lai noi dung thu muc dang mo (FileService.GetFiles + FolderService.GetSubFolders).
+            LoadListViewFiles();
+        }
+
+        /// <summary>
+        /// Nap lai toan bo noi dung (thu muc con + file) cua _currentPath vao
+        /// listViewFiles: thu muc liet ke truoc, sau do den file, giong Windows Explorer.
+        /// </summary>
+        private void LoadListViewFiles()
+        {
+            listViewFiles.BeginUpdate();
+            listViewFiles.Items.Clear();
+
+            try
+            {
+                foreach (string folderPath in Directory.GetDirectories(_currentPath))
+                {
+                    FolderItemModel folder = FolderItemModel.FromPath(folderPath);
+                    if (folder == null || (folder.IsHidden && !_showHiddenItems))
+                        continue;
+
+                    var item = new ListViewItem(folder.Name) { Tag = folder.FullPath };
+                    item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
+                    item.SubItems.Add("Thư mục tệp");
+                    item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                    listViewFiles.Items.Add(item);
+                }
+
+                foreach (string filePath in Directory.GetFiles(_currentPath))
+                {
+                    FileItemModel file = FileItemModel.FromPath(filePath);
+                    if (file == null || (file.IsHidden && !_showHiddenItems))
+                        continue;
+
+                    var item = new ListViewItem(file.Name) { Tag = file.FullPath };
+                    item.SubItems.Add(file.SizeFormatted);
+                    item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
+                    item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                    listViewFiles.Items.Add(item);
+                }
+            }
+            catch (UnauthorizedAccessException)
+            {
+                MessageBox.Show("Không đủ quyền truy cập thư mục này.", "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (IOException)
+            {
+                MessageBox.Show("Không thể đọc nội dung thư mục này.", "Lỗi",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                listViewFiles.EndUpdate();
+            }
+        }
+
+        /// <summary>
+        /// Nhap doi vao mot muc trong listViewFiles: mo thu muc (dieu huong den) neu
+        /// la thu muc, hoac mo file bang ung dung mac dinh cua he thong neu la file.
+        /// </summary>
+        private void listViewFiles_DoubleClick(object sender, EventArgs e)
+        {
+            if (listViewFiles.SelectedItems.Count != 1)
+                return;
+
+            string path = listViewFiles.SelectedItems[0].Tag as string;
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            if (Directory.Exists(path))
+            {
+                NavigateTo(path);
+            }
+            else if (File.Exists(path))
+            {
+                try
+                {
+                    Process.Start(path);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Không thể mở file:\n{ex.Message}", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
 
         private void mnuViewShowHidden_Click(object sender, EventArgs e)
@@ -337,9 +430,7 @@ namespace FileExplorerApp.Forms
             }
 
             _currentViewMode = mode;
-
-            // TODO: gan truc tiep cho ListView khi da co giao dien duyet file, VD:
-            // listViewFiles.View = _currentViewMode;
+            listViewFiles.View = _currentViewMode;
         }
 
         private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)

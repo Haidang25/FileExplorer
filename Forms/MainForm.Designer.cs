@@ -43,6 +43,11 @@
 
         private System.Windows.Forms.SplitContainer splitContainer1;
         private System.Windows.Forms.TreeView treeViewFolders;
+        private System.Windows.Forms.ListView listViewFiles;
+        private System.Windows.Forms.ColumnHeader colName;
+        private System.Windows.Forms.ColumnHeader colSize;
+        private System.Windows.Forms.ColumnHeader colType;
+        private System.Windows.Forms.ColumnHeader colModified;
 
         private System.Windows.Forms.ToolStripMenuItem mnuFile;
         private System.Windows.Forms.ToolStripMenuItem mnuFileNewFolder;
@@ -109,6 +114,11 @@
 
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
             this.treeViewFolders = new System.Windows.Forms.TreeView();
+            this.listViewFiles = new System.Windows.Forms.ListView();
+            this.colName = new System.Windows.Forms.ColumnHeader();
+            this.colSize = new System.Windows.Forms.ColumnHeader();
+            this.colType = new System.Windows.Forms.ColumnHeader();
+            this.colModified = new System.Windows.Forms.ColumnHeader();
 
             this.mnuFile = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuFileNewFolder = new System.Windows.Forms.ToolStripMenuItem();
@@ -466,7 +476,8 @@
             this.splitContainer1.Panel1.Controls.Add(this.treeViewFolders);
             this.splitContainer1.Panel1.Name = "splitContainer1.Panel1";
 
-            // Panel2 (phai) - danh cho danh sach file (ListView) sau nay.
+            // Panel2 (phai) - chua listViewFiles (danh sach file/thu muc).
+            this.splitContainer1.Panel2.Controls.Add(this.listViewFiles);
             this.splitContainer1.Panel2.Name = "splitContainer1.Panel2";
 
             //
@@ -479,6 +490,38 @@
             this.treeViewFolders.TabIndex = 0;
             this.treeViewFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeViewFolders_AfterSelect);
             this.treeViewFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.treeViewFolders_BeforeExpand);
+
+            //
+            // listViewFiles (danh sach file/thu muc ben phai, che do Details)
+            //
+            this.listViewFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+                this.colName,
+                this.colSize,
+                this.colType,
+                this.colModified});
+            this.listViewFiles.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listViewFiles.FullRowSelect = true;
+            this.listViewFiles.GridLines = true;
+            this.listViewFiles.HideSelection = false;
+            this.listViewFiles.MultiSelect = true;
+            this.listViewFiles.Name = "listViewFiles";
+            this.listViewFiles.TabIndex = 0;
+            this.listViewFiles.UseCompatibleStateImageBehavior = false;
+            this.listViewFiles.View = System.Windows.Forms.View.Details;
+            this.listViewFiles.DoubleClick += new System.EventHandler(this.listViewFiles_DoubleClick);
+
+            this.colName.Text = "Tên";
+            this.colName.Width = 240;
+
+            this.colSize.Text = "Kích thước";
+            this.colSize.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
+            this.colSize.Width = 100;
+
+            this.colType.Text = "Loại";
+            this.colType.Width = 130;
+
+            this.colModified.Text = "Ngày sửa đổi";
+            this.colModified.Width = 140;
 
             // 
             // MainForm
