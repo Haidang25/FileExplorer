@@ -674,7 +674,7 @@ namespace FileExplorerApp.Forms
                         var item = new ListViewItem(entry.Name, "folder") { Tag = entry.FullPath };
                         item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
                         item.SubItems.Add("Thư mục tệp");
-                        item.SubItems.Add(entry.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
                         lvwFiles.Items.Add(item);
                     }
                     else
@@ -682,7 +682,7 @@ namespace FileExplorerApp.Forms
                         var item = new ListViewItem(entry.Name, "file") { Tag = entry.FullPath };
                         item.SubItems.Add(entry.SizeFormatted);
                         item.SubItems.Add(FileHelper.GetFileType(entry.FullPath));
-                        item.SubItems.Add(entry.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
                         lvwFiles.Items.Add(item);
                         totalSize += entry.Size;
                     }

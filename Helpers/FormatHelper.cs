@@ -44,5 +44,17 @@ namespace FileExplorerApp.Helpers
         {
             return FormatSize((long)Math.Min(bytes, long.MaxValue), decimals);
         }
+
+        /// <summary>
+        /// Dinh dang ngay gio thanh chuoi de doc, dung chung cho cac cot "Ngay sua"/
+        /// "Ngay tao" tren lvwFiles va bat cu noi nao khac can hien DateTime cua
+        /// FileItemModel/FolderItemModel (VD: PropertiesForm sau nay).
+        /// VD: 05/03/2026 09:30.
+        /// </summary>
+        /// <param name="dateTime">Thoi diem can dinh dang.</param>
+        public static string FormatDate(DateTime dateTime)
+        {
+            return dateTime.ToString("dd/MM/yyyy HH:mm");
+        }
     }
 }
