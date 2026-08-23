@@ -36,6 +36,7 @@ namespace FileExplorerApp.Forms
 
         private System.Windows.Forms.GroupBox groupBoxWatcher;
         private System.Windows.Forms.CheckBox chkAutoRefresh;
+        private System.Windows.Forms.Label lblWatcherCaption;
         private System.Windows.Forms.Label lblWatcherDelay;
         private System.Windows.Forms.NumericUpDown numWatcherDelay;
         private System.Windows.Forms.Label lblWatcherDelayUnit;
@@ -67,6 +68,7 @@ namespace FileExplorerApp.Forms
             this.rbList = new System.Windows.Forms.RadioButton();
             this.groupBoxWatcher = new System.Windows.Forms.GroupBox();
             this.chkAutoRefresh = new System.Windows.Forms.CheckBox();
+            this.lblWatcherCaption = new System.Windows.Forms.Label();
             this.lblWatcherDelay = new System.Windows.Forms.Label();
             this.numWatcherDelay = new System.Windows.Forms.NumericUpDown();
             this.lblWatcherDelayUnit = new System.Windows.Forms.Label();
@@ -90,7 +92,7 @@ namespace FileExplorerApp.Forms
             this.groupBoxTheme.Controls.Add(this.rbDark);
             this.groupBoxTheme.Location = new System.Drawing.Point(12, 12);
             this.groupBoxTheme.Name = "groupBoxTheme";
-            this.groupBoxTheme.Size = new System.Drawing.Size(460, 56);
+            this.groupBoxTheme.Size = new System.Drawing.Size(476, 56);
             this.groupBoxTheme.TabIndex = 0;
             this.groupBoxTheme.TabStop = false;
             this.groupBoxTheme.Text = "GIAO DIỆN";
@@ -127,7 +129,7 @@ namespace FileExplorerApp.Forms
             this.groupBoxDisplay.Controls.Add(this.rbList);
             this.groupBoxDisplay.Location = new System.Drawing.Point(12, 80);
             this.groupBoxDisplay.Name = "groupBoxDisplay";
-            this.groupBoxDisplay.Size = new System.Drawing.Size(460, 118);
+            this.groupBoxDisplay.Size = new System.Drawing.Size(476, 118);
             this.groupBoxDisplay.TabIndex = 1;
             this.groupBoxDisplay.TabStop = false;
             this.groupBoxDisplay.Text = "HIỂN THỊ";
@@ -196,12 +198,13 @@ namespace FileExplorerApp.Forms
             // groupBoxWatcher
             //
             this.groupBoxWatcher.Controls.Add(this.chkAutoRefresh);
+            this.groupBoxWatcher.Controls.Add(this.lblWatcherCaption);
             this.groupBoxWatcher.Controls.Add(this.lblWatcherDelay);
             this.groupBoxWatcher.Controls.Add(this.numWatcherDelay);
             this.groupBoxWatcher.Controls.Add(this.lblWatcherDelayUnit);
-            this.groupBoxWatcher.Location = new System.Drawing.Point(12, 206);
+            this.groupBoxWatcher.Location = new System.Drawing.Point(12, 210);
             this.groupBoxWatcher.Name = "groupBoxWatcher";
-            this.groupBoxWatcher.Size = new System.Drawing.Size(460, 78);
+            this.groupBoxWatcher.Size = new System.Drawing.Size(476, 96);
             this.groupBoxWatcher.TabIndex = 2;
             this.groupBoxWatcher.TabStop = false;
             this.groupBoxWatcher.Text = "GIÁM SÁT THƯ MỤC";
@@ -216,33 +219,43 @@ namespace FileExplorerApp.Forms
             this.chkAutoRefresh.Text = "Tự động cập nhật khi có thay đổi";
             this.chkAutoRefresh.UseVisualStyleBackColor = true;
             //
+            // lblWatcherCaption
+            //
+            this.lblWatcherCaption.AutoSize = true;
+            this.lblWatcherCaption.Font = new System.Drawing.Font("Segoe UI", 8.5F);
+            this.lblWatcherCaption.Location = new System.Drawing.Point(34, 44);
+            this.lblWatcherCaption.Name = "lblWatcherCaption";
+            this.lblWatcherCaption.Size = new System.Drawing.Size(120, 18);
+            this.lblWatcherCaption.TabIndex = 1;
+            this.lblWatcherCaption.Text = "(FileSystemWatcher)";
+            //
             // lblWatcherDelay
             //
             this.lblWatcherDelay.AutoSize = true;
-            this.lblWatcherDelay.Location = new System.Drawing.Point(16, 50);
+            this.lblWatcherDelay.Location = new System.Drawing.Point(16, 68);
             this.lblWatcherDelay.Name = "lblWatcherDelay";
             this.lblWatcherDelay.Size = new System.Drawing.Size(100, 20);
-            this.lblWatcherDelay.TabIndex = 1;
+            this.lblWatcherDelay.TabIndex = 2;
             this.lblWatcherDelay.Text = "Độ trễ cập nhật:";
             //
             // numWatcherDelay
             //
             this.numWatcherDelay.Increment = new decimal(new int[] { 100, 0, 0, 0 });
-            this.numWatcherDelay.Location = new System.Drawing.Point(150, 48);
+            this.numWatcherDelay.Location = new System.Drawing.Point(150, 66);
             this.numWatcherDelay.Maximum = new decimal(new int[] { 10000, 0, 0, 0 });
             this.numWatcherDelay.Minimum = new decimal(new int[] { 100, 0, 0, 0 });
             this.numWatcherDelay.Name = "numWatcherDelay";
             this.numWatcherDelay.Size = new System.Drawing.Size(80, 26);
-            this.numWatcherDelay.TabIndex = 2;
+            this.numWatcherDelay.TabIndex = 3;
             this.numWatcherDelay.Value = new decimal(new int[] { 500, 0, 0, 0 });
             //
             // lblWatcherDelayUnit
             //
             this.lblWatcherDelayUnit.AutoSize = true;
-            this.lblWatcherDelayUnit.Location = new System.Drawing.Point(236, 50);
+            this.lblWatcherDelayUnit.Location = new System.Drawing.Point(236, 68);
             this.lblWatcherDelayUnit.Name = "lblWatcherDelayUnit";
             this.lblWatcherDelayUnit.Size = new System.Drawing.Size(30, 20);
-            this.lblWatcherDelayUnit.TabIndex = 3;
+            this.lblWatcherDelayUnit.TabIndex = 4;
             this.lblWatcherDelayUnit.Text = "ms";
             //
             // groupBoxLog
@@ -251,9 +264,9 @@ namespace FileExplorerApp.Forms
             this.groupBoxLog.Controls.Add(this.lblLogPath);
             this.groupBoxLog.Controls.Add(this.txtLogPath);
             this.groupBoxLog.Controls.Add(this.btnOpenLogFolder);
-            this.groupBoxLog.Location = new System.Drawing.Point(12, 292);
+            this.groupBoxLog.Location = new System.Drawing.Point(12, 318);
             this.groupBoxLog.Name = "groupBoxLog";
-            this.groupBoxLog.Size = new System.Drawing.Size(460, 100);
+            this.groupBoxLog.Size = new System.Drawing.Size(476, 100);
             this.groupBoxLog.TabIndex = 3;
             this.groupBoxLog.TabStop = false;
             this.groupBoxLog.Text = "NHẬT KÝ";
@@ -298,7 +311,7 @@ namespace FileExplorerApp.Forms
             // btnSave
             //
             this.btnSave.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnSave.Location = new System.Drawing.Point(316, 406);
+            this.btnSave.Location = new System.Drawing.Point(330, 430);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 30);
             this.btnSave.TabIndex = 4;
@@ -309,7 +322,7 @@ namespace FileExplorerApp.Forms
             // btnCancel
             //
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(397, 406);
+            this.btnCancel.Location = new System.Drawing.Point(413, 430);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 30);
             this.btnCancel.TabIndex = 5;
@@ -321,7 +334,7 @@ namespace FileExplorerApp.Forms
             this.AcceptButton = this.btnSave;
             this.CancelButton = this.btnCancel;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(484, 450);
+            this.ClientSize = new System.Drawing.Size(500, 480);
             this.Controls.Add(this.groupBoxTheme);
             this.Controls.Add(this.groupBoxDisplay);
             this.Controls.Add(this.groupBoxWatcher);
