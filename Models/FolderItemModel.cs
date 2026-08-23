@@ -53,6 +53,14 @@ namespace FileExplorerApp.Models
         public bool IsReady { get; set; } = true;
 
         /// <summary>
+        /// Chi co y nghia khi IsDrive = true: loai o dia (Fixed, Removable, CDRom,
+        /// Network, Ram...), tuong ung DriveInfo.DriveType. Dung de chon icon rieng
+        /// cho tung loai o dia tren TreeView (xem MainForm.LoadTreeViewFolders).
+        /// Gia tri mac dinh (DriveType.Unknown) voi thu muc thong thuong.
+        /// </summary>
+        public DriveType DriveType { get; set; } = DriveType.Unknown;
+
+        /// <summary>
         /// True neu thu muc con it nhat mot thu muc con, dung de hien thi
         /// dau (+) tren TreeView ma khong can nap toan bo cay ngay tu dau (lazy-load).
         /// </summary>

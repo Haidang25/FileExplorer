@@ -189,6 +189,50 @@ namespace FileExplorerApp.Forms
         {
             imlIcons.Images.Add("folder", CreateFolderIcon());
             imlIcons.Images.Add("file", CreateFileIcon());
+
+            // Icon rieng cho tung loai o dia (xem GetDriveImageKey), de TreeView phan
+            // biet truc quan o cung (Fixed) voi o roi/USB/dia quang/o mang, giong
+            // Windows Explorer.
+            imlIcons.Images.Add("driveFixed", CreateDriveIcon(DriveIconStyle.Fixed));
+            imlIcons.Images.Add("driveRemovable", CreateDriveIcon(DriveIconStyle.Removable));
+            imlIcons.Images.Add("driveCDRom", CreateDriveIcon(DriveIconStyle.CDRom));
+            imlIcons.Images.Add("driveNetwork", CreateDriveIcon(DriveIconStyle.Network));
+            imlIcons.Images.Add("driveNotReady", CreateDriveIcon(DriveIconStyle.NotReady));
+        }
+
+        /// <summary>Kieu ve icon o dia, dung noi bo cho CreateDriveIcon.</summary>
+        private enum DriveIconStyle
+        {
+            Fixed,
+            Removable,
+            CDRom,
+            Network,
+            NotReady
+        }
+
+        /// <summary>
+        /// Chon ImageKey trong imlIcons phu hop voi mot o dia (FolderItemModel co
+        /// IsDrive = true), dua tren IsReady va DriveType. O chua san sang luon
+        /// dung chung mot icon xam ("driveNotReady") bat ke loai o thuc su la gi,
+        /// de nhan biet ngay "khong dung duoc" ma khong can doc chu thich.
+        /// </summary>
+        private static string GetDriveImageKey(FolderItemModel drive)
+        {
+            if (!drive.IsReady)
+                return "driveNotReady";
+
+            switch (drive.DriveType)
+            {
+                case DriveType.Removable:
+                    return "driveRemovable";
+                case DriveType.CDRom:
+                    return "driveCDRom";
+                case DriveType.Network:
+                    return "driveNetwork";
+                case DriveType.Fixed:
+                default:
+                    return "driveFixed";
+            }
         }
 
         /// <summary>
@@ -238,6 +282,86 @@ namespace FileExplorerApp.Forms
                     g.DrawPolygon(borderPen, outline);
                     g.DrawLine(borderPen, 10, 1, 10, 4);
                     g.DrawLine(borderPen, 10, 4, 13, 4);
+                }
+            }
+
+            return bitmap;
+        }
+
+        /// <summary>
+        /// Ve icon o dia 16x16 theo tung kieu (xem DriveIconStyle), dung placeholder
+        /// hinh don gian (khong dung file .ico rieng) giong CreateFolderIcon/CreateFileIcon.
+        /// Mau sac lay theo AppTheme.Accent (o cung/mac dinh) hoac mau trung tinh cho
+        /// cac loai o dac biet, va mau xam nhat (AppTheme.TextSecondary) rieng cho o
+        /// chua san sang de nguoi dung nhan ra ngay tren TreeView.
+        /// </summary>
+        private static Bitmap CreateDriveIcon(DriveIconStyle style)
+        {
+            var bitmap = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                switch (style)
+                {
+                    case DriveIconStyle.NotReady:
+                        // O chua san sang: hinh o cung nhung to mau xam nhat, khong
+                        // ve chi tiet ben trong, de "nhat" hon han cac icon con lai.
+                        using (var bodyBrush = new SolidBrush(AppTheme.TextSecondary))
+                        using (var borderPen = new Pen(Color.FromArgb(255, 120, 120, 120)))
+                        {
+                            g.FillRectangle(bodyBrush, 1, 5, 14, 8);
+                            g.DrawRectangle(borderPen, 1, 5, 13, 7);
+                        }
+                        break;
+
+                    case DriveIconStyle.Removable:
+                        // O roi/USB: hinh chu nhat dung, phan dau nho nhu dau cam USB.
+                        using (var bodyBrush = new SolidBrush(AppTheme.Accent))
+                        using (var borderPen = new Pen(Color.FromArgb(255, 90, 70, 180)))
+                        {
+                            g.FillRectangle(bodyBrush, 4, 3, 8, 11);
+                            g.DrawRectangle(borderPen, 4, 3, 7, 10);
+                            g.FillRectangle(Brushes.White, 6, 6, 4, 3);
+                        }
+                        break;
+
+                    case DriveIconStyle.CDRom:
+                        // O dia quang: hinh tron co lo tron nho o giua (dia CD/DVD).
+                        using (var bodyBrush = new SolidBrush(Color.FromArgb(255, 200, 200, 210)))
+                        using (var borderPen = new Pen(Color.FromArgb(255, 120, 120, 130)))
+                        {
+                            g.FillEllipse(bodyBrush, 1, 1, 14, 14);
+                            g.DrawEllipse(borderPen, 1, 1, 13, 13);
+                            g.FillEllipse(new SolidBrush(AppTheme.Accent), 6, 6, 4, 4);
+                        }
+                        break;
+
+                    case DriveIconStyle.Network:
+                        // O mang: hinh o cung ben duoi + 2 "song" cong ben tren the
+                        // hien ket noi mang, giong bieu tuong o mang trong Explorer.
+                        using (var bodyBrush = new SolidBrush(Color.FromArgb(255, 214, 148, 46)))
+                        using (var borderPen = new Pen(Color.FromArgb(255, 160, 104, 28)))
+                        using (var wavePen = new Pen(AppTheme.Accent, 2))
+                        {
+                            g.FillRectangle(bodyBrush, 1, 8, 14, 6);
+                            g.DrawRectangle(borderPen, 1, 8, 13, 5);
+                            g.DrawArc(wavePen, 3, 1, 6, 6, 200, 140);
+                            g.DrawArc(wavePen, 5, 3, 4, 4, 200, 140);
+                        }
+                        break;
+
+                    case DriveIconStyle.Fixed:
+                    default:
+                        // O cung mac dinh: hinh o cung don gian, khe sang o giua.
+                        using (var bodyBrush = new SolidBrush(Color.FromArgb(255, 108, 92, 231)))
+                        using (var borderPen = new Pen(Color.FromArgb(255, 70, 58, 160)))
+                        {
+                            g.FillRectangle(bodyBrush, 1, 4, 14, 9);
+                            g.DrawRectangle(borderPen, 1, 4, 13, 8);
+                            g.DrawLine(Pens.White, 3, 8, 13, 8);
+                        }
+                        break;
                 }
             }
 
@@ -982,8 +1106,9 @@ namespace FileExplorerApp.Forms
             foreach (FolderItemModel drive in _folderService.GetDrives())
             {
                 var driveNode = new TreeNode(drive.Name);
-                driveNode.ImageKey = "folder";
-                driveNode.SelectedImageKey = "folder";
+                string driveImageKey = GetDriveImageKey(drive);
+                driveNode.ImageKey = driveImageKey;
+                driveNode.SelectedImageKey = driveImageKey;
 
                 if (drive.IsReady)
                 {

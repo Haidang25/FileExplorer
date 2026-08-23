@@ -58,7 +58,8 @@ namespace FileExplorerApp.Services
                         ParentPath = null,
                         IsDrive = true,
                         IsReady = false,
-                        HasSubFolders = false
+                        HasSubFolders = false,
+                        DriveType = drive.DriveType
                     });
                     continue;
                 }
@@ -93,7 +94,8 @@ namespace FileExplorerApp.Services
                         IsReady = true,
                         HasSubFolders = true,
                         DriveTotalSize = drive.TotalSize,
-                        AvailableFreeSpace = drive.AvailableFreeSpace
+                        AvailableFreeSpace = drive.AvailableFreeSpace,
+                        DriveType = drive.DriveType
                     });
                 }
                 catch (UnauthorizedAccessException) { /* Khong co quyen doc o dia nay - bo qua. */ }
@@ -109,7 +111,8 @@ namespace FileExplorerApp.Services
                         ParentPath = null,
                         IsDrive = true,
                         IsReady = false,
-                        HasSubFolders = false
+                        HasSubFolders = false,
+                        DriveType = drive.DriveType
                     });
                 }
             }
