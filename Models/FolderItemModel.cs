@@ -44,6 +44,15 @@ namespace FileExplorerApp.Models
         public bool IsDrive { get; set; }
 
         /// <summary>
+        /// Chi co y nghia khi IsDrive = true: true neu o dia dang san sang doc/ghi
+        /// (tuong ung DriveInfo.IsReady). False voi o CD/DVD rong, o dia mang mat
+        /// ket noi... - van hien trong danh sach/TreeView nhung khong the mo rong
+        /// hay dieu huong vao, chi de nguoi dung biet o do co ton tai.
+        /// Luon true voi thu muc thong thuong (khong phai o dia).
+        /// </summary>
+        public bool IsReady { get; set; } = true;
+
+        /// <summary>
         /// True neu thu muc con it nhat mot thu muc con, dung de hien thi
         /// dau (+) tren TreeView ma khong can nap toan bo cay ngay tu dau (lazy-load).
         /// </summary>

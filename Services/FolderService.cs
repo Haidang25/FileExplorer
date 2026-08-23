@@ -28,11 +28,18 @@ namespace FileExplorerApp.Services
         /// Lay danh sach cac o dia (drive) hien co tren may, dung lam node goc cho
         /// TreeView duyet thu muc (VD: "This PC" > C:\, D:\...).
         ///
-        /// Chi tra ve nhung o dia dang san sang (IsReady = true) — bo qua o dia
-        /// CD/DVD/o dia mang khong co dia/khong ket noi de tranh IOException khi
-        /// TreeView co gang doc thong tin cua o dia do sau nay.
+        /// Van tra ve ca nhung o dia chua san sang (IsReady = false — VD: o CD/DVD
+        /// dang rong, o dia mang bi ngat ket noi) de danh sach o dia giong Windows
+        /// Explorer (van thay o do ton tai, chi khong mo duoc), thay vi an han di.
+        /// Voi o chua san sang, chi doc duoc DriveInfo.Name/DriveType (an toan ke
+        /// ca khi IsReady = false) — moi thuoc tinh khac cua RootDirectory (VolumeLabel,
+        /// CreationTime, Attributes...) deu nem IOException neu goi luc o chua san sang,
+        /// nen duoc bo qua hoan toan cho truong hop nay.
         /// </summary>
-        /// <returns>Danh sach FolderItemModel, moi item ung voi mot o dia (IsDrive = true).</returns>
+        /// <returns>
+        /// Danh sach FolderItemModel, moi item ung voi mot o dia (IsDrive = true).
+        /// Kiem tra IsReady tren tung item truoc khi cho phep expand/dieu huong vao.
+        /// </returns>
         public List<FolderItemModel> GetDrives()
         {
             var drives = new List<FolderItemModel>();
@@ -40,7 +47,21 @@ namespace FileExplorerApp.Services
             foreach (DriveInfo drive in DriveInfo.GetDrives())
             {
                 if (!drive.IsReady)
-                    continue; // O dia khong san sang (VD: o CD rong, o mang mat ket noi).
+                {
+                    // O chua san sang: khong duoc dong vao RootDirectory/VolumeLabel/
+                    // CreationTime... (nem IOException) - chi dung Name/DriveType,
+                    // ca hai deu doc duoc an toan bat ke IsReady.
+                    drives.Add(new FolderItemModel
+                    {
+                        Name = $"{drive.Name.TrimEnd('\\')} ({DescribeDriveType(drive.DriveType)}, chưa sẵn sàng)",
+                        FullPath = drive.Name,
+                        ParentPath = null,
+                        IsDrive = true,
+                        IsReady = false,
+                        HasSubFolders = false
+                    });
+                    continue;
+                }
 
                 try
                 {
@@ -64,14 +85,45 @@ namespace FileExplorerApp.Services
                         ModifiedDate = rootDirectory.LastWriteTime,
                         Attributes = rootDirectory.Attributes,
                         IsDrive = true,
+                        IsReady = true,
                         HasSubFolders = true
                     });
                 }
                 catch (UnauthorizedAccessException) { /* Khong co quyen doc o dia nay - bo qua. */ }
-                catch (IOException) { /* O dia bao IsReady nhung van loi khi doc (hiem) - bo qua. */ }
+                catch (IOException)
+                {
+                    // O bao IsReady = true nhung van loi khi doc (hiem, VD: vua thao
+                    // ra dung luc doc) - them lai o dang "chua san sang" thay vi mat
+                    // hoan toan khoi danh sach, giong hanh vi khi IsReady = false.
+                    drives.Add(new FolderItemModel
+                    {
+                        Name = $"{drive.Name.TrimEnd('\\')} ({DescribeDriveType(drive.DriveType)}, chưa sẵn sàng)",
+                        FullPath = drive.Name,
+                        ParentPath = null,
+                        IsDrive = true,
+                        IsReady = false,
+                        HasSubFolders = false
+                    });
+                }
             }
 
             return drives;
+        }
+
+        /// <summary>Ten hien thi tieng Viet ngan gon cho DriveType, dung trong nhan cua o dia chua san sang.</summary>
+        private static string DescribeDriveType(DriveType driveType)
+        {
+            switch (driveType)
+            {
+                case DriveType.CDRom:
+                    return "Ổ đĩa quang";
+                case DriveType.Network:
+                    return "Ổ mạng";
+                case DriveType.Removable:
+                    return "Ổ di động";
+                default:
+                    return "Ổ đĩa";
+            }
         }
 
         /// <summary>

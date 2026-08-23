@@ -964,24 +964,41 @@ namespace FileExplorerApp.Forms
         private const string LazyLoadPlaceholder = "...";
 
         /// <summary>
-        /// Nap danh sach cac o dia (drive) san sang (IsReady) lam node goc cua
-        /// trvFolders. Moi node o dia duoc them mot node "gia" ben trong de
-        /// mui ten mo rong xuat hien, noi dung thuc su chi duoc doc khi nguoi dung
-        /// bam mo rong (xem trvFolders_BeforeExpand).
+        /// Nap danh sach o dia lam node goc cua trvFolders, dung
+        /// FolderService.GetDrives() (bao gom ca o dia chua san sang - VD: o CD
+        /// rong, o mang mat ket noi - de giong Windows Explorer, thay vi an di).
+        ///
+        /// Voi o dia da san sang, Tag duoc gan la duong dan goc (FullPath) va them
+        /// mot node "gia" ben trong de mui ten mo rong xuat hien, noi dung thuc su
+        /// chi duoc doc khi nguoi dung bam mo rong (xem trvFolders_BeforeExpand).
+        /// Voi o dia chua san sang, Tag duoc gan truc tiep la FolderItemModel (thay
+        /// vi string duong dan) de trvFolders_BeforeExpand/AfterSelect nhan biet va
+        /// tu choi mo rong/dieu huong mot cach than thien, khong nem IOException.
         /// </summary>
         private void LoadTreeViewFolders()
         {
             trvFolders.Nodes.Clear();
 
-            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            foreach (FolderItemModel drive in _folderService.GetDrives())
             {
-                if (!drive.IsReady)
-                    continue;
-
-                var driveNode = new TreeNode(drive.Name) { Tag = drive.RootDirectory.FullName };
+                var driveNode = new TreeNode(drive.Name);
                 driveNode.ImageKey = "folder";
                 driveNode.SelectedImageKey = "folder";
-                driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+
+                if (drive.IsReady)
+                {
+                    driveNode.Tag = drive.FullPath;
+                    driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+                }
+                else
+                {
+                    // Khong gan duong dan string vao Tag de tsbBack/AfterSelect/
+                    // BeforeExpand khong the vo tinh coi day la mot thu muc dieu
+                    // huong duoc - gan ca FolderItemModel lam dau hieu "o chua san sang".
+                    driveNode.Tag = drive;
+                    driveNode.ForeColor = AppTheme.TextSecondary;
+                }
+
                 trvFolders.Nodes.Add(driveNode);
             }
         }
@@ -993,6 +1010,15 @@ namespace FileExplorerApp.Forms
         private void trvFolders_BeforeExpand(object sender, TreeViewCancelEventArgs e)
         {
             TreeNode node = e.Node;
+
+            if (node.Tag is FolderItemModel notReadyDrive && !notReadyDrive.IsReady)
+            {
+                // O dia chua san sang (xem LoadTreeViewFolders) - khong co gi de mo
+                // rong, huy luon thao tac thay vi de TreeView co gang doc thu muc con
+                // va nem IOException.
+                e.Cancel = true;
+                return;
+            }
 
             bool isLazyPlaceholder = node.Nodes.Count == 1
                 && node.Nodes[0].Text == LazyLoadPlaceholder
@@ -1043,6 +1069,15 @@ namespace FileExplorerApp.Forms
         {
             if (_isSyncingTreeView)
                 return; // Dang tu dong chon lai node do NavigateTo goi, khong can dieu huong lai.
+
+            if (e.Node.Tag is FolderItemModel notReadyDrive && !notReadyDrive.IsReady)
+            {
+                // O dia chua san sang (xem LoadTreeViewFolders) - bao cho nguoi dung
+                // biet thay vi im lang khong lam gi, hoac nem loi khi co Directory.Exists.
+                MessageBox.Show($"{notReadyDrive.Name}\nỔ đĩa hiện chưa sẵn sàng (chưa có đĩa, hoặc mất kết nối).",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
 
             string path = e.Node.Tag as string;
             if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
