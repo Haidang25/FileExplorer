@@ -659,66 +659,35 @@ namespace FileExplorerApp.Forms
 
             int itemCount = 0;
             long totalSize = 0;
-            bool accessDenied = false;
-            bool ioError = false;
 
             try
             {
-                // Tach rieng foreach thu muc va foreach file trong 2 try/catch doc lap:
-                // neu Directory.GetDirectories(_currentPath) bi tu choi quyen (hiem, vi
-                // thong thuong _currentPath da duoc kiem tra Directory.Exists truoc do
-                // luc NavigateTo), van con co the doc duoc GetFiles() (hoac nguoc lai),
-                // tranh mot ben loi lam mat luon danh sach cua ben con lai.
-                try
+                // FileService.GetItems() da tra ve san thu muc con truoc, file sau
+                // (giong thu tu Windows Explorer) va tu bat/bo qua rieng tung muc loi
+                // quyen/IO ben trong no - khong con can 2 try/catch rieng cho thu muc
+                // va file nhu truoc; mot muc loi rieng le se khong lam mat ca danh
+                // sach nua (chi khong xuat hien trong ket qua tra ve).
+                foreach (FileItemModel entry in _fileService.GetItems(_currentPath, _showHiddenItems))
                 {
-                    foreach (string folderPath in Directory.GetDirectories(_currentPath))
+                    if (entry.IsDirectory)
                     {
-                        FolderItemModel folder = FolderItemModel.FromPath(folderPath);
-                        if (folder == null || (folder.IsHidden && !_showHiddenItems))
-                            continue;
-
-                        var item = new ListViewItem(folder.Name, "folder") { Tag = folder.FullPath };
+                        var item = new ListViewItem(entry.Name, "folder") { Tag = entry.FullPath };
                         item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
                         item.SubItems.Add("Thư mục tệp");
-                        item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        item.SubItems.Add(entry.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
                         lvwFiles.Items.Add(item);
-                        itemCount++;
                     }
-                }
-                catch (UnauthorizedAccessException) { accessDenied = true; }
-                catch (IOException) { ioError = true; }
-
-                try
-                {
-                    foreach (string filePath in Directory.GetFiles(_currentPath))
+                    else
                     {
-                        FileItemModel file = FileItemModel.FromPath(filePath);
-                        if (file == null || (file.IsHidden && !_showHiddenItems))
-                            continue;
-
-                        var item = new ListViewItem(file.Name, "file") { Tag = file.FullPath };
-                        item.SubItems.Add(file.SizeFormatted);
-                        item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
-                        item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        var item = new ListViewItem(entry.Name, "file") { Tag = entry.FullPath };
+                        item.SubItems.Add(entry.SizeFormatted);
+                        item.SubItems.Add(FileHelper.GetFileType(entry.FullPath));
+                        item.SubItems.Add(entry.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
                         lvwFiles.Items.Add(item);
-                        itemCount++;
-                        totalSize += file.Size;
+                        totalSize += entry.Size;
                     }
-                }
-                catch (UnauthorizedAccessException) { accessDenied = true; }
-                catch (IOException) { ioError = true; }
 
-                // Chi hien MOT thong bao du ca hai ben cung loi, tranh lam phien nguoi
-                // dung bang 2 hop thoai lien tiep cho cung mot nguyen nhan.
-                if (accessDenied)
-                {
-                    MessageBox.Show("Không đủ quyền truy cập một số mục trong thư mục này.", "Lỗi",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                else if (ioError)
-                {
-                    MessageBox.Show("Không thể đọc nội dung thư mục này.", "Lỗi",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    itemCount++;
                 }
             }
             finally
