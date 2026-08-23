@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using Microsoft.VisualBasic;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
+using FileExplorerApp.Properties;
 using FileExplorerApp.Services;
 
 namespace FileExplorerApp.Forms
@@ -67,9 +68,43 @@ namespace FileExplorerApp.Forms
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
+            LoadDisplaySettings();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
             mnuViewRefresh_Click(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Nap _showHiddenItems va _currentViewMode tu Properties.Settings.Default
+        /// (nguoi dung chon o SettingsForm) va dong bo lai trang thai Checked cua
+        /// mnuViewShowHidden/menu che do xem tuong ung. Goi truoc lan
+        /// mnuViewRefresh_Click dau tien de ListView hien dung tu dau, khong qua
+        /// cac Click handler (tranh luu lai Settings ngay trong luc khoi tao).
+        /// </summary>
+        private void LoadDisplaySettings()
+        {
+            _showHiddenItems = Settings.Default.ShowHiddenFiles;
+            mnuViewShowHidden.Checked = _showHiddenItems;
+
+            View savedMode = (View)Settings.Default.DefaultViewMode;
+            ToolStripMenuItem selectedItem;
+            switch (savedMode)
+            {
+                case View.LargeIcon:
+                    selectedItem = mnuViewModeLargeIcon;
+                    break;
+                case View.SmallIcon:
+                    selectedItem = mnuViewModeSmallIcon;
+                    break;
+                case View.List:
+                    selectedItem = mnuViewModeList;
+                    break;
+                default:
+                    savedMode = View.Details;
+                    selectedItem = mnuViewModeDetails;
+                    break;
+            }
+            SetViewMode(savedMode, selectedItem);
         }
 
         /// <summary>
@@ -615,9 +650,9 @@ namespace FileExplorerApp.Forms
         {
             _showHiddenItems = mnuViewShowHidden.Checked;
 
-            // TODO: luu trang thai _showHiddenItems (VD: vao Properties.Settings) de nho
-            // giua cac lan mo ung dung, roi loc/hien lai cac muc co IsHidden tren ListView
-            // theo trang thai moi (mnuViewRefresh_Click(sender, e)).
+            Settings.Default.ShowHiddenFiles = _showHiddenItems;
+            Settings.Default.Save();
+
             mnuViewRefresh_Click(sender, e);
         }
 
@@ -636,6 +671,9 @@ namespace FileExplorerApp.Forms
 
             _currentViewMode = mode;
             lvwFiles.View = _currentViewMode;
+
+            Settings.Default.DefaultViewMode = (int)_currentViewMode;
+            Settings.Default.Save();
         }
 
         private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)
@@ -687,12 +725,18 @@ namespace FileExplorerApp.Forms
 
         private void mnuToolsSettings_Click(object sender, EventArgs e)
         {
-            // TODO: mo Form cai dat (VD: Forms/SettingsForm) cho phep chinh:
-            // - Che do xem mac dinh (_currentViewMode), co hien file an mac dinh (_showHiddenItems)
-            // - Thu muc mac dinh khi mo ung dung (thay _currentPath)
-            // - Xoa vinh vien hay chuyen vao Thung rac khi Delete
-            // - Vi tri/gioi han dung luong file log (LogService)
-            // Cac lua chon nen luu qua Properties.Settings.Default de nho giua cac lan chay.
+            using (SettingsForm settingsForm = new SettingsForm())
+            {
+                if (settingsForm.ShowDialog(this) == DialogResult.OK)
+                {
+                    // SettingsForm da luu Settings.Default va cap nhat AppTheme.IsDarkMode
+                    // trong bo nho — ap dung lai theme + trang thai hien thi cho MainForm
+                    // ngay, khong can khoi dong lai ung dung.
+                    ApplyTheme();
+                    LoadDisplaySettings();
+                    mnuViewRefresh_Click(this, EventArgs.Empty);
+                }
+            }
         }
 
         #endregion

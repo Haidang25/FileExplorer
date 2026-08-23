@@ -80,17 +80,16 @@ namespace FileExplorerApp.Helpers
         }
 
         /// <summary>
-        /// Che do giao dien dang duoc ap dung cho toan ung dung. Doi gia tri nay
-        /// o mot noi duy nhat (vd. luc khoi dong, doc tu Settings da luu) roi goi
-        /// lai ApplyTheme()/ve lai cac Form dang mo de chuyen theme dong bo.
+        /// Che do giao dien dang duoc ap dung cho toan ung dung. Gia tri khoi tao
+        /// duoc doc tu Properties.Settings.Default.IsDarkMode (nguoi dung chon o
+        /// SettingsForm, nhom "Giao dien", va duoc luu lai giua cac lan chay).
         ///
-        /// Mac dinh la Dark mode: bang mau Light duoc thiet ke rat gan mau he
-        /// thong mac dinh cua Windows (nen trang, chu den) nen neu de Light lam
-        /// mac dinh, nguoi dung se kho nhan ra ung dung da doi theme khi chi
-        /// nhin thoang qua — mau nhan (Accent) cung chi hien ro luc hover/chon
-        /// muc menu. Dark mode tuong phan ro ngay tu lan chay dau tien.
+        /// Khi doi gia tri nay luc dang chay (SettingsForm.btnSave_Click), goi lai
+        /// MainForm.ApplyTheme() (va ApplyTheme() cua cac Form dang mo khac, neu
+        /// co) de giao dien cap nhat ngay, vi cac Form da mo truoc do khong tu
+        /// dong ve lai khi thuoc tinh nay thay doi.
         /// </summary>
-        public static bool IsDarkMode { get; set; } = true;
+        public static bool IsDarkMode { get; set; } = FileExplorerApp.Properties.Settings.Default.IsDarkMode;
 
         /// <summary>Nen chinh theo che do hien tai (Light/Dark).</summary>
         public static Color Background => IsDarkMode ? Dark.Background : Light.Background;
