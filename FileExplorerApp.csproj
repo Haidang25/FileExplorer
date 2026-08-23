@@ -81,6 +81,7 @@
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
+    <Compile Include="Helpers\AppTheme.cs" />
     <Compile Include="Helpers\FileHelper.cs" />
     <Compile Include="Helpers\FormatHelper.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
