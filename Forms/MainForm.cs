@@ -631,47 +631,67 @@ namespace FileExplorerApp.Forms
 
             int itemCount = 0;
             long totalSize = 0;
+            bool accessDenied = false;
+            bool ioError = false;
 
             try
             {
-                foreach (string folderPath in Directory.GetDirectories(_currentPath))
+                // Tach rieng foreach thu muc va foreach file trong 2 try/catch doc lap:
+                // neu Directory.GetDirectories(_currentPath) bi tu choi quyen (hiem, vi
+                // thong thuong _currentPath da duoc kiem tra Directory.Exists truoc do
+                // luc NavigateTo), van con co the doc duoc GetFiles() (hoac nguoc lai),
+                // tranh mot ben loi lam mat luon danh sach cua ben con lai.
+                try
                 {
-                    FolderItemModel folder = FolderItemModel.FromPath(folderPath);
-                    if (folder == null || (folder.IsHidden && !_showHiddenItems))
-                        continue;
+                    foreach (string folderPath in Directory.GetDirectories(_currentPath))
+                    {
+                        FolderItemModel folder = FolderItemModel.FromPath(folderPath);
+                        if (folder == null || (folder.IsHidden && !_showHiddenItems))
+                            continue;
 
-                    var item = new ListViewItem(folder.Name, "folder") { Tag = folder.FullPath };
-                    item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
-                    item.SubItems.Add("Thư mục tệp");
-                    item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
-                    lvwFiles.Items.Add(item);
-                    itemCount++;
+                        var item = new ListViewItem(folder.Name, "folder") { Tag = folder.FullPath };
+                        item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
+                        item.SubItems.Add("Thư mục tệp");
+                        item.SubItems.Add(folder.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        lvwFiles.Items.Add(item);
+                        itemCount++;
+                    }
                 }
+                catch (UnauthorizedAccessException) { accessDenied = true; }
+                catch (IOException) { ioError = true; }
 
-                foreach (string filePath in Directory.GetFiles(_currentPath))
+                try
                 {
-                    FileItemModel file = FileItemModel.FromPath(filePath);
-                    if (file == null || (file.IsHidden && !_showHiddenItems))
-                        continue;
+                    foreach (string filePath in Directory.GetFiles(_currentPath))
+                    {
+                        FileItemModel file = FileItemModel.FromPath(filePath);
+                        if (file == null || (file.IsHidden && !_showHiddenItems))
+                            continue;
 
-                    var item = new ListViewItem(file.Name, "file") { Tag = file.FullPath };
-                    item.SubItems.Add(file.SizeFormatted);
-                    item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
-                    item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
-                    lvwFiles.Items.Add(item);
-                    itemCount++;
-                    totalSize += file.Size;
+                        var item = new ListViewItem(file.Name, "file") { Tag = file.FullPath };
+                        item.SubItems.Add(file.SizeFormatted);
+                        item.SubItems.Add(FileHelper.GetFileType(file.FullPath));
+                        item.SubItems.Add(file.ModifiedDate.ToString("dd/MM/yyyy HH:mm"));
+                        lvwFiles.Items.Add(item);
+                        itemCount++;
+                        totalSize += file.Size;
+                    }
                 }
-            }
-            catch (UnauthorizedAccessException)
-            {
-                MessageBox.Show("Không đủ quyền truy cập thư mục này.", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            catch (IOException)
-            {
-                MessageBox.Show("Không thể đọc nội dung thư mục này.", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                catch (UnauthorizedAccessException) { accessDenied = true; }
+                catch (IOException) { ioError = true; }
+
+                // Chi hien MOT thong bao du ca hai ben cung loi, tranh lam phien nguoi
+                // dung bang 2 hop thoai lien tiep cho cung mot nguyen nhan.
+                if (accessDenied)
+                {
+                    MessageBox.Show("Không đủ quyền truy cập một số mục trong thư mục này.", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                else if (ioError)
+                {
+                    MessageBox.Show("Không thể đọc nội dung thư mục này.", "Lỗi",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
             finally
             {
