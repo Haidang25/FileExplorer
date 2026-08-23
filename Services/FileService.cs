@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
@@ -49,11 +50,97 @@ namespace FileExplorerApp.Services
         /// Lay danh sach cac file (khong bao gom thu muc con) truc tiep trong mot thu muc.
         /// </summary>
         /// <param name="folderPath">Duong dan thu muc chua cac file.</param>
-        public List<FileItemModel> GetFiles(string folderPath)
+        /// <param name="includeHidden">
+        /// True: lay ca file an/he thong (Hidden/System). False: bo qua cac file do.
+        /// </param>
+        /// <returns>
+        /// Danh sach FileItemModel (IsDirectory = false), sap xep theo ten. Danh sach
+        /// rong (khong phai null) neu folderPath khong ton tai hoac khong co quyen doc.
+        /// </returns>
+        public List<FileItemModel> GetFiles(string folderPath, bool includeHidden = true)
         {
-            // TODO: enumerate DirectoryInfo(folderPath).GetFiles(),
-            // map sang FileItemModel.FromFileInfo cho tung item.
-            throw new NotImplementedException();
+            var files = new List<FileItemModel>();
+
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return files;
+
+            try
+            {
+                var fileInfos = new DirectoryInfo(folderPath)
+                    .EnumerateFiles()
+                    .OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase);
+
+                foreach (FileInfo fileInfo in fileInfos)
+                {
+                    try
+                    {
+                        if (!includeHidden)
+                        {
+                            bool isHiddenOrSystem = fileInfo.Attributes.HasFlag(FileAttributes.Hidden)
+                                || fileInfo.Attributes.HasFlag(FileAttributes.System);
+                            if (isHiddenOrSystem)
+                                continue;
+                        }
+
+                        files.Add(FileItemModel.FromFileInfo(fileInfo));
+                    }
+                    catch (UnauthorizedAccessException) { /* Khong doc duoc file nay - bo qua rieng no. */ }
+                    catch (IOException) { /* VD: file dang bi khoa boi ung dung khac. */ }
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Khong co quyen liet ke thu muc - tra ve danh sach rong. */ }
+            catch (IOException) { /* Thu muc nam tren o dia vua thao ra, duong dan mang bi ngat... */ }
+
+            return files;
+        }
+
+        /// <summary>
+        /// Lay danh sach TOAN BO cac muc (ca thu muc con VA file) truc tiep trong mot
+        /// thu muc, thu muc liet ke truoc roi den file - giong thu tu hien thi cua
+        /// Windows Explorer va lvwFiles trong MainForm. Ket hop ca FolderService (cho
+        /// phan thu muc con) va FileService (cho phan file) vao mot loi goi duy nhat,
+        /// tranh MainForm phai tu viet lai logic duyet + loc an/he thong o 2 noi.
+        /// </summary>
+        /// <param name="path">Duong dan thu muc can liet ke noi dung.</param>
+        /// <param name="includeHidden">
+        /// True: lay ca muc an/he thong (Hidden/System). False: bo qua cac muc do,
+        /// dung khi nguoi dung tat tuy chon "Hien file/thu muc an".
+        /// </param>
+        /// <returns>
+        /// Danh sach FileItemModel: cac thu muc con (IsDirectory = true) truoc, sap
+        /// xep theo ten, roi den cac file (IsDirectory = false), cung sap xep theo
+        /// ten. Danh sach rong (khong phai null) neu path khong ton tai hoac khong
+        /// co quyen doc - khong nem exception ra ngoai.
+        /// </returns>
+        public List<FileItemModel> GetItems(string path, bool includeHidden = true)
+        {
+            var items = new List<FileItemModel>();
+
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                return items;
+
+            var folderService = new FolderService();
+
+            foreach (FolderItemModel folder in folderService.GetSubFolders(path, includeHidden))
+            {
+                items.Add(new FileItemModel
+                {
+                    Name = folder.Name,
+                    FullPath = folder.FullPath,
+                    ParentPath = folder.ParentPath,
+                    Extension = string.Empty,
+                    IsDirectory = true,
+                    Size = 0,
+                    CreatedDate = folder.CreatedDate,
+                    ModifiedDate = folder.ModifiedDate,
+                    LastAccessedDate = folder.ModifiedDate, // FolderItemModel khong luu rieng LastAccessedDate.
+                    Attributes = folder.Attributes
+                });
+            }
+
+            items.AddRange(GetFiles(path, includeHidden));
+
+            return items;
         }
 
         /// <summary>
