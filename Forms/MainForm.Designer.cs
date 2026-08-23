@@ -1,4 +1,4 @@
-﻿namespace FileExplorerApp.Forms
+namespace FileExplorerApp.Forms
 {
     partial class MainForm
     {
@@ -26,6 +26,7 @@
 
         private System.Windows.Forms.ToolStrip tlsMain;
         private System.Windows.Forms.ToolStripButton tsbBack;
+        private System.Windows.Forms.ToolStripButton tsbForward;
         private System.Windows.Forms.ToolStripButton tsbUp;
         private System.Windows.Forms.ToolStripButton tsbRefresh;
         private System.Windows.Forms.ToolStripSeparator tsbSeparator1;
@@ -40,6 +41,7 @@
         private System.Windows.Forms.Button btnUp;
         private System.Windows.Forms.Button btnGo;
         private System.Windows.Forms.TextBox txtPath;
+        private System.Windows.Forms.TextBox txtSearch;
 
         private System.Windows.Forms.SplitContainer spcMain;
         private System.Windows.Forms.TreeView trvFolders;
@@ -151,6 +153,7 @@
             this.mnuHelpAbout = new System.Windows.Forms.ToolStripMenuItem();
             this.tlsMain = new System.Windows.Forms.ToolStrip();
             this.tsbBack = new System.Windows.Forms.ToolStripButton();
+            this.tsbForward = new System.Windows.Forms.ToolStripButton();
             this.tsbUp = new System.Windows.Forms.ToolStripButton();
             this.tsbRefresh = new System.Windows.Forms.ToolStripButton();
             this.tsbSeparator1 = new System.Windows.Forms.ToolStripSeparator();
@@ -161,9 +164,10 @@
             this.tsbSeparator3 = new System.Windows.Forms.ToolStripSeparator();
             this.tsbDelete = new System.Windows.Forms.ToolStripButton();
             this.pnlAddressBar = new System.Windows.Forms.Panel();
-            this.btnUp = new System.Windows.Forms.Button();
+            this.txtSearch = new System.Windows.Forms.TextBox();
             this.btnGo = new System.Windows.Forms.Button();
             this.txtPath = new System.Windows.Forms.TextBox();
+            this.btnUp = new System.Windows.Forms.Button();
             this.spcMain = new System.Windows.Forms.SplitContainer();
             this.trvFolders = new System.Windows.Forms.TreeView();
             this.imlIcons = new System.Windows.Forms.ImageList(this.components);
@@ -199,9 +203,10 @@
             this.cmsListView.SuspendLayout();
             this.stsMain.SuspendLayout();
             this.SuspendLayout();
-            // 
+            //
             // mnsMain
-            // 
+            //
+            this.mnsMain.Dock = System.Windows.Forms.DockStyle.Top;
             this.mnsMain.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.mnsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuFile,
@@ -209,14 +214,14 @@
             this.mnuView,
             this.mnuTools,
             this.mnuHelp});
-            this.mnsMain.Location = new System.Drawing.Point(0, 55);
+            this.mnsMain.Location = new System.Drawing.Point(0, 0);
             this.mnsMain.Name = "mnsMain";
-            this.mnsMain.Size = new System.Drawing.Size(800, 28);
+            this.mnsMain.Size = new System.Drawing.Size(1200, 28);
             this.mnsMain.TabIndex = 0;
             this.mnsMain.Text = "mnsMain";
-            // 
+            //
             // mnuFile
-            // 
+            //
             this.mnuFile.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuFileNewFolder,
             this.mnuFileNewFile,
@@ -225,38 +230,38 @@
             this.mnuFile.Name = "mnuFile";
             this.mnuFile.Size = new System.Drawing.Size(48, 24);
             this.mnuFile.Text = "&Tệp";
-            // 
+            //
             // mnuFileNewFolder
-            // 
+            //
             this.mnuFileNewFolder.Name = "mnuFileNewFolder";
-            this.mnuFileNewFolder.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift) 
+            this.mnuFileNewFolder.ShortcutKeys = ((System.Windows.Forms.Keys)(((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.Shift)
             | System.Windows.Forms.Keys.N)));
             this.mnuFileNewFolder.Size = new System.Drawing.Size(298, 26);
             this.mnuFileNewFolder.Text = "Tạo &thư mục mới";
             this.mnuFileNewFolder.Click += new System.EventHandler(this.mnuFileNewFolder_Click);
-            // 
+            //
             // mnuFileNewFile
-            // 
+            //
             this.mnuFileNewFile.Name = "mnuFileNewFile";
             this.mnuFileNewFile.Size = new System.Drawing.Size(298, 26);
             this.mnuFileNewFile.Text = "Tạo &file mới";
             this.mnuFileNewFile.Click += new System.EventHandler(this.mnuFileNewFile_Click);
-            // 
+            //
             // mnuFileSeparator1
-            // 
+            //
             this.mnuFileSeparator1.Name = "mnuFileSeparator1";
             this.mnuFileSeparator1.Size = new System.Drawing.Size(295, 6);
-            // 
+            //
             // mnuFileExit
-            // 
+            //
             this.mnuFileExit.Name = "mnuFileExit";
             this.mnuFileExit.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.F4)));
             this.mnuFileExit.Size = new System.Drawing.Size(298, 26);
             this.mnuFileExit.Text = "&Thoát";
             this.mnuFileExit.Click += new System.EventHandler(this.mnuFileExit_Click);
-            // 
+            //
             // mnuEdit
-            // 
+            //
             this.mnuEdit.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuEditCut,
             this.mnuEditCopy,
@@ -269,67 +274,67 @@
             this.mnuEdit.Name = "mnuEdit";
             this.mnuEdit.Size = new System.Drawing.Size(87, 24);
             this.mnuEdit.Text = "&Chỉnh sửa";
-            // 
+            //
             // mnuEditCut
-            // 
+            //
             this.mnuEditCut.Name = "mnuEditCut";
             this.mnuEditCut.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
             this.mnuEditCut.Size = new System.Drawing.Size(219, 26);
             this.mnuEditCut.Text = "&Cắt";
             this.mnuEditCut.Click += new System.EventHandler(this.mnuEditCut_Click);
-            // 
+            //
             // mnuEditCopy
-            // 
+            //
             this.mnuEditCopy.Name = "mnuEditCopy";
             this.mnuEditCopy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
             this.mnuEditCopy.Size = new System.Drawing.Size(219, 26);
             this.mnuEditCopy.Text = "&Sao chép";
             this.mnuEditCopy.Click += new System.EventHandler(this.mnuEditCopy_Click);
-            // 
+            //
             // mnuEditPaste
-            // 
+            //
             this.mnuEditPaste.Name = "mnuEditPaste";
             this.mnuEditPaste.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.V)));
             this.mnuEditPaste.Size = new System.Drawing.Size(219, 26);
             this.mnuEditPaste.Text = "&Dán";
             this.mnuEditPaste.Click += new System.EventHandler(this.mnuEditPaste_Click);
-            // 
+            //
             // mnuEditSeparator1
-            // 
+            //
             this.mnuEditSeparator1.Name = "mnuEditSeparator1";
             this.mnuEditSeparator1.Size = new System.Drawing.Size(216, 6);
-            // 
+            //
             // mnuEditDelete
-            // 
+            //
             this.mnuEditDelete.Name = "mnuEditDelete";
             this.mnuEditDelete.ShortcutKeys = System.Windows.Forms.Keys.Delete;
             this.mnuEditDelete.Size = new System.Drawing.Size(219, 26);
             this.mnuEditDelete.Text = "&Xóa";
             this.mnuEditDelete.Click += new System.EventHandler(this.mnuEditDelete_Click);
-            // 
+            //
             // mnuEditRename
-            // 
+            //
             this.mnuEditRename.Name = "mnuEditRename";
             this.mnuEditRename.ShortcutKeys = System.Windows.Forms.Keys.F2;
             this.mnuEditRename.Size = new System.Drawing.Size(219, 26);
             this.mnuEditRename.Text = "Đổi &tên";
             this.mnuEditRename.Click += new System.EventHandler(this.mnuEditRename_Click);
-            // 
+            //
             // mnuEditSeparator2
-            // 
+            //
             this.mnuEditSeparator2.Name = "mnuEditSeparator2";
             this.mnuEditSeparator2.Size = new System.Drawing.Size(216, 6);
-            // 
+            //
             // mnuEditSelectAll
-            // 
+            //
             this.mnuEditSelectAll.Name = "mnuEditSelectAll";
             this.mnuEditSelectAll.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
             this.mnuEditSelectAll.Size = new System.Drawing.Size(219, 26);
             this.mnuEditSelectAll.Text = "Chọn tất &cả";
             this.mnuEditSelectAll.Click += new System.EventHandler(this.mnuEditSelectAll_Click);
-            // 
+            //
             // mnuView
-            // 
+            //
             this.mnuView.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuViewRefresh,
             this.mnuViewShowHidden,
@@ -338,30 +343,30 @@
             this.mnuView.Name = "mnuView";
             this.mnuView.Size = new System.Drawing.Size(53, 24);
             this.mnuView.Text = "&Xem";
-            // 
+            //
             // mnuViewRefresh
-            // 
+            //
             this.mnuViewRefresh.Name = "mnuViewRefresh";
             this.mnuViewRefresh.ShortcutKeys = System.Windows.Forms.Keys.F5;
             this.mnuViewRefresh.Size = new System.Drawing.Size(228, 26);
             this.mnuViewRefresh.Text = "&Làm mới";
             this.mnuViewRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
-            // 
+            //
             // mnuViewShowHidden
-            // 
+            //
             this.mnuViewShowHidden.CheckOnClick = true;
             this.mnuViewShowHidden.Name = "mnuViewShowHidden";
             this.mnuViewShowHidden.Size = new System.Drawing.Size(228, 26);
             this.mnuViewShowHidden.Text = "Hiện file/thư mục ẩn";
             this.mnuViewShowHidden.Click += new System.EventHandler(this.mnuViewShowHidden_Click);
-            // 
+            //
             // mnuViewSeparator1
-            // 
+            //
             this.mnuViewSeparator1.Name = "mnuViewSeparator1";
             this.mnuViewSeparator1.Size = new System.Drawing.Size(225, 6);
-            // 
+            //
             // mnuViewMode
-            // 
+            //
             this.mnuViewMode.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuViewModeLargeIcon,
             this.mnuViewModeSmallIcon,
@@ -370,39 +375,39 @@
             this.mnuViewMode.Name = "mnuViewMode";
             this.mnuViewMode.Size = new System.Drawing.Size(228, 26);
             this.mnuViewMode.Text = "Chế độ xem";
-            // 
+            //
             // mnuViewModeLargeIcon
-            // 
+            //
             this.mnuViewModeLargeIcon.Name = "mnuViewModeLargeIcon";
             this.mnuViewModeLargeIcon.Size = new System.Drawing.Size(194, 26);
             this.mnuViewModeLargeIcon.Text = "Biểu tượng lớn";
             this.mnuViewModeLargeIcon.Click += new System.EventHandler(this.mnuViewModeLargeIcon_Click);
-            // 
+            //
             // mnuViewModeSmallIcon
-            // 
+            //
             this.mnuViewModeSmallIcon.Name = "mnuViewModeSmallIcon";
             this.mnuViewModeSmallIcon.Size = new System.Drawing.Size(194, 26);
             this.mnuViewModeSmallIcon.Text = "Biểu tượng nhỏ";
             this.mnuViewModeSmallIcon.Click += new System.EventHandler(this.mnuViewModeSmallIcon_Click);
-            // 
+            //
             // mnuViewModeList
-            // 
+            //
             this.mnuViewModeList.Name = "mnuViewModeList";
             this.mnuViewModeList.Size = new System.Drawing.Size(194, 26);
             this.mnuViewModeList.Text = "Danh sách";
             this.mnuViewModeList.Click += new System.EventHandler(this.mnuViewModeList_Click);
-            // 
+            //
             // mnuViewModeDetails
-            // 
+            //
             this.mnuViewModeDetails.Checked = true;
             this.mnuViewModeDetails.CheckState = System.Windows.Forms.CheckState.Checked;
             this.mnuViewModeDetails.Name = "mnuViewModeDetails";
             this.mnuViewModeDetails.Size = new System.Drawing.Size(194, 26);
             this.mnuViewModeDetails.Text = "Chi tiết";
             this.mnuViewModeDetails.Click += new System.EventHandler(this.mnuViewModeDetails_Click);
-            // 
+            //
             // mnuTools
-            // 
+            //
             this.mnuTools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuToolsSearch,
             this.mnuToolsFindDuplicates,
@@ -414,73 +419,75 @@
             this.mnuTools.Name = "mnuTools";
             this.mnuTools.Size = new System.Drawing.Size(77, 24);
             this.mnuTools.Text = "&Công cụ";
-            // 
+            //
             // mnuToolsSearch
-            // 
+            //
             this.mnuToolsSearch.Name = "mnuToolsSearch";
             this.mnuToolsSearch.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
             this.mnuToolsSearch.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsSearch.Text = "&Tìm kiếm...";
             this.mnuToolsSearch.Click += new System.EventHandler(this.mnuToolsSearch_Click);
-            // 
+            //
             // mnuToolsFindDuplicates
-            // 
+            //
             this.mnuToolsFindDuplicates.Name = "mnuToolsFindDuplicates";
             this.mnuToolsFindDuplicates.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsFindDuplicates.Text = "Tìm file &trùng lặp...";
             this.mnuToolsFindDuplicates.Click += new System.EventHandler(this.mnuToolsFindDuplicates_Click);
-            // 
+            //
             // mnuToolsSeparator1
-            // 
+            //
             this.mnuToolsSeparator1.Name = "mnuToolsSeparator1";
             this.mnuToolsSeparator1.Size = new System.Drawing.Size(243, 6);
-            // 
+            //
             // mnuToolsRecycleBin
-            // 
+            //
             this.mnuToolsRecycleBin.Name = "mnuToolsRecycleBin";
             this.mnuToolsRecycleBin.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsRecycleBin.Text = "Thùng &rác";
             this.mnuToolsRecycleBin.Click += new System.EventHandler(this.mnuToolsRecycleBin_Click);
-            // 
+            //
             // mnuToolsLogs
-            // 
+            //
             this.mnuToolsLogs.Name = "mnuToolsLogs";
             this.mnuToolsLogs.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsLogs.Text = "&Xem nhật ký hoạt động";
             this.mnuToolsLogs.Click += new System.EventHandler(this.mnuToolsLogs_Click);
-            // 
+            //
             // mnuToolsSeparator2
-            // 
+            //
             this.mnuToolsSeparator2.Name = "mnuToolsSeparator2";
             this.mnuToolsSeparator2.Size = new System.Drawing.Size(243, 6);
-            // 
+            //
             // mnuToolsSettings
-            // 
+            //
             this.mnuToolsSettings.Name = "mnuToolsSettings";
             this.mnuToolsSettings.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsSettings.Text = "&Cài đặt...";
             this.mnuToolsSettings.Click += new System.EventHandler(this.mnuToolsSettings_Click);
-            // 
+            //
             // mnuHelp
-            // 
+            //
             this.mnuHelp.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuHelpAbout});
             this.mnuHelp.Name = "mnuHelp";
             this.mnuHelp.Size = new System.Drawing.Size(78, 24);
             this.mnuHelp.Text = "Trợ &giúp";
-            // 
+            //
             // mnuHelpAbout
-            // 
+            //
             this.mnuHelpAbout.Name = "mnuHelpAbout";
             this.mnuHelpAbout.Size = new System.Drawing.Size(165, 26);
             this.mnuHelpAbout.Text = "&Giới thiệu...";
             this.mnuHelpAbout.Click += new System.EventHandler(this.mnuHelpAbout_Click);
-            // 
+            //
             // tlsMain
-            // 
+            //
+            this.tlsMain.Dock = System.Windows.Forms.DockStyle.Top;
             this.tlsMain.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.tlsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsbBack,
+            this.tsbForward,
             this.tsbUp,
             this.tsbRefresh,
             this.tsbSeparator1,
@@ -492,152 +499,183 @@
             this.tsbDelete});
             this.tlsMain.Location = new System.Drawing.Point(0, 28);
             this.tlsMain.Name = "tlsMain";
-            this.tlsMain.Size = new System.Drawing.Size(800, 27);
+            this.tlsMain.Size = new System.Drawing.Size(1200, 58);
             this.tlsMain.TabIndex = 1;
             this.tlsMain.Text = "tlsMain";
-            // 
+            //
             // tsbBack
-            // 
-            this.tsbBack.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbBack.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbBack.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbBack.Name = "tsbBack";
-            this.tsbBack.Size = new System.Drawing.Size(61, 24);
-            this.tsbBack.Text = "◄ Back";
+            this.tsbBack.Size = new System.Drawing.Size(54, 55);
+            this.tsbBack.Text = "←\r\nBack";
             this.tsbBack.ToolTipText = "Quay lại thư mục trước";
             this.tsbBack.Click += new System.EventHandler(this.tsbBack_Click);
-            // 
+            //
+            // tsbForward
+            //
+            this.tsbForward.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbForward.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.tsbForward.Name = "tsbForward";
+            this.tsbForward.Size = new System.Drawing.Size(64, 55);
+            this.tsbForward.Text = "→\r\nForward";
+            this.tsbForward.ToolTipText = "Đi tới thư mục vừa quay lại";
+            this.tsbForward.Click += new System.EventHandler(this.tsbForward_Click);
+            //
             // tsbUp
-            // 
-            this.tsbUp.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbUp.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbUp.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbUp.Name = "tsbUp";
-            this.tsbUp.Size = new System.Drawing.Size(49, 24);
-            this.tsbUp.Text = "▲ Up";
+            this.tsbUp.Size = new System.Drawing.Size(38, 55);
+            this.tsbUp.Text = "↑\r\nUp";
             this.tsbUp.ToolTipText = "Lên thư mục cha";
             this.tsbUp.Click += new System.EventHandler(this.tsbUp_Click);
-            // 
+            //
             // tsbRefresh
-            // 
-            this.tsbRefresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbRefresh.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbRefresh.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbRefresh.Name = "tsbRefresh";
-            this.tsbRefresh.Size = new System.Drawing.Size(79, 24);
-            this.tsbRefresh.Text = "⟲ Refresh";
+            this.tsbRefresh.Size = new System.Drawing.Size(63, 55);
+            this.tsbRefresh.Text = "⟳\r\nRefresh";
             this.tsbRefresh.ToolTipText = "Làm mới (F5)";
             this.tsbRefresh.Click += new System.EventHandler(this.tsbRefresh_Click);
-            // 
+            //
             // tsbSeparator1
-            // 
+            //
             this.tsbSeparator1.Name = "tsbSeparator1";
-            this.tsbSeparator1.Size = new System.Drawing.Size(6, 27);
-            // 
+            this.tsbSeparator1.Size = new System.Drawing.Size(6, 58);
+            //
             // tsbNewFolder
-            // 
-            this.tsbNewFolder.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbNewFolder.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbNewFolder.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbNewFolder.Name = "tsbNewFolder";
-            this.tsbNewFolder.Size = new System.Drawing.Size(89, 24);
-            this.tsbNewFolder.Text = "New Folder";
+            this.tsbNewFolder.Size = new System.Drawing.Size(76, 55);
+            this.tsbNewFolder.Text = "+\r\nNew Folder";
             this.tsbNewFolder.ToolTipText = "Tạo thư mục mới";
             this.tsbNewFolder.Click += new System.EventHandler(this.tsbNewFolder_Click);
-            // 
+            //
             // tsbSeparator2
-            // 
+            //
             this.tsbSeparator2.Name = "tsbSeparator2";
-            this.tsbSeparator2.Size = new System.Drawing.Size(6, 27);
-            // 
+            this.tsbSeparator2.Size = new System.Drawing.Size(6, 58);
+            //
             // tsbCopy
-            // 
-            this.tsbCopy.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbCopy.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbCopy.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbCopy.Name = "tsbCopy";
-            this.tsbCopy.Size = new System.Drawing.Size(47, 24);
-            this.tsbCopy.Text = "Copy";
+            this.tsbCopy.Size = new System.Drawing.Size(49, 55);
+            this.tsbCopy.Text = "⧉\r\nCopy";
             this.tsbCopy.ToolTipText = "Sao chép (Ctrl+C)";
             this.tsbCopy.Click += new System.EventHandler(this.tsbCopy_Click);
-            // 
+            //
             // tsbPaste
-            // 
-            this.tsbPaste.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbPaste.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbPaste.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbPaste.Name = "tsbPaste";
-            this.tsbPaste.Size = new System.Drawing.Size(47, 24);
-            this.tsbPaste.Text = "Paste";
+            this.tsbPaste.Size = new System.Drawing.Size(48, 55);
+            this.tsbPaste.Text = "▤\r\nPaste";
             this.tsbPaste.ToolTipText = "Dán (Ctrl+V)";
             this.tsbPaste.Click += new System.EventHandler(this.tsbPaste_Click);
-            // 
+            //
             // tsbSeparator3
-            // 
+            //
             this.tsbSeparator3.Name = "tsbSeparator3";
-            this.tsbSeparator3.Size = new System.Drawing.Size(6, 27);
-            // 
+            this.tsbSeparator3.Size = new System.Drawing.Size(6, 58);
+            //
             // tsbDelete
-            // 
-            this.tsbDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            //
+            this.tsbDelete.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.ImageAndText;
+            this.tsbDelete.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbDelete.Name = "tsbDelete";
-            this.tsbDelete.Size = new System.Drawing.Size(57, 24);
-            this.tsbDelete.Text = "Delete";
+            this.tsbDelete.Size = new System.Drawing.Size(52, 55);
+            this.tsbDelete.Text = "✕\r\nDelete";
             this.tsbDelete.ToolTipText = "Xóa (Del)";
             this.tsbDelete.Click += new System.EventHandler(this.tsbDelete_Click);
-            // 
+            //
             // pnlAddressBar
-            // 
-            this.pnlAddressBar.Controls.Add(this.btnUp);
+            //
+            this.pnlAddressBar.Controls.Add(this.txtSearch);
             this.pnlAddressBar.Controls.Add(this.btnGo);
             this.pnlAddressBar.Controls.Add(this.txtPath);
+            this.pnlAddressBar.Controls.Add(this.btnUp);
             this.pnlAddressBar.Dock = System.Windows.Forms.DockStyle.Top;
-            this.pnlAddressBar.Location = new System.Drawing.Point(0, 0);
+            this.pnlAddressBar.Location = new System.Drawing.Point(0, 86);
             this.pnlAddressBar.Name = "pnlAddressBar";
-            this.pnlAddressBar.Padding = new System.Windows.Forms.Padding(2);
-            this.pnlAddressBar.Size = new System.Drawing.Size(800, 28);
+            this.pnlAddressBar.Padding = new System.Windows.Forms.Padding(8, 6, 8, 6);
+            this.pnlAddressBar.Size = new System.Drawing.Size(1200, 40);
             this.pnlAddressBar.TabIndex = 2;
-            // 
+            //
+            // txtSearch
+            //
+            this.txtSearch.Dock = System.Windows.Forms.DockStyle.Right;
+            this.txtSearch.Location = new System.Drawing.Point(892, 6);
+            this.txtSearch.Name = "txtSearch";
+            this.txtSearch.Size = new System.Drawing.Size(300, 26);
+            this.txtSearch.TabIndex = 3;
+            this.txtSearch.Text = "Tìm kiếm...";
+            this.txtSearch.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.txtSearch.Enter += new System.EventHandler(this.txtSearch_Enter);
+            this.txtSearch.Leave += new System.EventHandler(this.txtSearch_Leave);
+            this.txtSearch.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtSearch_KeyDown);
+            //
+            // btnGo
+            //
+            this.btnGo.Dock = System.Windows.Forms.DockStyle.Right;
+            this.btnGo.Location = new System.Drawing.Point(832, 6);
+            this.btnGo.Name = "btnGo";
+            this.btnGo.Size = new System.Drawing.Size(60, 26);
+            this.btnGo.TabIndex = 2;
+            this.btnGo.Text = "▶";
+            this.btnGo.UseVisualStyleBackColor = true;
+            this.btnGo.Click += new System.EventHandler(this.btnGo_Click);
+            //
+            // txtPath
+            //
+            this.txtPath.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtPath.Location = new System.Drawing.Point(38, 6);
+            this.txtPath.Name = "txtPath";
+            this.txtPath.Size = new System.Drawing.Size(794, 26);
+            this.txtPath.TabIndex = 1;
+            this.txtPath.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPath_KeyDown);
+            //
             // btnUp
-            // 
+            //
             this.btnUp.Dock = System.Windows.Forms.DockStyle.Left;
-            this.btnUp.Location = new System.Drawing.Point(2, 2);
+            this.btnUp.Location = new System.Drawing.Point(8, 6);
             this.btnUp.Name = "btnUp";
-            this.btnUp.Size = new System.Drawing.Size(32, 24);
+            this.btnUp.Size = new System.Drawing.Size(30, 26);
             this.btnUp.TabIndex = 0;
             this.btnUp.Text = "▲";
             this.btnUp.UseVisualStyleBackColor = true;
             this.btnUp.Click += new System.EventHandler(this.btnUp_Click);
-            // 
-            // btnGo
-            // 
-            this.btnGo.Dock = System.Windows.Forms.DockStyle.Right;
-            this.btnGo.Location = new System.Drawing.Point(738, 2);
-            this.btnGo.Name = "btnGo";
-            this.btnGo.Size = new System.Drawing.Size(60, 24);
-            this.btnGo.TabIndex = 2;
-            this.btnGo.Text = "Go";
-            this.btnGo.UseVisualStyleBackColor = true;
-            this.btnGo.Click += new System.EventHandler(this.btnGo_Click);
-            // 
-            // txtPath
-            // 
-            this.txtPath.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtPath.Location = new System.Drawing.Point(2, 2);
-            this.txtPath.Name = "txtPath";
-            this.txtPath.Size = new System.Drawing.Size(796, 22);
-            this.txtPath.TabIndex = 1;
-            this.txtPath.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtPath_KeyDown);
-            // 
+            //
             // spcMain
-            // 
+            //
             this.spcMain.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.spcMain.Location = new System.Drawing.Point(0, 0);
+            this.spcMain.Location = new System.Drawing.Point(0, 126);
             this.spcMain.Name = "spcMain";
-            // 
+            //
             // spcMain.Panel1
-            // 
+            //
             this.spcMain.Panel1.Controls.Add(this.trvFolders);
             this.spcMain.Panel1MinSize = 120;
-            // 
+            //
             // spcMain.Panel2
-            // 
+            //
             this.spcMain.Panel2.Controls.Add(this.lvwFiles);
             this.spcMain.Panel2MinSize = 200;
-            this.spcMain.Size = new System.Drawing.Size(800, 420);
-            this.spcMain.SplitterDistance = 220;
+            this.spcMain.Size = new System.Drawing.Size(1200, 544);
+            this.spcMain.SplitterDistance = 300;
             this.spcMain.TabIndex = 3;
-            // 
+            //
             // trvFolders
-            // 
+            //
             this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
             this.trvFolders.HideSelection = false;
             this.trvFolders.ImageKey = "folder";
@@ -645,19 +683,19 @@
             this.trvFolders.Location = new System.Drawing.Point(0, 0);
             this.trvFolders.Name = "trvFolders";
             this.trvFolders.SelectedImageKey = "folder";
-            this.trvFolders.Size = new System.Drawing.Size(220, 420);
+            this.trvFolders.Size = new System.Drawing.Size(300, 544);
             this.trvFolders.TabIndex = 0;
             this.trvFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.trvFolders_BeforeExpand);
             this.trvFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.trvFolders_AfterSelect);
-            // 
+            //
             // imlIcons
-            // 
+            //
             this.imlIcons.ColorDepth = System.Windows.Forms.ColorDepth.Depth32Bit;
             this.imlIcons.ImageSize = new System.Drawing.Size(16, 16);
             this.imlIcons.TransparentColor = System.Drawing.Color.Transparent;
-            // 
+            //
             // lvwFiles
-            // 
+            //
             this.lvwFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.colName,
             this.colSize,
@@ -666,41 +704,41 @@
             this.lvwFiles.ContextMenuStrip = this.cmsListView;
             this.lvwFiles.Dock = System.Windows.Forms.DockStyle.Fill;
             this.lvwFiles.FullRowSelect = true;
-            this.lvwFiles.GridLines = true;
+            this.lvwFiles.GridLines = false;
             this.lvwFiles.HideSelection = false;
             this.lvwFiles.Location = new System.Drawing.Point(0, 0);
             this.lvwFiles.Name = "lvwFiles";
-            this.lvwFiles.Size = new System.Drawing.Size(576, 420);
+            this.lvwFiles.Size = new System.Drawing.Size(896, 544);
             this.lvwFiles.SmallImageList = this.imlIcons;
             this.lvwFiles.TabIndex = 0;
             this.lvwFiles.UseCompatibleStateImageBehavior = false;
             this.lvwFiles.View = System.Windows.Forms.View.Details;
             this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
-            // 
+            //
             // colName
-            // 
+            //
             this.colName.Text = "Tên";
-            this.colName.Width = 240;
-            // 
+            this.colName.Width = 380;
+            //
             // colSize
-            // 
+            //
             this.colSize.Text = "Kích thước";
             this.colSize.TextAlign = System.Windows.Forms.HorizontalAlignment.Right;
-            this.colSize.Width = 100;
-            // 
+            this.colSize.Width = 120;
+            //
             // colType
-            // 
+            //
             this.colType.Text = "Loại";
-            this.colType.Width = 130;
-            // 
+            this.colType.Width = 160;
+            //
             // colModified
-            // 
-            this.colModified.Text = "Ngày sửa đổi";
-            this.colModified.Width = 140;
-            // 
+            //
+            this.colModified.Text = "Ngày sửa";
+            this.colModified.Width = 200;
+            //
             // cmsListView
-            // 
+            //
             this.cmsListView.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.cmsListView.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.cmsOpen,
@@ -717,132 +755,133 @@
             this.cmsListView.Name = "cmsListView";
             this.cmsListView.Size = new System.Drawing.Size(192, 214);
             this.cmsListView.Opening += new System.ComponentModel.CancelEventHandler(this.cmsListView_Opening);
-            // 
+            //
             // cmsOpen
-            // 
+            //
             this.cmsOpen.Name = "cmsOpen";
             this.cmsOpen.Size = new System.Drawing.Size(191, 24);
             this.cmsOpen.Text = "&Mở";
             this.cmsOpen.Click += new System.EventHandler(this.cmsOpen_Click);
-            // 
+            //
             // cmsSeparator1
-            // 
+            //
             this.cmsSeparator1.Name = "cmsSeparator1";
             this.cmsSeparator1.Size = new System.Drawing.Size(188, 6);
-            // 
+            //
             // cmsCut
-            // 
+            //
             this.cmsCut.Name = "cmsCut";
             this.cmsCut.Size = new System.Drawing.Size(191, 24);
             this.cmsCut.Text = "&Cắt";
             this.cmsCut.Click += new System.EventHandler(this.mnuEditCut_Click);
-            // 
+            //
             // cmsCopy
-            // 
+            //
             this.cmsCopy.Name = "cmsCopy";
             this.cmsCopy.Size = new System.Drawing.Size(191, 24);
             this.cmsCopy.Text = "Sao &chép";
             this.cmsCopy.Click += new System.EventHandler(this.mnuEditCopy_Click);
-            // 
+            //
             // cmsPaste
-            // 
+            //
             this.cmsPaste.Name = "cmsPaste";
             this.cmsPaste.Size = new System.Drawing.Size(191, 24);
             this.cmsPaste.Text = "&Dán";
             this.cmsPaste.Click += new System.EventHandler(this.mnuEditPaste_Click);
-            // 
+            //
             // cmsSeparator2
-            // 
+            //
             this.cmsSeparator2.Name = "cmsSeparator2";
             this.cmsSeparator2.Size = new System.Drawing.Size(188, 6);
-            // 
+            //
             // cmsDelete
-            // 
+            //
             this.cmsDelete.Name = "cmsDelete";
             this.cmsDelete.Size = new System.Drawing.Size(191, 24);
             this.cmsDelete.Text = "&Xóa";
             this.cmsDelete.Click += new System.EventHandler(this.mnuEditDelete_Click);
-            // 
+            //
             // cmsRename
-            // 
+            //
             this.cmsRename.Name = "cmsRename";
             this.cmsRename.Size = new System.Drawing.Size(191, 24);
             this.cmsRename.Text = "Đổi &tên";
             this.cmsRename.Click += new System.EventHandler(this.mnuEditRename_Click);
-            // 
+            //
             // cmsSeparator3
-            // 
+            //
             this.cmsSeparator3.Name = "cmsSeparator3";
             this.cmsSeparator3.Size = new System.Drawing.Size(188, 6);
-            // 
+            //
             // cmsNewFolder
-            // 
+            //
             this.cmsNewFolder.Name = "cmsNewFolder";
             this.cmsNewFolder.Size = new System.Drawing.Size(191, 24);
             this.cmsNewFolder.Text = "Tạo thư mục &mới";
             this.cmsNewFolder.Click += new System.EventHandler(this.mnuFileNewFolder_Click);
-            // 
+            //
             // cmsRefresh
-            // 
+            //
             this.cmsRefresh.Name = "cmsRefresh";
             this.cmsRefresh.Size = new System.Drawing.Size(191, 24);
             this.cmsRefresh.Text = "&Làm mới";
             this.cmsRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
-            // 
+            //
             // stsMain
-            // 
+            //
+            this.stsMain.Dock = System.Windows.Forms.DockStyle.Bottom;
             this.stsMain.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.stsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsslStatus,
             this.tspProgress,
             this.tsslItemCount,
             this.tsslTotalSize});
-            this.stsMain.Location = new System.Drawing.Point(0, 420);
+            this.stsMain.Location = new System.Drawing.Point(0, 670);
             this.stsMain.Name = "stsMain";
-            this.stsMain.Size = new System.Drawing.Size(800, 30);
+            this.stsMain.Size = new System.Drawing.Size(1200, 30);
             this.stsMain.TabIndex = 4;
-            // 
+            //
             // tsslStatus
-            // 
+            //
             this.tsslStatus.Name = "tsslStatus";
-            this.tsslStatus.Size = new System.Drawing.Size(556, 24);
+            this.tsslStatus.Size = new System.Drawing.Size(956, 24);
             this.tsslStatus.Spring = true;
             this.tsslStatus.Text = "Sẵn sàng";
             this.tsslStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            // 
+            //
             // tspProgress
-            // 
+            //
             this.tspProgress.Name = "tspProgress";
             this.tspProgress.Size = new System.Drawing.Size(120, 22);
             this.tspProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.tspProgress.Visible = false;
-            // 
+            //
             // tsslItemCount
-            // 
+            //
             this.tsslItemCount.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
             this.tsslItemCount.Name = "tsslItemCount";
             this.tsslItemCount.Size = new System.Drawing.Size(53, 24);
             this.tsslItemCount.Text = "0 mục";
-            // 
+            //
             // tsslTotalSize
-            // 
+            //
             this.tsslTotalSize.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
             this.tsslTotalSize.Name = "tsslTotalSize";
             this.tsslTotalSize.Size = new System.Drawing.Size(54, 24);
             this.tsslTotalSize.Text = "0 byte";
-            // 
+            //
             // MainForm
-            // 
+            //
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.mnsMain);
-            this.Controls.Add(this.tlsMain);
-            this.Controls.Add(this.pnlAddressBar);
+            this.ClientSize = new System.Drawing.Size(1200, 700);
             this.Controls.Add(this.spcMain);
+            this.Controls.Add(this.pnlAddressBar);
+            this.Controls.Add(this.tlsMain);
+            this.Controls.Add(this.mnsMain);
             this.Controls.Add(this.stsMain);
             this.MainMenuStrip = this.mnsMain;
-            this.MinimumSize = new System.Drawing.Size(500, 350);
+            this.MinimumSize = new System.Drawing.Size(700, 450);
             this.Name = "MainForm";
             this.Text = "MainForm";
             this.mnsMain.ResumeLayout(false);

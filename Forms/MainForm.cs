@@ -52,6 +52,11 @@ namespace FileExplorerApp.Forms
         // duoc goi, duong dan hien tai (truoc khi doi) duoc day vao day.
         private readonly Stack<string> _backHistory = new Stack<string>();
 
+        // Lich su "tien" tuong ung nut Forward: chi duoc day vao khi bam Back, va bi
+        // xoa het moi khi nguoi dung dieu huong toi mot thu muc moi (khong phai qua
+        // Back/Forward), giong hanh vi trinh duyet/Explorer thong thuong.
+        private readonly Stack<string> _forwardHistory = new Stack<string>();
+
         // True trong luc dang chon node tren trvFolders bang code (VD: khi NavigateTo
         // duoc goi tu noi khac, khong phai tu chinh nguoi dung bam vao cay thu muc), de
         // tranh trvFolders_AfterSelect goi lai NavigateTo va gay vong lap/History sai.
@@ -142,9 +147,18 @@ namespace FileExplorerApp.Forms
             btnUp.BackColor = AppTheme.Surface;
             btnUp.ForeColor = AppTheme.TextPrimary;
             btnGo.FlatStyle = FlatStyle.Flat;
-            btnGo.FlatAppearance.BorderColor = AppTheme.Border;
-            btnGo.BackColor = AppTheme.Surface;
-            btnGo.ForeColor = AppTheme.TextPrimary;
+            btnGo.FlatAppearance.BorderColor = AppTheme.Accent;
+            btnGo.BackColor = AppTheme.Accent;
+            btnGo.ForeColor = System.Drawing.Color.White;
+
+            txtSearch.BackColor = AppTheme.Surface;
+            txtSearch.BorderStyle = BorderStyle.FixedSingle;
+            // Neu dang hien placeholder ("Tìm kiếm...") thi giu mau chu nhat (TextSecondary),
+            // con lai dung mau chu chinh — tranh ApplyTheme() ghi de mau placeholder khi
+            // duoc goi lai (VD: sau khi dong SettingsForm).
+            txtSearch.ForeColor = txtSearch.Text == SearchPlaceholderText
+                ? AppTheme.TextSecondary
+                : AppTheme.TextPrimary;
 
             // Vung lam viec: SplitContainer (mau nen chinh la mau duong phan
             // cach giua 2 panel), TreeView, ListView.
@@ -801,6 +815,9 @@ namespace FileExplorerApp.Forms
                 return;
 
             _backHistory.Push(_currentPath);
+            // Dieu huong toi mot thu muc moi (khong phai qua tsbForward_Click) se lam
+            // "gay" nhanh history tien, giong hanh vi trinh duyet/Explorer thong thuong.
+            _forwardHistory.Clear();
             _currentPath = path;
 
             // TODO: khi da co ListView duyet thu muc thuc te, ham nay se la
@@ -821,7 +838,23 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            _forwardHistory.Push(_currentPath);
             _currentPath = _backHistory.Pop();
+            mnuViewRefresh_Click(sender, e);
+            SelectTreeViewNodeForPath(_currentPath);
+        }
+
+        private void tsbForward_Click(object sender, EventArgs e)
+        {
+            if (_forwardHistory.Count == 0)
+            {
+                MessageBox.Show("Không có gì để đi tới.", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _backHistory.Push(_currentPath);
+            _currentPath = _forwardHistory.Pop();
             mnuViewRefresh_Click(sender, e);
             SelectTreeViewNodeForPath(_currentPath);
         }
@@ -882,6 +915,42 @@ namespace FileExplorerApp.Forms
             {
                 e.SuppressKeyPress = true; // Tranh tieng "beep" va xuong dong trong TextBox.
                 btnGo_Click(sender, e);
+            }
+        }
+
+        #endregion
+
+        #region O tim kiem nhanh (txtSearch)
+
+        private const string SearchPlaceholderText = "Tìm kiếm...";
+
+        /// <summary>Xoa chu placeholder khi nguoi dung bam vao o tim kiem.</summary>
+        private void txtSearch_Enter(object sender, EventArgs e)
+        {
+            if (txtSearch.Text == SearchPlaceholderText)
+            {
+                txtSearch.Text = string.Empty;
+                txtSearch.ForeColor = AppTheme.TextPrimary;
+            }
+        }
+
+        /// <summary>Khoi phuc chu placeholder neu nguoi dung roi o tim kiem ma khong nhap gi.</summary>
+        private void txtSearch_Leave(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtSearch.Text))
+            {
+                txtSearch.Text = SearchPlaceholderText;
+                txtSearch.ForeColor = AppTheme.TextSecondary;
+            }
+        }
+
+        /// <summary>Nhan Enter trong o tim kiem se mo man hinh Tim kiem (SearchForm, TODO).</summary>
+        private void txtSearch_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter)
+            {
+                e.SuppressKeyPress = true;
+                mnuToolsSearch_Click(sender, e);
             }
         }
 
