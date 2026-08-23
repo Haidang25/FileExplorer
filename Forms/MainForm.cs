@@ -1302,30 +1302,41 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void LoadTreeViewFolders()
         {
-            trvFolders.Nodes.Clear();
-
-            foreach (FolderItemModel drive in _folderService.GetDrives())
+            // BeginUpdate/EndUpdate: tam ngung ve lai TreeView trong luc nap toan bo
+            // node o dia, tranh nhap nhay va tang toc do khi co nhieu o dia (VD: may
+            // gan nhieu o ngoai/o mang).
+            trvFolders.BeginUpdate();
+            try
             {
-                var driveNode = new TreeNode(drive.Name);
-                string driveImageKey = GetDriveImageKey(drive);
-                driveNode.ImageKey = driveImageKey;
-                driveNode.SelectedImageKey = driveImageKey;
+                trvFolders.Nodes.Clear();
 
-                if (drive.IsReady)
+                foreach (FolderItemModel drive in _folderService.GetDrives())
                 {
-                    driveNode.Tag = drive.FullPath;
-                    driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
-                }
-                else
-                {
-                    // Khong gan duong dan string vao Tag de tsbBack/AfterSelect/
-                    // BeforeExpand khong the vo tinh coi day la mot thu muc dieu
-                    // huong duoc - gan ca FolderItemModel lam dau hieu "o chua san sang".
-                    driveNode.Tag = drive;
-                    driveNode.ForeColor = AppTheme.TextSecondary;
-                }
+                    var driveNode = new TreeNode(drive.Name);
+                    string driveImageKey = GetDriveImageKey(drive);
+                    driveNode.ImageKey = driveImageKey;
+                    driveNode.SelectedImageKey = driveImageKey;
 
-                trvFolders.Nodes.Add(driveNode);
+                    if (drive.IsReady)
+                    {
+                        driveNode.Tag = drive.FullPath;
+                        driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+                    }
+                    else
+                    {
+                        // Khong gan duong dan string vao Tag de tsbBack/AfterSelect/
+                        // BeforeExpand khong the vo tinh coi day la mot thu muc dieu
+                        // huong duoc - gan ca FolderItemModel lam dau hieu "o chua san sang".
+                        driveNode.Tag = drive;
+                        driveNode.ForeColor = AppTheme.TextSecondary;
+                    }
+
+                    trvFolders.Nodes.Add(driveNode);
+                }
+            }
+            finally
+            {
+                trvFolders.EndUpdate();
             }
         }
 
@@ -1353,14 +1364,19 @@ namespace FileExplorerApp.Forms
             if (!isLazyPlaceholder)
                 return; // Da nap that roi (hoac khong co thu muc con), khong can lam lai.
 
-            node.Nodes.Clear();
-
             string path = node.Tag as string;
             if (string.IsNullOrEmpty(path))
                 return;
 
+            // BeginUpdate/EndUpdate: tam ngung ve lai TreeView trong luc thay node
+            // "gia" bang danh sach thu muc con thuc su - tranh nhap nhay khi thu muc
+            // co nhieu thu muc con (VD: expand C:\Windows\System32). An toan khi goi
+            // trong chinh su kien BeforeExpand cua TreeView dang duoc mo rong.
+            trvFolders.BeginUpdate();
             try
             {
+                node.Nodes.Clear();
+
                 // Dung FolderService.GetSubFolders() thay vi tu Directory.GetDirectories()
                 // de tan dung viec loc file/thu muc an co san (includeHidden) va HasSubFolders
                 // da duoc tinh san (FolderItemModel.FromDirectoryInfo) - tranh phai goi rieng
@@ -1388,6 +1404,10 @@ namespace FileExplorerApp.Forms
             catch (IOException)
             {
                 // O dia thao ra, duong dan mang bi ngat... - bo qua tuong tu.
+            }
+            finally
+            {
+                trvFolders.EndUpdate();
             }
         }
 
