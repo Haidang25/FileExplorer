@@ -114,6 +114,102 @@ namespace FileExplorerApp.Helpers
             return true;
         }
 
+        /// <summary>Nhom icon rieng cho file tren ListView, dua tren phan mo rong (xem GetFileIconCategory).</summary>
+        public enum FileIconCategory
+        {
+            /// <summary>Khong khop nhom nao rieng - dung icon file trung tinh mac dinh.</summary>
+            Generic,
+            Image,
+            Document,
+            Spreadsheet,
+            Archive,
+            Media,
+            Code
+        }
+
+        /// <summary>Bang tra nhom icon theo phan mo rong (khong phan biet hoa/thuong).</summary>
+        private static readonly Dictionary<string, FileIconCategory> FileIconMap = new Dictionary<string, FileIconCategory>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Hinh anh
+            [".jpg"] = FileIconCategory.Image,
+            [".jpeg"] = FileIconCategory.Image,
+            [".png"] = FileIconCategory.Image,
+            [".gif"] = FileIconCategory.Image,
+            [".bmp"] = FileIconCategory.Image,
+            [".svg"] = FileIconCategory.Image,
+            [".ico"] = FileIconCategory.Image,
+            [".webp"] = FileIconCategory.Image,
+
+            // Van ban / tai lieu
+            [".txt"] = FileIconCategory.Document,
+            [".doc"] = FileIconCategory.Document,
+            [".docx"] = FileIconCategory.Document,
+            [".pdf"] = FileIconCategory.Document,
+            [".rtf"] = FileIconCategory.Document,
+            [".odt"] = FileIconCategory.Document,
+
+            // Bang tinh / trinh chieu (gom chung nhom voi bang tinh, khac hinh dang voi Document).
+            [".xls"] = FileIconCategory.Spreadsheet,
+            [".xlsx"] = FileIconCategory.Spreadsheet,
+            [".csv"] = FileIconCategory.Spreadsheet,
+            [".ppt"] = FileIconCategory.Spreadsheet,
+            [".pptx"] = FileIconCategory.Spreadsheet,
+
+            // Nen / luu tru
+            [".zip"] = FileIconCategory.Archive,
+            [".rar"] = FileIconCategory.Archive,
+            [".7z"] = FileIconCategory.Archive,
+            [".tar"] = FileIconCategory.Archive,
+            [".gz"] = FileIconCategory.Archive,
+
+            // Am thanh / video
+            [".mp3"] = FileIconCategory.Media,
+            [".wav"] = FileIconCategory.Media,
+            [".flac"] = FileIconCategory.Media,
+            [".mp4"] = FileIconCategory.Media,
+            [".avi"] = FileIconCategory.Media,
+            [".mkv"] = FileIconCategory.Media,
+            [".mov"] = FileIconCategory.Media,
+
+            // Ma nguon / thuc thi
+            [".cs"] = FileIconCategory.Code,
+            [".html"] = FileIconCategory.Code,
+            [".htm"] = FileIconCategory.Code,
+            [".css"] = FileIconCategory.Code,
+            [".js"] = FileIconCategory.Code,
+            [".json"] = FileIconCategory.Code,
+            [".xml"] = FileIconCategory.Code,
+            [".sql"] = FileIconCategory.Code,
+            [".exe"] = FileIconCategory.Code,
+            [".msi"] = FileIconCategory.Code,
+            [".dll"] = FileIconCategory.Code,
+            [".bat"] = FileIconCategory.Code,
+            [".ps1"] = FileIconCategory.Code,
+        };
+
+        /// <summary>
+        /// Xac dinh nhom icon rieng cho mot file dua tren phan mo rong, dung de chon
+        /// ImageKey tren lvwFiles (xem MainForm.GetFileIconKey) - tach rieng voi
+        /// GetFileType() vi muc dich khac nhau: GetFileType() tra ve chuoi hien thi
+        /// chi tiet cho cot "Loai" (VD: "Hinh anh JPEG"), con ham nay chi gom vao
+        /// mot trong 6 nhom hinh dang icon rong hon (VD: ca .jpg/.png/.gif deu chung
+        /// mot icon "Image") de khong phai ve rieng hang chuc icon cho tung dinh dang.
+        /// </summary>
+        /// <param name="path">Duong dan hoac ten file (VD: "a.jpg", "C:\\a.jpg").</param>
+        public static FileIconCategory GetFileIconCategory(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return FileIconCategory.Generic;
+
+            string extension = Path.GetExtension(path);
+            if (string.IsNullOrEmpty(extension))
+                return FileIconCategory.Generic;
+
+            return FileIconMap.TryGetValue(extension, out FileIconCategory category)
+                ? category
+                : FileIconCategory.Generic;
+        }
+
         /// <summary>
         /// Xac dinh loai file de hien thi (VD: "Hinh anh JPEG", "Tai lieu Word"...)
         /// dua tren phan mo rong. Nhan vao duong dan hoac chi ten file/phan mo rong.

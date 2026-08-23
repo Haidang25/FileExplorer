@@ -15,6 +15,9 @@ using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 using FileExplorerApp.Properties;
 using FileExplorerApp.Services;
+// Alias de dung ngan gon FileIconCategory thay vi FileHelper.FileIconCategory
+// moi lan tham chieu (enum nam long ben trong static class FileHelper).
+using FileIconCategory = FileExplorerApp.Helpers.FileHelper.FileIconCategory;
 
 namespace FileExplorerApp.Forms
 {
@@ -198,6 +201,45 @@ namespace FileExplorerApp.Forms
             imlIcons.Images.Add("driveCDRom", CreateDriveIcon(DriveIconStyle.CDRom));
             imlIcons.Images.Add("driveNetwork", CreateDriveIcon(DriveIconStyle.Network));
             imlIcons.Images.Add("driveNotReady", CreateDriveIcon(DriveIconStyle.NotReady));
+
+            // Icon rieng cho tung nhom file tren lvwFiles, dua tren
+            // FileHelper.GetFileIconCategory() (VD: anh, tai lieu, bang tinh...) -
+            // nhom nao khong khop se dung lai "file" (icon to giay trang trung tinh
+            // co san) thay vi ve them mot ImageCategory.Generic rieng khong can thiet.
+            imlIcons.Images.Add("fileImage", CreateFileTypeIcon(FileIconCategory.Image));
+            imlIcons.Images.Add("fileDocument", CreateFileTypeIcon(FileIconCategory.Document));
+            imlIcons.Images.Add("fileSpreadsheet", CreateFileTypeIcon(FileIconCategory.Spreadsheet));
+            imlIcons.Images.Add("fileArchive", CreateFileTypeIcon(FileIconCategory.Archive));
+            imlIcons.Images.Add("fileMedia", CreateFileTypeIcon(FileIconCategory.Media));
+            imlIcons.Images.Add("fileCode", CreateFileTypeIcon(FileIconCategory.Code));
+        }
+
+        /// <summary>
+        /// Chon ImageKey trong imlIcons phu hop voi mot file, dua tren
+        /// FileHelper.GetFileIconCategory() (xac dinh theo phan mo rong). Nhom
+        /// Generic (khong khop nhom rieng nao) dung lai icon "file" trung tinh mac
+        /// dinh da co san, tranh ve them mot icon giong het no.
+        /// </summary>
+        private static string GetFileImageKey(string path)
+        {
+            switch (FileHelper.GetFileIconCategory(path))
+            {
+                case FileIconCategory.Image:
+                    return "fileImage";
+                case FileIconCategory.Document:
+                    return "fileDocument";
+                case FileIconCategory.Spreadsheet:
+                    return "fileSpreadsheet";
+                case FileIconCategory.Archive:
+                    return "fileArchive";
+                case FileIconCategory.Media:
+                    return "fileMedia";
+                case FileIconCategory.Code:
+                    return "fileCode";
+                case FileIconCategory.Generic:
+                default:
+                    return "file";
+            }
         }
 
         /// <summary>Kieu ve icon o dia, dung noi bo cho CreateDriveIcon.</summary>
@@ -282,6 +324,108 @@ namespace FileExplorerApp.Forms
                     g.DrawPolygon(borderPen, outline);
                     g.DrawLine(borderPen, 10, 1, 10, 4);
                     g.DrawLine(borderPen, 10, 4, 13, 4);
+                }
+            }
+
+            return bitmap;
+        }
+
+        /// <summary>
+        /// Ve icon file 16x16 rieng cho mot nhom (xem FileHelper.FileIconCategory):
+        /// dung lai hinh to giay trang gap goc giong CreateFileIcon() lam nen, roi
+        /// them mot dau hieu nho, mau sac dac trung ben trong de phan biet nhanh
+        /// giua cac nhom ma khong can doc cot "Loai" (VD: dai mau cho Anh, luoi cho
+        /// Bang tinh, khoa keo cho Nen...). Khong ve cho Generic vi nhom do dung lai
+        /// icon "file" trung tinh co san (xem GetFileImageKey).
+        /// </summary>
+        private static Bitmap CreateFileTypeIcon(FileIconCategory category)
+        {
+            var bitmap = new Bitmap(16, 16);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+
+                Point[] outline =
+                {
+                    new Point(3, 1), new Point(10, 1), new Point(13, 4),
+                    new Point(13, 15), new Point(3, 15)
+                };
+
+                using (var bodyBrush = new SolidBrush(Color.White))
+                using (var borderPen = new Pen(Color.FromArgb(255, 120, 120, 120)))
+                {
+                    g.FillPolygon(bodyBrush, outline);
+                    g.DrawPolygon(borderPen, outline);
+                    g.DrawLine(borderPen, 10, 1, 10, 4);
+                    g.DrawLine(borderPen, 10, 4, 13, 4);
+                }
+
+                switch (category)
+                {
+                    case FileIconCategory.Image:
+                        // Dai nui + mat troi nho, giong bieu tuong anh don gian.
+                        using (var mountainBrush = new SolidBrush(Color.FromArgb(255, 76, 175, 80)))
+                        using (var sunBrush = new SolidBrush(Color.FromArgb(255, 255, 193, 7)))
+                        {
+                            g.FillEllipse(sunBrush, 5, 6, 3, 3);
+                            Point[] mountain = { new Point(4, 13), new Point(7, 9), new Point(9, 11), new Point(11, 8), new Point(12, 13) };
+                            g.FillPolygon(mountainBrush, mountain);
+                        }
+                        break;
+
+                    case FileIconCategory.Document:
+                        // Cac dong ke ngang tuong trung cho van ban.
+                        using (var linePen = new Pen(Color.FromArgb(255, 100, 130, 200), 1.2f))
+                        {
+                            g.DrawLine(linePen, 5, 6, 11, 6);
+                            g.DrawLine(linePen, 5, 9, 11, 9);
+                            g.DrawLine(linePen, 5, 12, 9, 12);
+                        }
+                        break;
+
+                    case FileIconCategory.Spreadsheet:
+                        // Luoi 2x2 tuong trung cho bang tinh.
+                        using (var gridPen = new Pen(Color.FromArgb(255, 33, 150, 83), 1f))
+                        {
+                            g.DrawRectangle(gridPen, 4, 5, 8, 8);
+                            g.DrawLine(gridPen, 8, 5, 8, 13);
+                            g.DrawLine(gridPen, 4, 9, 12, 9);
+                        }
+                        break;
+
+                    case FileIconCategory.Archive:
+                        // Khoa keo doc giua than file, tuong trung file nen.
+                        using (var zipPen = new Pen(Color.FromArgb(255, 158, 118, 40), 1.4f))
+                        {
+                            g.DrawLine(zipPen, 8, 5, 8, 13);
+                            g.DrawRectangle(new Pen(Color.FromArgb(255, 158, 118, 40)), 7, 7, 2, 2);
+                        }
+                        break;
+
+                    case FileIconCategory.Media:
+                        // Not nhac don gian, tuong trung am thanh/video.
+                        using (var noteBrush = new SolidBrush(Color.FromArgb(255, 156, 39, 176)))
+                        using (var notePen = new Pen(Color.FromArgb(255, 156, 39, 176), 1.4f))
+                        {
+                            g.DrawLine(notePen, 9, 5, 9, 11);
+                            g.FillEllipse(noteBrush, 6, 10, 3, 3);
+                        }
+                        break;
+
+                    case FileIconCategory.Code:
+                        // Dau ngoac nhon "< >" tuong trung ma nguon.
+                        using (var codeFont = new Font("Consolas", 6.5f, System.Drawing.FontStyle.Bold))
+                        using (var codeBrush = new SolidBrush(Color.FromArgb(255, 66, 133, 244)))
+                        {
+                            g.DrawString("<>", codeFont, codeBrush, 4.5f, 6.5f);
+                        }
+                        break;
+
+                    case FileIconCategory.Generic:
+                    default:
+                        // Khong ve them gi - giong het CreateFileIcon() (khong nen goi
+                        // ham nay voi Generic, xem GetFileImageKey).
+                        break;
                 }
             }
 
@@ -679,7 +823,7 @@ namespace FileExplorerApp.Forms
                     }
                     else
                     {
-                        var item = new ListViewItem(entry.Name, "file") { Tag = entry.FullPath };
+                        var item = new ListViewItem(entry.Name, GetFileImageKey(entry.FullPath)) { Tag = entry.FullPath };
                         item.SubItems.Add(entry.SizeFormatted);
                         item.SubItems.Add(FileHelper.GetFileType(entry.FullPath));
                         item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
