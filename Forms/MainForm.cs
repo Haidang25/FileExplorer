@@ -1160,18 +1160,22 @@ namespace FileExplorerApp.Forms
 
             try
             {
-                foreach (string subFolderPath in Directory.GetDirectories(path))
+                // Dung FolderService.GetSubFolders() thay vi tu Directory.GetDirectories()
+                // de tan dung viec loc file/thu muc an co san (includeHidden) va HasSubFolders
+                // da duoc tinh san (FolderItemModel.FromDirectoryInfo) - tranh phai goi rieng
+                // EnumerateDirectories().Any() cho tung thu muc con o day.
+                foreach (FolderItemModel subFolder in _folderService.GetSubFolders(path, _showHiddenItems))
                 {
-                    var subFolderInfo = new DirectoryInfo(subFolderPath);
-
-                    bool isHidden = (subFolderInfo.Attributes & FileAttributes.Hidden) == FileAttributes.Hidden;
-                    if (isHidden && !_showHiddenItems)
-                        continue;
-
-                    var childNode = new TreeNode(subFolderInfo.Name) { Tag = subFolderInfo.FullName };
+                    var childNode = new TreeNode(subFolder.Name) { Tag = subFolder.FullPath };
                     childNode.ImageKey = "folder";
                     childNode.SelectedImageKey = "folder";
-                    childNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+
+                    // Chi them node "gia" (placeholder) neu thu muc nay thuc su co thu
+                    // muc con - tranh hien dau (+) tren thu muc rong (leaf), bam vao se
+                    // chi thay mot node trong khong co y nghia.
+                    if (subFolder.HasSubFolders)
+                        childNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+
                     node.Nodes.Add(childNode);
                 }
             }
