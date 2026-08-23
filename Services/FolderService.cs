@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
@@ -160,13 +161,57 @@ namespace FileExplorerApp.Services
         /// <summary>
         /// Lay danh sach thu muc con truc tiep (khong de quy) cua mot thu muc.
         /// Dung khi nguoi dung mo rong (expand) node tren TreeView.
+        ///
+        /// Sap xep theo ten (OrdinalIgnoreCase) de thu tu hien thi on dinh, khong
+        /// phu thuoc thu tu tra ve cua he dieu hanh. Cac thu muc khong doc duoc
+        /// (mat quyen ngay trong luc enumerate, o dia thao ra giua chung...) duoc
+        /// bo qua thay vi lam hong ca danh sach.
         /// </summary>
         /// <param name="folderPath">Duong dan thu muc cha.</param>
-        public List<FolderItemModel> GetSubFolders(string folderPath)
+        /// <param name="includeHidden">
+        /// True: lay ca thu muc an/he thong (Hidden/System). False: bo qua cac thu
+        /// muc do, dung khi nguoi dung tat tuy chon "Hien file/thu muc an".
+        /// </param>
+        /// <returns>
+        /// Danh sach FolderItemModel cua cac thu muc con truc tiep. Danh sach rong
+        /// (khong phai null) neu folderPath khong ton tai, khong co thu muc con,
+        /// hoac khong co quyen doc.
+        /// </returns>
+        public List<FolderItemModel> GetSubFolders(string folderPath, bool includeHidden = true)
         {
-            // TODO: enumerate DirectoryInfo(folderPath).GetDirectories(),
-            // map sang FolderItemModel.FromDirectoryInfo cho tung item.
-            throw new NotImplementedException();
+            var subFolders = new List<FolderItemModel>();
+
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return subFolders;
+
+            try
+            {
+                var directoryInfos = new DirectoryInfo(folderPath)
+                    .EnumerateDirectories()
+                    .OrderBy(d => d.Name, StringComparer.OrdinalIgnoreCase);
+
+                foreach (DirectoryInfo directoryInfo in directoryInfos)
+                {
+                    try
+                    {
+                        if (!includeHidden)
+                        {
+                            bool isHiddenOrSystem = directoryInfo.Attributes.HasFlag(FileAttributes.Hidden)
+                                || directoryInfo.Attributes.HasFlag(FileAttributes.System);
+                            if (isHiddenOrSystem)
+                                continue;
+                        }
+
+                        subFolders.Add(FolderItemModel.FromDirectoryInfo(directoryInfo));
+                    }
+                    catch (UnauthorizedAccessException) { /* Khong doc duoc thu muc con nay - bo qua rieng no. */ }
+                    catch (IOException) { /* VD: shortcut/junction hong, o dia mang vua ngat. */ }
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Khong co quyen liet ke thu muc cha - tra ve danh sach rong. */ }
+            catch (IOException) { /* folderPath nam tren o dia vua thao ra, duong dan mang bi ngat... */ }
+
+            return subFolders;
         }
 
         /// <summary>
