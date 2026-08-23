@@ -67,6 +67,20 @@ namespace FileExplorerApp.Models
         /// <summary>Tong dung luong thu muc (byte), tinh de quy. -1 neu chua tinh (de tranh cham do voi thu muc lon).</summary>
         public long TotalSize { get; set; } = -1;
 
+        /// <summary>
+        /// Chi co y nghia khi IsDrive = true va IsReady = true: tong dung luong cua
+        /// ca o dia (byte), tuong ung DriveInfo.TotalSize. -1 voi thu muc thong
+        /// thuong hoac o dia chua san sang (khong doc duoc).
+        /// </summary>
+        public long DriveTotalSize { get; set; } = -1;
+
+        /// <summary>
+        /// Chi co y nghia khi IsDrive = true va IsReady = true: dung luong con trong
+        /// nguoi dung con dung duoc (byte), tuong ung DriveInfo.AvailableFreeSpace.
+        /// -1 voi thu muc thong thuong hoac o dia chua san sang (khong doc duoc).
+        /// </summary>
+        public long AvailableFreeSpace { get; set; } = -1;
+
         /// <summary>Trang thai dang mo/dong tren TreeView (phuc vu UI, khong anh huong du lieu thuc).</summary>
         public bool IsExpanded { get; set; }
 

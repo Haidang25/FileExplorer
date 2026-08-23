@@ -72,9 +72,14 @@ namespace FileExplorerApp.Services
                     // dung lam node goc TreeView, ta luon muon hien dau (+) de nguoi
                     // dung tu expand, tranh cham/loi truy cap toan bo o dia ngay luc
                     // liet ke danh sach o dia (VD: o dia mang cham, o co qua nhieu file).
-                    string label = string.IsNullOrWhiteSpace(drive.VolumeLabel)
-                        ? drive.Name.TrimEnd('\\')
-                        : $"{drive.VolumeLabel} ({drive.Name.TrimEnd('\\')})";
+                    string volumeLabel = string.IsNullOrWhiteSpace(drive.VolumeLabel)
+                        ? DescribeDriveType(drive.DriveType)
+                        : drive.VolumeLabel;
+
+                    // Nhan hien thi day du gom nhan o + duong dan + dung luong con
+                    // trong, giong Windows Explorer (VD: "Local Disk (C:) — 120 GB trống").
+                    string label = $"{volumeLabel} ({drive.Name.TrimEnd('\\')}) — " +
+                        $"{FormatHelper.FormatSize(drive.AvailableFreeSpace)} trống";
 
                     drives.Add(new FolderItemModel
                     {
@@ -86,7 +91,9 @@ namespace FileExplorerApp.Services
                         Attributes = rootDirectory.Attributes,
                         IsDrive = true,
                         IsReady = true,
-                        HasSubFolders = true
+                        HasSubFolders = true,
+                        DriveTotalSize = drive.TotalSize,
+                        AvailableFreeSpace = drive.AvailableFreeSpace
                     });
                 }
                 catch (UnauthorizedAccessException) { /* Khong co quyen doc o dia nay - bo qua. */ }
