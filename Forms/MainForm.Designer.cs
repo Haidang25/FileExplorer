@@ -50,6 +50,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.ColumnHeader colSize;
         private System.Windows.Forms.ColumnHeader colType;
         private System.Windows.Forms.ColumnHeader colModified;
+        private System.Windows.Forms.Label lblEmptyFolder;
 
         private System.Windows.Forms.StatusStrip stsMain;
         private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
@@ -172,6 +173,7 @@ namespace FileExplorerApp.Forms
             this.trvFolders = new System.Windows.Forms.TreeView();
             this.imlIcons = new System.Windows.Forms.ImageList(this.components);
             this.lvwFiles = new System.Windows.Forms.ListView();
+            this.lblEmptyFolder = new System.Windows.Forms.Label();
             this.colName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colType = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -669,6 +671,7 @@ namespace FileExplorerApp.Forms
             // spcMain.Panel2
             //
             this.spcMain.Panel2.Controls.Add(this.lvwFiles);
+            this.spcMain.Panel2.Controls.Add(this.lblEmptyFolder);
             this.spcMain.Panel2MinSize = 200;
             this.spcMain.Size = new System.Drawing.Size(1200, 544);
             this.spcMain.SplitterDistance = 300;
@@ -736,6 +739,17 @@ namespace FileExplorerApp.Forms
             //
             this.colModified.Text = "Ngày sửa";
             this.colModified.Width = 200;
+            //
+            // lblEmptyFolder
+            //
+            this.lblEmptyFolder.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lblEmptyFolder.Location = new System.Drawing.Point(0, 0);
+            this.lblEmptyFolder.Name = "lblEmptyFolder";
+            this.lblEmptyFolder.Size = new System.Drawing.Size(896, 544);
+            this.lblEmptyFolder.TabIndex = 1;
+            this.lblEmptyFolder.Text = "Thư mục này trống";
+            this.lblEmptyFolder.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.lblEmptyFolder.Visible = false;
             //
             // cmsListView
             //

@@ -175,6 +175,13 @@ namespace FileExplorerApp.Forms
             lvwFiles.ForeColor = AppTheme.TextPrimary;
             lvwFiles.BorderStyle = BorderStyle.FixedSingle;
 
+            // Nhan bao thu muc trong (xem UpdateEmptyFolderMessage) - nen trong suot
+            // len tren lvwFiles nen chi can chinh mau chu, dung mau nhat (TextSecondary)
+            // giong placeholder cua txtSearch de khong lam nguoi dung tuong day la du
+            // lieu that.
+            lblEmptyFolder.ForeColor = AppTheme.TextSecondary;
+            lblEmptyFolder.BackColor = AppTheme.Surface;
+
             // Ghi chu: mau dong duoc chon (SelectedRow trong AppTheme) do he
             // dieu hanh tu ve theo mau he thong khi TreeView/ListView khong o
             // che do OwnerDraw. WinForms khong co thuoc tinh de doi rieng mau
@@ -839,9 +846,42 @@ namespace FileExplorerApp.Forms
                 lvwFiles.EndUpdate();
             }
 
+            UpdateEmptyFolderMessage(itemCount);
+
             tsslItemCount.Text = $"{itemCount} mục";
             tsslTotalSize.Text = FormatHelper.FormatSize(totalSize);
             tsslStatus.Text = "Sẵn sàng";
+        }
+
+        /// <summary>
+        /// Hien/an lblEmptyFolder de lvwFiles khong bi bo trong khi thu muc hien
+        /// tai khong co gi de hien thi - giong Windows Explorer bao "Thư mục này
+        /// trống" thay vi chi de mot bang trang khong ro ly do.
+        ///
+        /// Phan biet 2 truong hop rieng: thu muc thuc su khong co gi ben trong, va
+        /// thu muc co noi dung nhung tat ca deu bi an (do tuy chon "Hien file/thu
+        /// muc an" dang tat) - truong hop sau can noi ro cho nguoi dung de tranh
+        /// nham tuong thu muc trong trong khi thuc ra chi dang bi loc.
+        /// </summary>
+        /// <param name="visibleItemCount">So muc dang hien thi tren lvwFiles sau khi loc.</param>
+        private void UpdateEmptyFolderMessage(int visibleItemCount)
+        {
+            if (visibleItemCount > 0)
+            {
+                lblEmptyFolder.Visible = false;
+                return;
+            }
+
+            // Chi kiem tra lai voi includeHidden: true khi thuc su can (danh sach dang
+            // hien la rong) - tranh goi GetItems() 2 lan cho truong hop thong thuong
+            // (co noi dung) vi ham nay duyet dia moi lan goi.
+            bool hasHiddenItemsOnly = !_showHiddenItems
+                && _fileService.GetItems(_currentPath, includeHidden: true).Count > 0;
+
+            lblEmptyFolder.Text = hasHiddenItemsOnly
+                ? "Thư mục này chỉ chứa các mục đang ẩn.\nBật \"Hiện file/thư mục ẩn\" trong menu Xem để xem."
+                : "Thư mục này trống";
+            lblEmptyFolder.Visible = true;
         }
 
         /// <summary>
