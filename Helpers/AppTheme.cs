@@ -82,10 +82,15 @@ namespace FileExplorerApp.Helpers
         /// <summary>
         /// Che do giao dien dang duoc ap dung cho toan ung dung. Doi gia tri nay
         /// o mot noi duy nhat (vd. luc khoi dong, doc tu Settings da luu) roi goi
-        /// lai Refresh()/ve lai cac Form dang mo de chuyen theme dong bo.
-        /// Mac dinh la Light mode.
+        /// lai ApplyTheme()/ve lai cac Form dang mo de chuyen theme dong bo.
+        ///
+        /// Mac dinh la Dark mode: bang mau Light duoc thiet ke rat gan mau he
+        /// thong mac dinh cua Windows (nen trang, chu den) nen neu de Light lam
+        /// mac dinh, nguoi dung se kho nhan ra ung dung da doi theme khi chi
+        /// nhin thoang qua — mau nhan (Accent) cung chi hien ro luc hover/chon
+        /// muc menu. Dark mode tuong phan ro ngay tu lan chay dau tien.
         /// </summary>
-        public static bool IsDarkMode { get; set; } = false;
+        public static bool IsDarkMode { get; set; } = true;
 
         /// <summary>Nen chinh theo che do hien tai (Light/Dark).</summary>
         public static Color Background => IsDarkMode ? Dark.Background : Light.Background;
