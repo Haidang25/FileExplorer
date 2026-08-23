@@ -347,11 +347,27 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Sao chep thu muc (va toan bo noi dung ben trong, de quy) sang vi tri khac.
+        ///
+        /// Neu mot thu muc con hoac file nao do ben trong khong doc/ghi duoc (VD:
+        /// mat quyen, file dang bi khoa boi ung dung khac), chi bo qua rieng muc do
+        /// va tiep tuc sao chep phan con lai cua cay thu muc, thay vi huy toan bo
+        /// thao tac. Dung SkippedPaths (xem sau ham nay) de biet co bo sot gi khong.
         /// </summary>
         /// <param name="sourcePath">Duong dan thu muc nguon.</param>
         /// <param name="destinationPath">Duong dan thu muc dich.</param>
-        public OperationResult CopyFolder(string sourcePath, string destinationPath)
+        /// <param name="skippedPaths">
+        /// Danh sach duong dan (thu muc/file) da bi bo qua do loi quyen/IO trong luc
+        /// sao chep de quy. Danh sach rong neu sao chep het toan bo khong loi gi.
+        /// </param>
+        /// <returns>
+        /// OperationResult.Success neu sao chep duoc it nhat thu muc goc (ke ca khi
+        /// co bo sot mot so muc con - kiem tra skippedPaths de biet chi tiet).
+        /// AccessDenied/Failed chi khi ngay ca thu muc goc cung khong tao duoc.
+        /// </returns>
+        public OperationResult CopyFolder(string sourcePath, string destinationPath, out List<string> skippedPaths)
         {
+            skippedPaths = new List<string>();
+
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 return OperationResult.NotFound;
 
@@ -364,7 +380,11 @@ namespace FileExplorerApp.Services
 
             try
             {
-                CopyDirectoryRecursive(sourcePath, destinationPath);
+                // Chi loi o cap thu muc goc (khong tao duoc destinationDir dau tien -
+                // VD: destinationParent bi mat quyen dung luc kiem tra o tren) moi lam
+                // that bai toan bo thao tac - loi o cac thu muc/file con ben trong deu
+                // duoc CopyDirectoryRecursive tu bat va ghi vao skippedPaths.
+                CopyDirectoryRecursive(sourcePath, destinationPath, skippedPaths);
                 return OperationResult.Success;
             }
             catch (UnauthorizedAccessException)
@@ -378,23 +398,43 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
-        /// Sao chep de quy toan bo noi dung mot thu muc (bao gom thu muc con) sang vi tri moi.
+        /// Sao chep de quy toan bo noi dung mot thu muc (bao gom thu muc con) sang vi
+        /// tri moi. Loi quyen/IO tren tung file hoac thu muc con RIENG LE duoc bat va
+        /// bo qua ngay tai do (ghi duong dan loi vao skippedPaths), khong lam dung
+        /// hoac huy phan con lai cua de quy - chi loi khi tao chinh destinationDir
+        /// nay (Directory.CreateDirectory ngay dau ham) moi duoc nem ra ngoai, vi day
+        /// la dieu kien tien quyet de co the sao chep bat cu thu gi vao ben trong no.
         /// </summary>
-        private static void CopyDirectoryRecursive(string sourceDir, string destinationDir)
+        private static void CopyDirectoryRecursive(string sourceDir, string destinationDir, List<string> skippedPaths)
         {
             Directory.CreateDirectory(destinationDir);
 
-            foreach (string filePath in Directory.GetFiles(sourceDir))
+            try
             {
-                string destFilePath = Path.Combine(destinationDir, Path.GetFileName(filePath));
-                File.Copy(filePath, destFilePath, overwrite: false);
+                foreach (string filePath in Directory.GetFiles(sourceDir))
+                {
+                    try
+                    {
+                        string destFilePath = Path.Combine(destinationDir, Path.GetFileName(filePath));
+                        File.Copy(filePath, destFilePath, overwrite: false);
+                    }
+                    catch (UnauthorizedAccessException) { skippedPaths.Add(filePath); }
+                    catch (IOException) { skippedPaths.Add(filePath); } // VD: file dang bi ung dung khac khoa.
+                }
             }
+            catch (UnauthorizedAccessException) { skippedPaths.Add(sourceDir); }
+            catch (IOException) { skippedPaths.Add(sourceDir); } // Khong liet ke duoc danh sach file cua sourceDir.
 
-            foreach (string subDir in Directory.GetDirectories(sourceDir))
+            try
             {
-                string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
-                CopyDirectoryRecursive(subDir, destSubDir);
+                foreach (string subDir in Directory.GetDirectories(sourceDir))
+                {
+                    string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
+                    CopyDirectoryRecursive(subDir, destSubDir, skippedPaths);
+                }
             }
+            catch (UnauthorizedAccessException) { skippedPaths.Add(sourceDir); }
+            catch (IOException) { skippedPaths.Add(sourceDir); } // Khong liet ke duoc danh sach thu muc con cua sourceDir.
         }
     }
 }

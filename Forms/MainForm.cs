@@ -505,6 +505,12 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            // Gom het duong dan bi bo qua (do loi quyen/IO tren tung thu muc/file con
+            // rieng le trong luc CopyFolder de quy) cua CA LOAT muc dang dan, de chi
+            // bao MOT LAN sau khi dan xong toan bo, thay vi lam gian doan nguoi dung
+            // bang nhieu hop thoai giua chung khi dan nhieu muc cung luc.
+            var allSkippedPaths = new List<string>();
+
             foreach (string sourcePath in _clipboardPaths)
             {
                 string name = Path.GetFileName(sourcePath);
@@ -514,9 +520,15 @@ namespace FileExplorerApp.Forms
                 OperationResult result;
                 if (isDirectory)
                 {
-                    result = _clipboardIsCut
-                        ? _folderService.MoveFolder(sourcePath, destinationPath)
-                        : _folderService.CopyFolder(sourcePath, destinationPath);
+                    if (_clipboardIsCut)
+                    {
+                        result = _folderService.MoveFolder(sourcePath, destinationPath);
+                    }
+                    else
+                    {
+                        result = _folderService.CopyFolder(sourcePath, destinationPath, out List<string> skippedPaths);
+                        allSkippedPaths.AddRange(skippedPaths);
+                    }
                 }
                 else
                 {
@@ -526,6 +538,22 @@ namespace FileExplorerApp.Forms
                 }
 
                 ShowOperationResultMessage(result, $"dan \"{name}\"");
+            }
+
+            if (allSkippedPaths.Count > 0)
+            {
+                // Bao rieng cho nguoi dung biet co bo sot noi dung trong luc sao chep
+                // thu muc (VD: file dang bi khoa boi ung dung khac, thu muc con mat
+                // quyen doc) - khac voi ShowOperationResultMessage() o tren vi ket qua
+                // tong the van la Success (thu muc goc da duoc tao/sao chep xong).
+                string preview = string.Join("\n", allSkippedPaths.Take(10));
+                if (allSkippedPaths.Count > 10)
+                    preview += $"\n... và {allSkippedPaths.Count - 10} mục khác.";
+
+                MessageBox.Show(
+                    $"Đã dán xong nhưng bỏ qua {allSkippedPaths.Count} mục không thể sao chép " +
+                    $"(thiếu quyền truy cập hoặc đang bị khóa bởi ứng dụng khác):\n\n{preview}",
+                    "Hoàn tất với một số mục bị bỏ qua", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
             if (_clipboardIsCut)
