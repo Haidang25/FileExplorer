@@ -25,6 +25,56 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Lay danh sach cac o dia (drive) hien co tren may, dung lam node goc cho
+        /// TreeView duyet thu muc (VD: "This PC" > C:\, D:\...).
+        ///
+        /// Chi tra ve nhung o dia dang san sang (IsReady = true) — bo qua o dia
+        /// CD/DVD/o dia mang khong co dia/khong ket noi de tranh IOException khi
+        /// TreeView co gang doc thong tin cua o dia do sau nay.
+        /// </summary>
+        /// <returns>Danh sach FolderItemModel, moi item ung voi mot o dia (IsDrive = true).</returns>
+        public List<FolderItemModel> GetDrives()
+        {
+            var drives = new List<FolderItemModel>();
+
+            foreach (DriveInfo drive in DriveInfo.GetDrives())
+            {
+                if (!drive.IsReady)
+                    continue; // O dia khong san sang (VD: o CD rong, o mang mat ket noi).
+
+                try
+                {
+                    DirectoryInfo rootDirectory = drive.RootDirectory;
+
+                    // Khong dung FolderItemModel.FromDirectoryInfo() vi ham do goi
+                    // EnumerateDirectories() de kiem tra HasSubFolders — voi o dia
+                    // dung lam node goc TreeView, ta luon muon hien dau (+) de nguoi
+                    // dung tu expand, tranh cham/loi truy cap toan bo o dia ngay luc
+                    // liet ke danh sach o dia (VD: o dia mang cham, o co qua nhieu file).
+                    string label = string.IsNullOrWhiteSpace(drive.VolumeLabel)
+                        ? drive.Name.TrimEnd('\\')
+                        : $"{drive.VolumeLabel} ({drive.Name.TrimEnd('\\')})";
+
+                    drives.Add(new FolderItemModel
+                    {
+                        Name = label,
+                        FullPath = rootDirectory.FullName,
+                        ParentPath = null,
+                        CreatedDate = rootDirectory.CreationTime,
+                        ModifiedDate = rootDirectory.LastWriteTime,
+                        Attributes = rootDirectory.Attributes,
+                        IsDrive = true,
+                        HasSubFolders = true
+                    });
+                }
+                catch (UnauthorizedAccessException) { /* Khong co quyen doc o dia nay - bo qua. */ }
+                catch (IOException) { /* O dia bao IsReady nhung van loi khi doc (hiem) - bo qua. */ }
+            }
+
+            return drives;
+        }
+
+        /// <summary>
         /// Kiem tra thu muc co ton tai hay khong.
         /// </summary>
         /// <param name="folderPath">Duong dan thu muc can kiem tra.</param>
