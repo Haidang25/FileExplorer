@@ -1,4 +1,4 @@
-﻿namespace FileExplorerApp.Forms
+namespace FileExplorerApp.Forms
 {
     partial class LogForm
     {
@@ -35,7 +35,10 @@
             // LogForm
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
             this.ClientSize = new System.Drawing.Size(600, 400);
+            this.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.MinimizeBox = false;
             this.Name = "LogForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;

@@ -1,4 +1,4 @@
-﻿namespace FileExplorerApp.Forms
+namespace FileExplorerApp.Forms
 {
     partial class AboutForm
     {
@@ -35,7 +35,10 @@
             // AboutForm
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
             this.ClientSize = new System.Drawing.Size(360, 220);
+            this.Font = new System.Drawing.Font("Segoe UI", 9F);
+            this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;

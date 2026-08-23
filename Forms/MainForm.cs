@@ -64,11 +64,71 @@ namespace FileExplorerApp.Forms
             // khong phu thuoc duong dan tuong doi luc chay.
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
+            ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
             mnuViewRefresh_Click(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Ap dung bang mau dung chung (AppTheme, xem Helpers/AppTheme.cs va
+        /// Helpers/AppThemeRenderer.cs) cho toan bo control tinh cua MainForm.
+        /// Chi dung BackColor/ForeColor/Renderer — cac thuoc tinh WinForms co san,
+        /// dung theo dung nguyen tac trong "00_He_Thong_Mau_Sac.md" muc 3 (khong bo
+        /// goc lon, khong do bong, khong ve lai control bang GraphicsPath).
+        /// </summary>
+        private void ApplyTheme()
+        {
+            this.BackColor = AppTheme.Background;
+            this.ForeColor = AppTheme.TextPrimary;
+
+            // MenuStrip/ToolStrip/StatusStrip/ContextMenuStrip: dung chung mot
+            // renderer (AppThemeRenderer) de dam bao dong bo giua cac thanh nay.
+            AppThemeRenderer renderer = new AppThemeRenderer();
+            mnsMain.Renderer = renderer;
+            mnsMain.BackColor = AppTheme.Surface;
+            tlsMain.Renderer = renderer;
+            tlsMain.BackColor = AppTheme.Surface;
+            stsMain.Renderer = renderer;
+            stsMain.BackColor = AppTheme.Surface;
+            cmsListView.Renderer = renderer;
+            cmsListView.BackColor = AppTheme.Surface;
+            cmsListView.ForeColor = AppTheme.TextPrimary;
+
+            // Thanh dia chi.
+            pnlAddressBar.BackColor = AppTheme.Surface;
+            txtPath.BackColor = AppTheme.Surface;
+            txtPath.ForeColor = AppTheme.TextPrimary;
+            txtPath.BorderStyle = BorderStyle.FixedSingle;
+            btnUp.FlatStyle = FlatStyle.Flat;
+            btnUp.FlatAppearance.BorderColor = AppTheme.Border;
+            btnUp.BackColor = AppTheme.Surface;
+            btnUp.ForeColor = AppTheme.TextPrimary;
+            btnGo.FlatStyle = FlatStyle.Flat;
+            btnGo.FlatAppearance.BorderColor = AppTheme.Border;
+            btnGo.BackColor = AppTheme.Surface;
+            btnGo.ForeColor = AppTheme.TextPrimary;
+
+            // Vung lam viec: SplitContainer (mau nen chinh la mau duong phan
+            // cach giua 2 panel), TreeView, ListView.
+            spcMain.BackColor = AppTheme.Border;
+            trvFolders.BackColor = AppTheme.Surface;
+            trvFolders.ForeColor = AppTheme.TextPrimary;
+            trvFolders.BorderStyle = BorderStyle.FixedSingle;
+            trvFolders.LineColor = AppTheme.Border;
+
+            lvwFiles.BackColor = AppTheme.Surface;
+            lvwFiles.ForeColor = AppTheme.TextPrimary;
+            lvwFiles.BorderStyle = BorderStyle.FixedSingle;
+
+            // Ghi chu: mau dong duoc chon (SelectedRow trong AppTheme) do he
+            // dieu hanh tu ve theo mau he thong khi TreeView/ListView khong o
+            // che do OwnerDraw. WinForms khong co thuoc tinh de doi rieng mau
+            // nay ma khong phai tu ve lai toan bo dong — neu can dung dung mau
+            // AppTheme.SelectedRow, buoc tiep theo se can bat OwnerDraw cho
+            // lvwFiles (DrawItem/DrawSubItem), hien tai chua trien khai.
         }
 
         /// <summary>
