@@ -534,8 +534,34 @@ namespace FileExplorerApp.Forms
 
             if (result == OperationResult.Success)
             {
-                // TODO: goi lai ham lam moi ListView/TreeView khi da co (VD: LoadCurrentFolder()).
                 mnuViewRefresh_Click(sender, e);
+
+                // Chon san thu muc vua tao tren lvwFiles, giong hanh vi Windows Explorer
+                // (tao xong la thay ngay va co the doi ten/mo luon khong can tu tim).
+                SelectAndFocusListViewItem(Path.Combine(_currentPath, name));
+            }
+        }
+
+        /// <summary>
+        /// Chon (Selected = true) va cuon toi mot muc tren lvwFiles theo duong dan day
+        /// du, dung sau khi tao/doi ten mot muc de nguoi dung thay ngay ket qua thay vi
+        /// phai tu tim lai trong danh sach. Khong lam gi neu khong tim thay muc do (VD:
+        /// LoadListViewFiles dang loc theo _showHiddenItems va muc do bi an).
+        /// </summary>
+        /// <param name="fullPath">Duong dan day du cua muc can chon.</param>
+        private void SelectAndFocusListViewItem(string fullPath)
+        {
+            foreach (ListViewItem item in lvwFiles.Items)
+            {
+                if (string.Equals(item.Tag as string, fullPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    lvwFiles.SelectedItems.Clear();
+                    item.Selected = true;
+                    item.Focused = true;
+                    item.EnsureVisible();
+                    lvwFiles.Focus();
+                    break;
+                }
             }
         }
 
