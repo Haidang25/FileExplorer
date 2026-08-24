@@ -183,6 +183,32 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Doi ten mot muc bat ky - tu dong nhan biet la file hay thu muc de goi
+        /// ham xu ly tuong ung (RenameFile o day, hoac FolderService.RenameFolder),
+        /// giup noi goi (VD: MainForm) khong can tu kiem tra Directory.Exists roi
+        /// re nhanh giua _fileService/_folderService nhu truoc.
+        /// </summary>
+        /// <param name="path">Duong dan hien tai cua file hoac thu muc.</param>
+        /// <param name="newName">Ten moi (chi ten, khong bao gom duong dan; voi file thi bao gom phan mo rong).</param>
+        /// <returns>
+        /// OperationResult.NotFound neu path khong ton tai (ca file lan thu muc);
+        /// cac ket qua khac giong RenameFile/FolderService.RenameFolder.
+        /// </returns>
+        public OperationResult Rename(string path, string newName)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return OperationResult.NotFound;
+
+            if (Directory.Exists(path))
+                return new FolderService().RenameFolder(path, newName);
+
+            if (File.Exists(path))
+                return RenameFile(path, newName);
+
+            return OperationResult.NotFound;
+        }
+
+        /// <summary>
         /// Doi ten mot file.
         /// </summary>
         /// <param name="filePath">Duong dan file hien tai.</param>

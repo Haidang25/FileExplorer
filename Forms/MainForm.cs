@@ -789,10 +789,9 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName)
                 return; // Nguoi dung bam Cancel, de trong, hoac khong doi gi.
 
-            bool isDirectory = Directory.Exists(path);
-            OperationResult result = isDirectory
-                ? _folderService.RenameFolder(path, newName)
-                : _fileService.RenameFile(path, newName);
+            // FileService.Rename tu nhan biet path la file hay thu muc va goi ham
+            // xu ly tuong ung, khong can tu kiem tra Directory.Exists o day nua.
+            OperationResult result = _fileService.Rename(path, newName);
 
             ShowOperationResultMessage(result, $"doi ten \"{oldName}\" thanh \"{newName}\"");
 
