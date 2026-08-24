@@ -824,7 +824,7 @@ namespace FileExplorerApp.Forms
             if (e.Label == null)
                 return; // Nguoi dung nhan Esc hoac khong doi gi - giu nguyen ten cu.
 
-            ListViewItem item = lvwFiles.Items[e.Index];
+            ListViewItem item = lvwFiles.Items[e.Item];
             string path = item.Tag as string;
             string oldName = Path.GetFileName(path);
             string newName = e.Label;
