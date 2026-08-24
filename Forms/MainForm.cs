@@ -825,6 +825,20 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName)
                 return;
 
+            // Kiem tra hop le ngay tai day (truoc khi goi Rename) de bao loi cu the
+            // hon "khong the doi ten: co loi xay ra" chung chung cua nhanh default
+            // trong ShowOperationResultMessage - nguoi dung biet ngay ly do (VD: chua
+            // ky tu cam \ / : * ? " < > |) thay vi phai tu doan.
+            if (!FileHelper.IsValidFileName(newName))
+            {
+                MessageBox.Show(
+                    $"Tên \"{newName}\" không hợp lệ: không được để trống, chứa ký tự \\ / : * ? \" < > |, " +
+                    "kết thúc bằng khoảng trắng/dấu chấm, trùng tên thiết bị hệ thống (CON, PRN...), " +
+                    "hoặc dài quá 255 ký tự.",
+                    "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return; // CancelEdit = true da khoi phuc lai ten cu tren o hien thi.
+            }
+
             OperationResult result = _fileService.Rename(path, newName);
 
             if (result == OperationResult.Success)
