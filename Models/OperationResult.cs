@@ -26,6 +26,14 @@ namespace FileExplorerApp.Models
         AccessDenied,
 
         /// <summary>Khong tim thay file/thu muc de thuc hien thao tac.</summary>
-        NotFound
+        NotFound,
+
+        /// <summary>
+        /// File dang bi khoa (mo/su dung) boi mot chuong trinh khac nen khong the
+        /// doi ten/di chuyen/xoa duoc luc nay (VD: dang mo trong Word, Notepad++...).
+        /// Tach rieng voi Failed de bao thong bao cu the, huong dan nguoi dung dong
+        /// chuong trinh dang giu file roi thu lai, thay vi bao loi chung chung.
+        /// </summary>
+        FileInUse
     }
 }

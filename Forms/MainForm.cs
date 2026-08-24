@@ -613,6 +613,13 @@ namespace FileExplorerApp.Forms
                         "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     break;
 
+                case OperationResult.FileInUse:
+                    MessageBox.Show(
+                        $"Không thể {actionDescription}: tệp đang được chương trình khác sử dụng.\n" +
+                        "Vui lòng đóng chương trình đang mở tệp này rồi thử lại.",
+                        "Tệp đang được sử dụng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    break;
+
                 default:
                     MessageBox.Show($"Khong the {actionDescription}: ten khong hop le hoac co loi xay ra.",
                         "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);

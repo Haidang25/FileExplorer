@@ -11,6 +11,23 @@ namespace FileExplorerApp.Helpers
     /// </summary>
     public static class FileHelper
     {
+        /// <summary>Ma loi Win32 ERROR_SHARING_VIOLATION (0x20 = 32), tra ve khi mot
+        /// tien trinh khac dang mo/khoa file (VD: dang mo trong Word, Notepad++...)
+        /// khien thao tac doi ten/di chuyen/xoa khong the thuc hien duoc luc nay.</summary>
+        private const int ErrorSharingViolationHResult = unchecked((int)0x80070020);
+
+        /// <summary>
+        /// Kiem tra mot IOException co phai do file dang bi khoa boi chuong trinh
+        /// khac hay khong (sharing violation), de phan biet voi cac IOException khac
+        /// (VD: het dung luong dia, duong dan qua dai) va bao thong bao phu hop hon
+        /// (OperationResult.FileInUse) thay vi Failed chung chung.
+        /// </summary>
+        /// <param name="ex">IOException bat duoc tu thao tac file (Move/Delete/Copy...).</param>
+        public static bool IsSharingViolation(IOException ex)
+        {
+            return ex != null && ex.HResult == ErrorSharingViolationHResult;
+        }
+
         /// <summary>Cac ten bi Windows gioi han khong duoc dat cho file/thu muc.</summary>
         private static readonly string[] ReservedNames =
         {

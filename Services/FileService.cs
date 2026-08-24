@@ -239,6 +239,13 @@ namespace FileExplorerApp.Services
             {
                 return OperationResult.AccessDenied;
             }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                // File dang duoc mo/khoa boi chuong trinh khac (VD: dang mo trong
+                // Word, Notepad++...) - tach rieng voi Failed de bao thong bao cu
+                // the hon, huong dan nguoi dung dong chuong trinh do roi thu lai.
+                return OperationResult.FileInUse;
+            }
             catch (IOException)
             {
                 return OperationResult.Failed;
