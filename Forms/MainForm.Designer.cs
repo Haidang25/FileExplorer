@@ -709,6 +709,7 @@ namespace FileExplorerApp.Forms
             this.lvwFiles.FullRowSelect = true;
             this.lvwFiles.GridLines = false;
             this.lvwFiles.HideSelection = false;
+            this.lvwFiles.LabelEdit = true;
             this.lvwFiles.Location = new System.Drawing.Point(0, 0);
             this.lvwFiles.Name = "lvwFiles";
             this.lvwFiles.Size = new System.Drawing.Size(896, 544);
@@ -718,6 +719,8 @@ namespace FileExplorerApp.Forms
             this.lvwFiles.View = System.Windows.Forms.View.Details;
             this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
+            this.lvwFiles.BeforeLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_BeforeLabelEdit);
+            this.lvwFiles.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_AfterLabelEdit);
             //
             // colName
             //

@@ -772,32 +772,78 @@ namespace FileExplorerApp.Forms
             mnuViewRefresh_Click(sender, e);
         }
 
+        /// <summary>
+        /// Muc "Doi ten" tren menu Chinh sua / F2: thay vi hien InputBox rieng, chuyen
+        /// sang sua ten truc tiep tren chinh o ten cua lvwFiles (LabelEdit) - giong
+        /// hanh vi chuan cua Windows Explorer. Logic doi ten thuc su nam o
+        /// lvwFiles_AfterLabelEdit, duoc goi tu dong khi nguoi dung go xong va nhan Enter.
+        /// </summary>
         private void mnuEditRename_Click(object sender, EventArgs e)
         {
-            List<string> selected = GetSelectedPaths();
-            if (selected.Count != 1)
+            if (lvwFiles.SelectedItems.Count != 1)
             {
                 MessageBox.Show("Vui long chon dung mot muc de doi ten.", "Thong bao",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            string path = selected[0];
+            lvwFiles.SelectedItems[0].BeginEdit();
+        }
+
+        /// <summary>
+        /// Chan LabelEdit ngay tu dau neu muc dang chon khong con hop le (VD: da bi
+        /// xoa/di chuyen boi tien trinh khac giua luc dang hien danh sach) - tranh
+        /// AfterLabelEdit phai xu ly mot Tag khong con dung.
+        /// </summary>
+        private void lvwFiles_BeforeLabelEdit(object sender, LabelEditEventArgs e)
+        {
+            string path = lvwFiles.Items[e.Item].Tag as string;
+            if (string.IsNullOrEmpty(path) || (!File.Exists(path) && !Directory.Exists(path)))
+                e.CancelEdit = true;
+        }
+
+        /// <summary>
+        /// Nguoi dung go xong ten moi truc tiep tren o (LabelEdit) va nhan Enter (hoac
+        /// bam ra ngoai) - e.Label la ten moi (null neu nguoi dung nhan Esc de huy,
+        /// hoac khong doi gi ca). Luon e.CancelEdit = true de tu quan ly lai Text cua
+        /// item (thanh ten that su sau khi doi, hoac giu nguyen ten cu neu that bai/huy)
+        /// thay vi de WinForms tu dong ap e.Label vao Text - vi item.Text can khop voi
+        /// FileService.Rename tra ve thanh cong hay khong.
+        /// </summary>
+        private void lvwFiles_AfterLabelEdit(object sender, LabelEditEventArgs e)
+        {
+            e.CancelEdit = true; // Luon tu cap nhat lai Text ben duoi, khong de WinForms tu ap e.Label.
+
+            if (e.Label == null)
+                return; // Nguoi dung nhan Esc hoac khong doi gi - giu nguyen ten cu.
+
+            ListViewItem item = lvwFiles.Items[e.Index];
+            string path = item.Tag as string;
             string oldName = Path.GetFileName(path);
-            string newName = Interaction.InputBox("Nhap ten moi:", "Doi ten", oldName);
+            string newName = e.Label;
 
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName)
-                return; // Nguoi dung bam Cancel, de trong, hoac khong doi gi.
+                return;
 
-            // FileService.Rename tu nhan biet path la file hay thu muc va goi ham
-            // xu ly tuong ung, khong can tu kiem tra Directory.Exists o day nua.
             OperationResult result = _fileService.Rename(path, newName);
-
-            ShowOperationResultMessage(result, $"doi ten \"{oldName}\" thanh \"{newName}\"");
 
             if (result == OperationResult.Success)
             {
+                string newPath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, newName);
+                item.Text = newName;
+                item.Tag = newPath;
+
+                // Doi thu tu (thu muc/file van con dung nhom truoc/sau) co the thay doi
+                // vi ten moi co the sap xep khac ten cu - lam moi lai toan bo cho chac
+                // chan dung thu tu, dong thoi chon lai chinh muc vua doi ten.
                 mnuViewRefresh_Click(sender, e);
+                SelectAndFocusListViewItem(newPath);
+            }
+            else
+            {
+                ShowOperationResultMessage(result, $"doi ten \"{oldName}\" thanh \"{newName}\"");
+                // Giu nguyen item.Text (khong gan gi) vi CancelEdit = true da tu dong
+                // khoi phuc lai ten cu tren o hien thi.
             }
         }
 
