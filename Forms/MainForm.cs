@@ -768,13 +768,13 @@ namespace FileExplorerApp.Forms
 
             foreach (string path in selected)
             {
-                OperationResult result = _recycleBinService.MoveToRecycleBin(path);
+                OperationResult result = _recycleBinService.DeleteToRecycleBin(path);
                 ShowOperationResultMessage(result, $"xoa \"{Path.GetFileName(path)}\"");
             }
 
             // TODO: neu nguoi dung giu Shift khi bam Delete (hoac chon muc "Xoa vinh vien"),
             // goi FileService.DeleteFile/FolderService.DeleteFolder voi permanent = true thay
-            // vi RecycleBinService.MoveToRecycleBin.
+            // vi RecycleBinService.DeleteToRecycleBin.
 
             mnuViewRefresh_Click(sender, e);
         }

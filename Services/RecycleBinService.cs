@@ -30,10 +30,12 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
-        /// Chuyen mot file hoac thu muc vao Recycle Bin (khong xoa vinh vien).
+        /// Xoa mot file hoac thu muc bang cach chuyen vao Recycle Bin (khong xoa
+        /// vinh vien - nguoi dung van co the khoi phuc lai qua RestoreFromRecycleBin
+        /// hoac tu mo Recycle Bin cua Windows).
         /// </summary>
-        /// <param name="path">Duong dan file/thu muc can chuyen vao thung rac.</param>
-        public OperationResult MoveToRecycleBin(string path)
+        /// <param name="path">Duong dan file/thu muc can xoa (chuyen vao thung rac).</param>
+        public OperationResult DeleteToRecycleBin(string path)
         {
             if (string.IsNullOrWhiteSpace(path))
                 return OperationResult.Failed;
