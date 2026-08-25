@@ -772,9 +772,44 @@ namespace FileExplorerApp.Forms
                 ShowOperationResultMessage(result, $"xoa \"{Path.GetFileName(path)}\"");
             }
 
-            // TODO: neu nguoi dung giu Shift khi bam Delete (hoac chon muc "Xoa vinh vien"),
-            // goi FileService.DeleteFile/FolderService.DeleteFolder voi permanent = true thay
-            // vi RecycleBinService.DeleteToRecycleBin.
+            mnuViewRefresh_Click(sender, e);
+        }
+
+        /// <summary>
+        /// Bat rieng Shift+Delete tren lvwFiles: xoa vinh vien (bo qua Thung rac),
+        /// giong hanh vi chuan cua Windows Explorer. Delete thuong (khong Shift) van
+        /// di qua mnuEditDelete_Click (ShortcutKeys = Keys.Delete, khong kem Shift)
+        /// nhu cu - hai duong khong trung nhau vi WinForms chi kich hoat ShortcutKeys
+        /// khi to hop phim khop hoan toan (Delete thuong se khong khop Shift+Delete).
+        /// </summary>
+        private void lvwFiles_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Delete || !e.Shift)
+                return;
+
+            e.Handled = true; // Tranh su kien Delete thuong (mnuEditDelete) xu ly lai lan nua.
+
+            List<string> selected = GetSelectedPaths();
+            if (selected.Count == 0)
+            {
+                MessageBox.Show("Chưa chọn mục nào để xóa.", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            DialogResult confirm = MessageBox.Show(
+                $"Bạn có chắc muốn XÓA VĨNH VIỄN {selected.Count} mục đã chọn?\n" +
+                "Hành động này KHÔNG THỂ khôi phục (không đi qua Thùng rác).",
+                "Xác nhận xóa vĩnh viễn", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (confirm != DialogResult.Yes)
+                return;
+
+            foreach (string path in selected)
+            {
+                OperationResult result = _fileService.DeletePermanently(path);
+                ShowOperationResultMessage(result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"");
+            }
 
             mnuViewRefresh_Click(sender, e);
         }

@@ -257,13 +257,69 @@ namespace FileExplorerApp.Services
         /// </summary>
         /// <param name="filePath">Duong dan file can xoa.</param>
         /// <param name="permanent">
-        /// True: xoa vinh vien (File.Delete). False: chuyen vao Recycle Bin
-        /// (can dung thu vien ho tro, VD Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile).
+        /// True: xoa vinh vien (File.Delete, khong the khoi phuc). False: chuyen vao
+        /// Recycle Bin - nen goi RecycleBinService.DeleteToRecycleBin() truc tiep cho
+        /// truong hop nay (xem giai thich tuong tu trong FolderService.DeleteFolder).
         /// </param>
         public OperationResult DeleteFile(string filePath, bool permanent = false)
         {
-            // TODO: kiem tra quyen, kiem tra ton tai, thuc hien xoa theo tham so permanent.
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+                return OperationResult.NotFound;
+
+            if (!permanent)
+            {
+                throw new NotSupportedException(
+                    "FileService.DeleteFile(permanent: false) chua duoc ho tro - " +
+                    "hay dung RecycleBinService.DeleteToRecycleBin() de chuyen vao Thung rac.");
+            }
+
+            string directory = Path.GetDirectoryName(filePath);
+            if (!PermissionHelper.HasWritePermission(directory))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                File.Delete(filePath);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                return OperationResult.FileInUse;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
+        }
+
+        /// <summary>
+        /// Xoa vinh vien (khong qua Recycle Bin, KHONG THE KHOI PHUC) mot muc bat ky -
+        /// tu dong nhan biet la file hay thu muc de goi ham xu ly tuong ung, giong
+        /// cach Rename() da lam. Dung cho hanh dong Shift+Delete tren lvwFiles (giong
+        /// Windows Explorer: Delete thuong = chuyen vao Thung rac qua RecycleBinService,
+        /// Shift+Delete = xoa thang, bo qua Thung rac).
+        /// </summary>
+        /// <param name="path">Duong dan file hoac thu muc can xoa vinh vien.</param>
+        /// <returns>
+        /// OperationResult.NotFound neu path khong ton tai (ca file lan thu muc);
+        /// cac ket qua khac giong DeleteFile/FolderService.DeleteFolder (voi permanent = true).
+        /// </returns>
+        public OperationResult DeletePermanently(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return OperationResult.NotFound;
+
+            if (Directory.Exists(path))
+                return new FolderService().DeleteFolder(path, permanent: true);
+
+            if (File.Exists(path))
+                return DeleteFile(path, permanent: true);
+
+            return OperationResult.NotFound;
         }
 
         /// <summary>

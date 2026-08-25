@@ -304,13 +304,52 @@ namespace FileExplorerApp.Services
         /// </summary>
         /// <param name="folderPath">Duong dan thu muc can xoa.</param>
         /// <param name="permanent">
-        /// True: xoa vinh vien (Directory.Delete). False: chuyen vao Recycle Bin
-        /// (can dung thu vien ho tro, VD Microsoft.VisualBasic.FileIO.FileSystem.DeleteDirectory).
+        /// True: xoa vinh vien (Directory.Delete, khong the khoi phuc). False: chuyen
+        /// vao Recycle Bin - nen goi RecycleBinService.DeleteToRecycleBin() truc tiep
+        /// cho truong hop nay thay vi qua day, vi permanent = false hien chi la lop
+        /// vo boc mong danh cho tinh nhat quan API, khong tu goi RecycleBinService
+        /// (tranh FolderService phu thuoc nguoc vao RecycleBinService).
         /// </param>
         public OperationResult DeleteFolder(string folderPath, bool permanent = false)
         {
-            // TODO: kiem tra quyen, kiem tra ton tai, thuc hien xoa theo tham so permanent.
-            throw new NotImplementedException();
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return OperationResult.NotFound;
+
+            if (!permanent)
+            {
+                // Chua ho tro chuyen vao Recycle Bin truc tiep tu FolderService - noi
+                // goi nen dung RecycleBinService.DeleteToRecycleBin() cho truong hop nay.
+                throw new NotSupportedException(
+                    "FolderService.DeleteFolder(permanent: false) chua duoc ho tro - " +
+                    "hay dung RecycleBinService.DeleteToRecycleBin() de chuyen vao Thung rac.");
+            }
+
+            string parentPath = Directory.GetParent(folderPath)?.FullName;
+            if (!PermissionHelper.HasWritePermission(parentPath))
+                return OperationResult.AccessDenied;
+
+            try
+            {
+                // recursive: true de xoa dc thu muc khong rong (co file/thu muc con
+                // ben trong) - giong hanh vi xoa vinh vien cua Windows Explorer.
+                Directory.Delete(folderPath, recursive: true);
+                return OperationResult.Success;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return OperationResult.AccessDenied;
+            }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                // Mot file nao do ben trong thu muc dang bi chuong trinh khac khoa -
+                // Directory.Delete(recursive: true) that bai toan bo (khong xoa duoc
+                // mot phan roi bo qua phan con lai nhu CopyDirectoryRecursive).
+                return OperationResult.FileInUse;
+            }
+            catch (IOException)
+            {
+                return OperationResult.Failed;
+            }
         }
 
         /// <summary>

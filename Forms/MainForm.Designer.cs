@@ -721,6 +721,7 @@ namespace FileExplorerApp.Forms
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
             this.lvwFiles.BeforeLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_BeforeLabelEdit);
             this.lvwFiles.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_AfterLabelEdit);
+            this.lvwFiles.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lvwFiles_KeyDown);
             //
             // colName
             //
