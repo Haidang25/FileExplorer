@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.VisualBasic.FileIO;
+using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
 namespace FileExplorerApp.Services
@@ -64,6 +65,13 @@ namespace FileExplorerApp.Services
             {
                 // Nguoi dung bam Cancel tren hop thoai loi (neu UIOption khac OnlyErrorDialogs).
                 return OperationResult.Cancelled;
+            }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                // File (hoac mot file nao do ben trong thu muc) dang bi chuong trinh
+                // khac khoa - tach rieng voi Failed de bao thong bao cu the hon, giong
+                // da lam voi FileService.RenameFile/DeleteFile.
+                return OperationResult.FileInUse;
             }
             catch (IOException)
             {
