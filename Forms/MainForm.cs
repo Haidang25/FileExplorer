@@ -797,10 +797,22 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            DialogResult confirm = MessageBox.Show(
-                $"Bạn có chắc muốn XÓA VĨNH VIỄN {selected.Count} mục đã chọn?\n" +
-                "Hành động này KHÔNG THỂ khôi phục (không đi qua Thùng rác).",
-                "Xác nhận xóa vĩnh viễn", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            // Liet ke ro ten tung muc (toi da 10, sau do rut gon "... va N muc khac")
+            // de nguoi dung biet chinh xac dang xoa gi truoc khi xac nhan, thay vi
+            // chi thay so luong chung chung - quan trong hon voi xoa vinh vien vi
+            // khong the "undo" bang cach mo lai Thung rac nhu Delete thuong.
+            const int maxNamesToShow = 10;
+            var names = selected.Take(maxNamesToShow).Select(p => "  • " + Path.GetFileName(p)).ToList();
+            if (selected.Count > maxNamesToShow)
+                names.Add($"  ... và {selected.Count - maxNamesToShow} mục khác.");
+
+            string message = $"Bạn có chắc muốn XÓA VĨNH VIỄN {selected.Count} mục sau đây?\n\n" +
+                string.Join(Environment.NewLine, names) +
+                "\n\nHành động này KHÔNG THỂ khôi phục (không đi qua Thùng rác) - " +
+                "nếu là thư mục, toàn bộ tệp/thư mục con bên trong cũng bị xóa vĩnh viễn.";
+
+            DialogResult confirm = MessageBox.Show(message, "Xác nhận xóa vĩnh viễn",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
 
             if (confirm != DialogResult.Yes)
                 return;
