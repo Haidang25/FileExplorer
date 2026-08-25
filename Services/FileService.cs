@@ -279,6 +279,11 @@ namespace FileExplorerApp.Services
 
             try
             {
+                // Go co ReadOnly truoc (giong Windows Explorer) - File.Delete() se nem
+                // UnauthorizedAccessException neu file dang co thuoc tinh nay, du da co
+                // quyen ghi len thu muc cha (ReadOnly la co rieng cua tung file, khac
+                // voi quyen NTFS cua thu muc chua no).
+                FileHelper.ClearReadOnlyAttribute(filePath);
                 File.Delete(filePath);
                 return OperationResult.Success;
             }

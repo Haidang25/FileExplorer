@@ -330,6 +330,12 @@ namespace FileExplorerApp.Services
 
             try
             {
+                // Go co ReadOnly cho toan bo file con truoc (de quy) - Directory.Delete()
+                // se nem UnauthorizedAccessException va dung ngay khi gap MOT file con
+                // co thuoc tinh nay, du da co quyen ghi len thu muc cha, giong ly do da
+                // xu ly trong FileService.DeleteFile.
+                ClearReadOnlyAttributeRecursive(folderPath);
+
                 // recursive: true de xoa dc thu muc khong rong (co file/thu muc con
                 // ben trong) - giong hanh vi xoa vinh vien cua Windows Explorer.
                 Directory.Delete(folderPath, recursive: true);
@@ -350,6 +356,34 @@ namespace FileExplorerApp.Services
             {
                 return OperationResult.Failed;
             }
+        }
+
+        /// <summary>
+        /// Go co ReadOnly cho toan bo file (de quy qua tat ca thu muc con) ben trong
+        /// mot thu muc, chuan bi truoc khi Directory.Delete(recursive: true) - ham do
+        /// se that bai ngay khi gap file con dau tien con giu co nay. Bo qua rieng
+        /// tung file/thu muc loi (VD: mat quyen doc mot nhanh con) thay vi lam hong
+        /// ca qua trinh - Directory.Delete() sau do van se tu bao loi rieng cho phan
+        /// con lai khong go duoc co, thay vi de ham nay nem exception som.
+        /// </summary>
+        private static void ClearReadOnlyAttributeRecursive(string folderPath)
+        {
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    try { FileHelper.ClearReadOnlyAttribute(filePath); }
+                    catch (UnauthorizedAccessException) { /* Bo qua rieng file nay - Directory.Delete se bao loi cu the hon sau. */ }
+                    catch (IOException) { /* VD: file dang bi khoa boi ung dung khac. */ }
+                }
+
+                foreach (string subDir in Directory.GetDirectories(folderPath))
+                {
+                    ClearReadOnlyAttributeRecursive(subDir);
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Khong liet ke duoc thu muc nay - bo qua, de Directory.Delete tu bao loi. */ }
+            catch (IOException) { /* Tuong tu. */ }
         }
 
         /// <summary>

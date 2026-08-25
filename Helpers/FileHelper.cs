@@ -28,6 +28,21 @@ namespace FileExplorerApp.Helpers
             return ex != null && ex.HResult == ErrorSharingViolationHResult;
         }
 
+        /// <summary>
+        /// Go co thuoc tinh ReadOnly cua mot file neu dang co, giong hanh vi cua
+        /// Windows Explorer khi xoa file chi doc (khong hoi lai nguoi dung, vi
+        /// ReadOnly chi la mot co thuoc tinh do nguoi dung/ung dung tu dat, khac han
+        /// voi khong co quyen NTFS thuc su - van se bi UnauthorizedAccessException
+        /// rieng neu that su thieu quyen he thong).
+        /// </summary>
+        /// <param name="filePath">Duong dan file can go thuoc tinh ReadOnly.</param>
+        public static void ClearReadOnlyAttribute(string filePath)
+        {
+            FileAttributes attributes = File.GetAttributes(filePath);
+            if (attributes.HasFlag(FileAttributes.ReadOnly))
+                File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
+        }
+
         /// <summary>Cac ten bi Windows gioi han khong duoc dat cho file/thu muc.</summary>
         private static readonly string[] ReservedNames =
         {

@@ -45,12 +45,20 @@ namespace FileExplorerApp.Services
             {
                 if (Directory.Exists(path))
                 {
+                    // Go co ReadOnly cho toan bo file con truoc (Shell API thuong tu xu
+                    // ly duoc file ReadOnly khi chuyen vao Thung rac, nhung van lam de
+                    // dam bao nhat quan voi FileService/FolderService.DeleteFolder).
+                    ClearReadOnlyAttributeRecursive(path);
                     FileSystem.DeleteDirectory(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
                     return OperationResult.Success;
                 }
 
                 if (File.Exists(path))
                 {
+                    try { FileHelper.ClearReadOnlyAttribute(path); }
+                    catch (UnauthorizedAccessException) { /* De FileSystem.DeleteFile tu bao loi cu the hon. */ }
+                    catch (IOException) { /* Tuong tu. */ }
+
                     FileSystem.DeleteFile(path, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);
                     return OperationResult.Success;
                 }
@@ -77,6 +85,32 @@ namespace FileExplorerApp.Services
             {
                 return OperationResult.Failed;
             }
+        }
+
+        /// <summary>
+        /// Go co ReadOnly cho toan bo file (de quy qua tat ca thu muc con) ben trong
+        /// mot thu muc truoc khi chuyen vao Thung rac - xem giai thich tuong tu trong
+        /// FolderService.ClearReadOnlyAttributeRecursive (khong tai su dung truc tiep
+        /// duoc vi ham do la private cua class khac).
+        /// </summary>
+        private static void ClearReadOnlyAttributeRecursive(string folderPath)
+        {
+            try
+            {
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    try { FileHelper.ClearReadOnlyAttribute(filePath); }
+                    catch (UnauthorizedAccessException) { /* Bo qua rieng file nay - DeleteDirectory se tu bao loi cu the hon sau. */ }
+                    catch (IOException) { /* VD: file dang bi khoa boi ung dung khac. */ }
+                }
+
+                foreach (string subDir in Directory.GetDirectories(folderPath))
+                {
+                    ClearReadOnlyAttributeRecursive(subDir);
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Khong liet ke duoc thu muc nay - bo qua, de DeleteDirectory tu bao loi. */ }
+            catch (IOException) { /* Tuong tu. */ }
         }
 
         /// <summary>
