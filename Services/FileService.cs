@@ -344,6 +344,48 @@ namespace FileExplorerApp.Services
             if (!PermissionHelper.HasWritePermission(destinationDir))
                 return OperationResult.AccessDenied;
 
+            if (FileHelper.IsOnDifferentDrive(sourcePath, destinationPath))
+            {
+                // File.Move() khong ho tro di chuyen truc tiep giua 2 o dia khac nhau
+                // - tu dong chuyen sang Copy roi Delete nguon, giong hanh vi Windows
+                // Explorer khi keo-tha giua 2 o (nguoi dung khong can biet co su khac
+                // biet nay). Tach rieng buoc Copy va Delete de: neu Copy loi thi chua
+                // dong gi den nguon (an toan); neu Copy thanh cong nhung Delete nguon
+                // loi (VD: file nguon vua bi khoa ngay luc do) thi bao PartialSuccess
+                // thay vi Success (da co ban sao o dich, nhung ban goc van con o
+                // nguon - khac voi Move thuc su, nguoi dung can biet de tu xoa sau).
+                try
+                {
+                    File.Copy(sourcePath, destinationPath, overwrite: false);
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return OperationResult.AccessDenied;
+                }
+                catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+                {
+                    return OperationResult.FileInUse;
+                }
+                catch (IOException)
+                {
+                    return OperationResult.Failed;
+                }
+
+                try
+                {
+                    File.Delete(sourcePath);
+                    return OperationResult.Success;
+                }
+                catch (IOException)
+                {
+                    return OperationResult.PartialSuccess;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return OperationResult.PartialSuccess;
+                }
+            }
+
             try
             {
                 File.Move(sourcePath, destinationPath);

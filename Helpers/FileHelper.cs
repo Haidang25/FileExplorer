@@ -71,6 +71,23 @@ namespace FileExplorerApp.Helpers
                     normalizedSource + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
         }
 
+        /// <summary>
+        /// Kiem tra hai duong dan co nam tren HAI O DIA (hoac UNC share) khac nhau
+        /// hay khong - File.Move()/Directory.Move() cua .NET KHONG ho tro di chuyen
+        /// truc tiep giua 2 root khac nhau (nem IOException "Source and destination
+        /// path must have identical roots"), nen can tu phat hien truoc de fallback
+        /// sang Copy roi Delete, giong hanh vi Windows Explorer khi keo-tha giua 2 o.
+        /// </summary>
+        /// <param name="sourcePath">Duong dan nguon.</param>
+        /// <param name="destinationPath">Duong dan dich.</param>
+        public static bool IsOnDifferentDrive(string sourcePath, string destinationPath)
+        {
+            string sourceRoot = Path.GetPathRoot(Path.GetFullPath(sourcePath));
+            string destinationRoot = Path.GetPathRoot(Path.GetFullPath(destinationPath));
+
+            return !string.Equals(sourceRoot, destinationRoot, StringComparison.OrdinalIgnoreCase);
+        }
+
         /// <summary>Chuan hoa duong dan thu muc de so sanh: duong dan tuyet doi, bo dau '\' cuoi.</summary>
         private static string NormalizeDirectoryPath(string path)
         {

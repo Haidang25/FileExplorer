@@ -627,6 +627,14 @@ namespace FileExplorerApp.Forms
                         "Vị trí đích không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     break;
 
+                case OperationResult.PartialSuccess:
+                    MessageBox.Show(
+                        $"Đã {actionDescription} sang vị trí mới, nhưng không xóa được bản gốc " +
+                        "(có thể do đang bị chương trình khác sử dụng hoặc thiếu quyền).\n" +
+                        "Vui lòng tự xóa bản gốc thủ công nếu cần.",
+                        "Hoàn tất một phần", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    break;
+
                 default:
                     MessageBox.Show($"Khong the {actionDescription}: ten khong hop le hoac co loi xay ra.",
                         "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);

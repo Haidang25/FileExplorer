@@ -410,6 +410,26 @@ namespace FileExplorerApp.Services
             if (!PermissionHelper.HasWritePermission(destinationParent))
                 return OperationResult.AccessDenied;
 
+            if (FileHelper.IsOnDifferentDrive(sourcePath, destinationPath))
+            {
+                // Directory.Move() khong ho tro di chuyen truc tiep giua 2 o dia khac
+                // nhau - tu dong chuyen sang CopyFolder (de quy, tu bat loi tung file/
+                // thu muc con) roi DeleteFolder nguon, giong huong xu ly da lam voi
+                // FileService.MoveFile. Neu Copy that bai hoan toan (ke ca thu muc
+                // goc) thi tra thang ket qua do - chua dong den nguon. Neu Copy thanh
+                // cong (co the co skippedPaths con so, van tinh la du de tiep tuc xoa
+                // nguon) nhung Delete nguon that bai, tra PartialSuccess de nguoi dung
+                // biet con ban goc chua xoa duoc.
+                OperationResult copyResult = CopyFolder(sourcePath, destinationPath, out List<string> skippedPaths);
+                if (copyResult != OperationResult.Success)
+                    return copyResult;
+
+                OperationResult deleteResult = DeleteFolder(sourcePath, permanent: true);
+                return deleteResult == OperationResult.Success
+                    ? OperationResult.Success
+                    : OperationResult.PartialSuccess;
+            }
+
             try
             {
                 Directory.Move(sourcePath, destinationPath);
@@ -418,6 +438,10 @@ namespace FileExplorerApp.Services
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                return OperationResult.FileInUse;
             }
             catch (IOException)
             {
