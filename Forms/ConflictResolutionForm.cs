@@ -45,16 +45,22 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Goi y mot ten moi khong con trung trong destinationDirectory, theo dang
-        /// "ten (2).ext", "ten (3).ext"... giong hanh vi Windows Explorer.
+        /// "Copy của tên.ext" (lan dau), roi "Copy (2) của tên.ext", "Copy (3) của
+        /// tên.ext"... neu ten do van con trung (VD: da dan lai nhieu lan).
         /// </summary>
         private static string SuggestNewName(string sourcePath, string destinationDirectory)
         {
             string nameWithoutExtension = Path.GetFileNameWithoutExtension(sourcePath);
             string extension = Path.GetExtension(sourcePath); // Rong voi thu muc - Path.GetExtension tu xu ly dung.
 
+            string firstCandidate = $"Copy của {nameWithoutExtension}{extension}";
+            if (!File.Exists(Path.Combine(destinationDirectory, firstCandidate))
+                && !Directory.Exists(Path.Combine(destinationDirectory, firstCandidate)))
+                return firstCandidate;
+
             for (int counter = 2; counter < 1000; counter++)
             {
-                string candidate = $"{nameWithoutExtension} ({counter}){extension}";
+                string candidate = $"Copy ({counter}) của {nameWithoutExtension}{extension}";
                 string candidatePath = Path.Combine(destinationDirectory, candidate);
 
                 if (!File.Exists(candidatePath) && !Directory.Exists(candidatePath))
