@@ -80,11 +80,11 @@
     <Compile Include="Forms\AboutForm.Designer.cs">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Forms\SettingsForm.cs">
+    <Compile Include="Forms\ConflictResolutionForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Forms\SettingsForm.Designer.cs">
-      <DependentUpon>SettingsForm.cs</DependentUpon>
+    <Compile Include="Forms\ConflictResolutionForm.Designer.cs">
+      <DependentUpon>ConflictResolutionForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Helpers\AppTheme.cs" />
@@ -92,6 +92,7 @@
     <Compile Include="Helpers\FileHelper.cs" />
     <Compile Include="Helpers\FormatHelper.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
+    <Compile Include="Models\ConflictAction.cs" />
     <Compile Include="Models\FileItemModel.cs" />
     <Compile Include="Models\FileOperationType.cs" />
     <Compile Include="Models\FolderItemModel.cs" />

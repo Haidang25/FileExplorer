@@ -702,11 +702,76 @@ namespace FileExplorerApp.Forms
             // bang nhieu hop thoai giua chung khi dan nhieu muc cung luc.
             var allSkippedPaths = new List<string>();
 
+            // Neu nguoi dung da tick "Ap dung cho tat ca" tren ConflictResolutionForm,
+            // ghi nho lai hanh dong (Overwrite/Skip) de tu dong dung lai cho cac muc
+            // trung ten con lai, khong hoi lai tung muc mot nua. Rename khong duoc
+            // ghi nho vi ten moi chi hop le rieng cho muc da hoi.
+            ConflictAction? rememberedAction = null;
+
             foreach (string sourcePath in _clipboardPaths)
             {
                 string name = Path.GetFileName(sourcePath);
                 string destinationPath = Path.Combine(_currentPath, name);
                 bool isDirectory = Directory.Exists(sourcePath);
+                bool hasConflict = File.Exists(destinationPath) || Directory.Exists(destinationPath);
+                bool overwriteFile = false; // Chi dat true khi nguoi dung xac nhan Overwrite cho truong hop file+Copy.
+
+                if (hasConflict)
+                {
+                    ConflictAction action;
+                    string newName = null;
+
+                    if (rememberedAction.HasValue)
+                    {
+                        action = rememberedAction.Value;
+                    }
+                    else
+                    {
+                        using (var dialog = new ConflictResolutionForm(sourcePath, _currentPath))
+                        {
+                            DialogResult dialogResult = dialog.ShowDialog(this);
+                            action = dialogResult == DialogResult.OK ? dialog.SelectedAction : ConflictAction.Cancel;
+                            newName = dialog.NewName;
+
+                            if (dialog.ApplyToAll && action != ConflictAction.Rename)
+                                rememberedAction = action;
+                        }
+                    }
+
+                    if (action == ConflictAction.Cancel)
+                        break; // Nguoi dung dong dialog - dung het cac muc con lai trong clipboard.
+
+                    if (action == ConflictAction.Skip)
+                        continue; // Bo qua rieng muc nay, tiep tuc muc tiep theo.
+
+                    if (action == ConflictAction.Rename)
+                    {
+                        name = newName;
+                        destinationPath = Path.Combine(_currentPath, newName);
+                    }
+                    else if (action == ConflictAction.Overwrite)
+                    {
+                        if (!isDirectory && !_clipboardIsCut)
+                        {
+                            // File + Copy: File.Copy co tham so overwrite rieng, hieu
+                            // qua hon xoa-roi-tao-lai - danh dau de dung ben duoi.
+                            overwriteFile = true;
+                        }
+                        else
+                        {
+                            // Thu muc (Directory.Move/CopyFolder khong co tham so
+                            // overwrite), hoac file+Cut (File.Move cung khong co) -
+                            // xoa truoc muc dich cu (vao Thung rac, an toan hon xoa
+                            // vinh vien) roi moi dan vao.
+                            OperationResult deleteResult = _recycleBinService.DeleteToRecycleBin(destinationPath);
+                            if (deleteResult != OperationResult.Success)
+                            {
+                                ShowOperationResultMessage(deleteResult, $"ghi đè \"{name}\"");
+                                continue;
+                            }
+                        }
+                    }
+                }
 
                 OperationResult result;
                 if (isDirectory)
@@ -725,7 +790,7 @@ namespace FileExplorerApp.Forms
                 {
                     result = _clipboardIsCut
                         ? _fileService.MoveFile(sourcePath, destinationPath)
-                        : _fileService.CopyFile(sourcePath, destinationPath);
+                        : _fileService.CopyFile(sourcePath, destinationPath, overwriteFile);
                 }
 
                 ShowOperationResultMessage(result, $"dan \"{name}\"");
