@@ -34,6 +34,15 @@ namespace FileExplorerApp.Models
         /// Tach rieng voi Failed de bao thong bao cu the, huong dan nguoi dung dong
         /// chuong trinh dang giu file roi thu lai, thay vi bao loi chung chung.
         /// </summary>
-        FileInUse
+        FileInUse,
+
+        /// <summary>
+        /// Vi tri dich khong hop le doi voi thao tac nay - cu the la khi di
+        /// chuyen/sao chep mot thu muc vao CHINH NO hoac vao MOT THU MUC CON cua
+        /// chinh no (VD: keo "C:\A" vao "C:\A\B"), se gay de quy vo han hoac loi he
+        /// thong kho hieu neu khong chan truoc. Tach rieng voi Skipped/Failed de bao
+        /// thong bao cu the, giup nguoi dung hieu dung ly do bi chan.
+        /// </summary>
+        InvalidDestination
     }
 }

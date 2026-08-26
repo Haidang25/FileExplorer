@@ -620,6 +620,13 @@ namespace FileExplorerApp.Forms
                         "Tệp đang được sử dụng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     break;
 
+                case OperationResult.InvalidDestination:
+                    MessageBox.Show(
+                        $"Không thể {actionDescription}: không thể di chuyển/sao chép một thư mục " +
+                        "vào chính nó hoặc vào một thư mục con của chính nó.",
+                        "Vị trí đích không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    break;
+
                 default:
                     MessageBox.Show($"Khong the {actionDescription}: ten khong hop le hoac co loi xay ra.",
                         "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);

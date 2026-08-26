@@ -43,6 +43,40 @@ namespace FileExplorerApp.Helpers
                 File.SetAttributes(filePath, attributes & ~FileAttributes.ReadOnly);
         }
 
+        /// <summary>
+        /// Kiem tra destinationPath co la CHINH sourcePath hoac nam BEN TRONG cay
+        /// con cua sourcePath hay khong - dung de chan truoc khi di chuyen/sao chep
+        /// mot thu muc vao chinh no hoac vao mot thu muc con cua chinh no (VD: keo
+        /// "C:\A" vao "C:\A\B"), tranh de quy vo han (CopyDirectoryRecursive tu goi
+        /// lai chinh no ben trong dich no dang tao) hoac loi he thong kho hieu tu
+        /// Directory.Move.
+        ///
+        /// So sanh dua tren duong dan da chuan hoa (Path.GetFullPath, bo dau '\'
+        /// cuoi, khong phan biet hoa/thuong - dung chuan cua he thong file Windows)
+        /// de tranh sai do cach viet hoa/thuong hoac duong dan tuong doi khac nhau
+        /// nhung cung tro toi mot vi tri thuc te.
+        /// </summary>
+        /// <param name="sourcePath">Duong dan thu muc nguon dang duoc di chuyen/sao chep.</param>
+        /// <param name="destinationPath">Duong dan dich du dinh.</param>
+        public static bool IsSameOrSubdirectory(string sourcePath, string destinationPath)
+        {
+            if (string.IsNullOrWhiteSpace(sourcePath) || string.IsNullOrWhiteSpace(destinationPath))
+                return false;
+
+            string normalizedSource = NormalizeDirectoryPath(sourcePath);
+            string normalizedDestination = NormalizeDirectoryPath(destinationPath);
+
+            return normalizedDestination.Equals(normalizedSource, StringComparison.OrdinalIgnoreCase)
+                || normalizedDestination.StartsWith(
+                    normalizedSource + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>Chuan hoa duong dan thu muc de so sanh: duong dan tuyet doi, bo dau '\' cuoi.</summary>
+        private static string NormalizeDirectoryPath(string path)
+        {
+            return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        }
+
         /// <summary>Cac ten bi Windows gioi han khong duoc dat cho file/thu muc.</summary>
         private static readonly string[] ReservedNames =
         {

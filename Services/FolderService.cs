@@ -396,6 +396,13 @@ namespace FileExplorerApp.Services
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 return OperationResult.NotFound;
 
+            // Chan truoc khi di chuyen thu muc vao chinh no hoac vao mot thu muc con
+            // cua chinh no - Directory.Move() se nem IOException kho hieu ("Cannot
+            // move a directory into itself") cho truong hop dau, va am tham gay loi
+            // logic (thu muc bien mat/long nhau sai) cho truong hop sau neu khong chan.
+            if (FileHelper.IsSameOrSubdirectory(sourcePath, destinationPath))
+                return OperationResult.InvalidDestination;
+
             if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
                 return OperationResult.Skipped; // Da co muc trung ten tai dich.
 
@@ -443,6 +450,13 @@ namespace FileExplorerApp.Services
 
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 return OperationResult.NotFound;
+
+            // Chan truoc khi sao chep thu muc vao chinh no hoac vao mot thu muc con
+            // cua chinh no - neu khong, CopyDirectoryRecursive se de quy vo han (moi
+            // lan tao destinationDir ben trong sourceDir lai bi chinh vong lap ben
+            // ngoai duyet tiep vao, gay tran ngan xep hoac day dia).
+            if (FileHelper.IsSameOrSubdirectory(sourcePath, destinationPath))
+                return OperationResult.InvalidDestination;
 
             if (Directory.Exists(destinationPath) || File.Exists(destinationPath))
                 return OperationResult.Skipped; // Da co muc trung ten tai dich.
