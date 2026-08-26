@@ -353,6 +353,12 @@ namespace FileExplorerApp.Services
             {
                 return OperationResult.AccessDenied;
             }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                // File dang bi khoa boi chuong trinh khac - tach rieng voi Failed de
+                // bao thong bao cu the hon, giong da lam voi RenameFile/DeleteFile.
+                return OperationResult.FileInUse;
+            }
             catch (IOException)
             {
                 return OperationResult.Failed;
