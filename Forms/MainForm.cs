@@ -679,6 +679,15 @@ namespace FileExplorerApp.Forms
 
             _clipboardPaths = selected;
             _clipboardIsCut = true;
+
+            // To mo ngay cac item vua Cut tren lvwFiles (khong can refresh lai tu
+            // dia) - vong lap qua toan bo Items de khoi phuc mau binh thuong cho cac
+            // item cua lan Cut TRUOC (neu co, VD: Cut A roi lai Cut B ma chua Paste)
+            // va to mo cac item cua lan Cut nay.
+            foreach (ListViewItem item in lvwFiles.Items)
+            {
+                ApplyCutVisualState(item);
+            }
         }
 
         private void mnuEditCopy_Click(object sender, EventArgs e)
@@ -693,6 +702,14 @@ namespace FileExplorerApp.Forms
 
             _clipboardPaths = selected;
             _clipboardIsCut = false;
+
+            // Copy khong to mo item nao ca, nhung neu truoc do da co mot lan Cut
+            // (_clipboardIsCut vua doi thanh false) thi can khoi phuc lai mau binh
+            // thuong cho cac item da bi to mo boi lan Cut do.
+            foreach (ListViewItem item in lvwFiles.Items)
+            {
+                ApplyCutVisualState(item);
+            }
         }
 
         private void mnuEditPaste_Click(object sender, EventArgs e)
@@ -1022,6 +1039,23 @@ namespace FileExplorerApp.Forms
         /// Nap lai toan bo noi dung (thu muc con + file) cua _currentPath vao
         /// lvwFiles: thu muc liet ke truoc, sau do den file, giong Windows Explorer.
         /// </summary>
+        /// <summary>
+        /// Neu item nay dang la mot trong cac muc da Cut (_clipboardPaths voi
+        /// _clipboardIsCut == true), to mo ForeColor (AppTheme.TextSecondary) de bao
+        /// hieu truc quan "da danh dau de di chuyen, chua thuc su bien mat" - giong
+        /// hanh vi Windows Explorer. Nguoc lai giu/khoi phuc mau chu binh thuong
+        /// (AppTheme.TextPrimary) - can co nhanh else vi ham nay cung duoc goi lai
+        /// khi refresh sau khi Paste xong (luc do _clipboardPaths da rong).
+        /// </summary>
+        private void ApplyCutVisualState(ListViewItem item)
+        {
+            bool isCut = _clipboardIsCut
+                && item.Tag is string path
+                && _clipboardPaths.Contains(path, StringComparer.OrdinalIgnoreCase);
+
+            item.ForeColor = isCut ? AppTheme.TextSecondary : AppTheme.TextPrimary;
+        }
+
         private void LoadListViewFiles()
         {
             lvwFiles.BeginUpdate();
@@ -1039,9 +1073,11 @@ namespace FileExplorerApp.Forms
                 // sach nua (chi khong xuat hien trong ket qua tra ve).
                 foreach (FileItemModel entry in _fileService.GetItems(_currentPath, _showHiddenItems))
                 {
+                    ListViewItem item;
+
                     if (entry.IsDirectory)
                     {
-                        var item = new ListViewItem(entry.Name, "folder") { Tag = entry.FullPath };
+                        item = new ListViewItem(entry.Name, "folder") { Tag = entry.FullPath };
                         item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
                         item.SubItems.Add("Thư mục tệp");
                         item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
@@ -1049,13 +1085,15 @@ namespace FileExplorerApp.Forms
                     }
                     else
                     {
-                        var item = new ListViewItem(entry.Name, GetFileImageKey(entry.FullPath)) { Tag = entry.FullPath };
+                        item = new ListViewItem(entry.Name, GetFileImageKey(entry.FullPath)) { Tag = entry.FullPath };
                         item.SubItems.Add(entry.SizeFormatted);
                         item.SubItems.Add(FileHelper.GetFileType(entry.FullPath));
                         item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
                         lvwFiles.Items.Add(item);
                         totalSize += entry.Size;
                     }
+
+                    ApplyCutVisualState(item);
 
                     itemCount++;
                 }
