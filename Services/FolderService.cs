@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -503,9 +504,15 @@ namespace FileExplorerApp.Services
         /// them ti le byte cua file dang copy do dang). Bo qua (null) neu khong can
         /// theo doi tien do - luc do ham nay khong ton chi phi CountFiles()/Report().
         /// </param>
+        /// <param name="cancellationToken">
+        /// Token de huy giua chung (VD: nguoi dung bam nut Huy tren CopyProgressForm) -
+        /// duoc truyen xuong tung FileService.CopyFileAsync va duoc kiem tra giua cac
+        /// file/thu muc con trong CopyDirectoryRecursiveAsync, de dung lai gan nhu
+        /// ngay thay vi phai cho sao chep xong het ca cay thu muc.
+        /// </param>
         public async Task<OperationResult> CopyFolderAsync(
             string sourcePath, string destinationPath, List<string> skippedPaths,
-            IProgress<FileOperationProgress> progress = null)
+            IProgress<FileOperationProgress> progress = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 return OperationResult.NotFound;
@@ -543,8 +550,17 @@ namespace FileExplorerApp.Services
                 // VD: destinationParent bi mat quyen dung luc kiem tra o tren) moi lam
                 // that bai toan bo thao tac - loi o cac thu muc/file con ben trong deu
                 // duoc CopyDirectoryRecursiveAsync tu bat va ghi vao skippedPaths.
-                await CopyDirectoryRecursiveAsync(sourcePath, destinationPath, skippedPaths, progressState).ConfigureAwait(false);
+                await CopyDirectoryRecursiveAsync(sourcePath, destinationPath, skippedPaths, progressState, cancellationToken).ConfigureAwait(false);
                 return OperationResult.Success;
+            }
+            catch (OperationCanceledException)
+            {
+                // Nguoi dung bam Huy giua chung - KHONG xoa nhung gi da sao chep duoc
+                // cho den luc do (khac voi CopyFileAsync chi huy MOT file don le va
+                // xoa ngay ban do dang) vi day co the la mot cay thu muc lon, xoa lai
+                // toan bo cung ton thoi gian tuong duong voi viec sao chep tiep; nguoi
+                // dung co the tu xoa thu muc dich do dang neu khong can.
+                return OperationResult.Cancelled;
             }
             catch (UnauthorizedAccessException)
             {
@@ -565,14 +581,18 @@ namespace FileExplorerApp.Services
         /// la dieu kien tien quyet de co the sao chep bat cu thu gi vao ben trong no.
         /// </summary>
         private static async Task CopyDirectoryRecursiveAsync(
-            string sourceDir, string destinationDir, List<string> skippedPaths, CopyProgressState progressState)
+            string sourceDir, string destinationDir, List<string> skippedPaths, CopyProgressState progressState,
+            CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             Directory.CreateDirectory(destinationDir);
 
             try
             {
                 foreach (string filePath in Directory.GetFiles(sourceDir))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
+
                     string fileName = Path.GetFileName(filePath);
                     try
                     {
@@ -584,7 +604,16 @@ namespace FileExplorerApp.Services
 
                         var fileService = new FileService();
                         OperationResult copyResult = await fileService.CopyFileAsync(
-                            filePath, destFilePath, overwrite: false, progress: fileProgress).ConfigureAwait(false);
+                            filePath, destFilePath, overwrite: false, progress: fileProgress,
+                            cancellationToken: cancellationToken).ConfigureAwait(false);
+
+                        // CopyFileAsync tra ve Cancelled (khong nem exception) khi bi huy -
+                        // ThrowIfCancellationRequested() o day se nem lai OperationCanceledException
+                        // (chac chan nem duoc, vi token dung la da bi huy luc nay), de loi nay
+                        // thoat het khoi 2 vong foreach (bo qua cac catch UnauthorizedAccessException/
+                        // IOException ben duoi vi khong khop kieu) va duoc CopyFolderAsync bat lai.
+                        if (copyResult == OperationResult.Cancelled)
+                            cancellationToken.ThrowIfCancellationRequested();
 
                         if (copyResult != OperationResult.Success)
                             skippedPaths.Add(filePath);
@@ -613,8 +642,9 @@ namespace FileExplorerApp.Services
             {
                 foreach (string subDir in Directory.GetDirectories(sourceDir))
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
-                    await CopyDirectoryRecursiveAsync(subDir, destSubDir, skippedPaths, progressState).ConfigureAwait(false);
+                    await CopyDirectoryRecursiveAsync(subDir, destSubDir, skippedPaths, progressState, cancellationToken).ConfigureAwait(false);
                 }
             }
             catch (UnauthorizedAccessException) { skippedPaths.Add(sourceDir); }
