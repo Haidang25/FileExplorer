@@ -1,4 +1,4 @@
-namespace FileExplorerApp.Forms
+﻿namespace FileExplorerApp.Forms
 {
     partial class MainForm
     {
@@ -711,6 +711,7 @@ namespace FileExplorerApp.Forms
             this.lvwFiles.HideSelection = false;
             this.lvwFiles.LabelEdit = true;
             this.lvwFiles.Location = new System.Drawing.Point(0, 0);
+            this.lvwFiles.MultiSelect = true;
             this.lvwFiles.Name = "lvwFiles";
             this.lvwFiles.Size = new System.Drawing.Size(896, 544);
             this.lvwFiles.SmallImageList = this.imlIcons;
