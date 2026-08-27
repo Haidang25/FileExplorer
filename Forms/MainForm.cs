@@ -712,7 +712,7 @@ namespace FileExplorerApp.Forms
             }
         }
 
-        private void mnuEditPaste_Click(object sender, EventArgs e)
+        private async void mnuEditPaste_Click(object sender, EventArgs e)
         {
             if (_clipboardPaths.Count == 0)
             {
@@ -815,7 +815,11 @@ namespace FileExplorerApp.Forms
                 {
                     result = _clipboardIsCut
                         ? _fileService.MoveFile(sourcePath, destinationPath)
-                        : _fileService.CopyFile(sourcePath, destinationPath, overwriteFile);
+                        // CopyFileAsync: doc/ghi bang FileStream + buffer, khong chan UI
+                        // thread khi dan file lon - await ngay tai day, UI van phan hoi
+                        // duoc trong luc copy (VD: nguoi dung van co the di chuyen/resize
+                        // cua so) vi mnuEditPaste_Click da chuyen thanh async void.
+                        : await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile);
                 }
 
                 ShowOperationResultMessage(result, $"dan \"{name}\"");

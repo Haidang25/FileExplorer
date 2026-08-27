@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
@@ -408,12 +409,39 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
-        /// Sao chep file sang vi tri khac.
+        /// Kich thuoc buffer (byte) dung cho moi luot doc/ghi trong CopyFileAsync -
+        /// 1 MB giup giam so lan goi ReadAsync/WriteAsync voi file lon, nhung van du
+        /// nho de khong chiem qua nhieu bo nho khi Copy nhieu file cung luc (Paste
+        /// nhieu muc, xem mnuEditPaste_Click).
+        /// </summary>
+        private const int CopyBufferSize = 1024 * 1024;
+
+        /// <summary>
+        /// Sao chep file sang vi tri khac (dong bo) - giu lai de tuong thich voi cac
+        /// noi goi cu/don gian chua can async; ben trong chi goi CopyFileAsync roi
+        /// cho ket qua ngay (.GetAwaiter().GetResult()) thay vi viet lai logic File.Copy.
+        /// Uu tien dung CopyFileAsync() truc tiep o cac noi co the await (VD: UI).
         /// </summary>
         /// <param name="sourcePath">Duong dan file nguon.</param>
         /// <param name="destinationPath">Duong dan file dich (bao gom ten file).</param>
         /// <param name="overwrite">True neu cho phep ghi de file dich da ton tai.</param>
         public OperationResult CopyFile(string sourcePath, string destinationPath, bool overwrite = false)
+        {
+            return CopyFileAsync(sourcePath, destinationPath, overwrite).GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Sao chep file sang vi tri khac theo kieu bat dong bo, tu doc/ghi bang
+        /// FileStream + buffer (thay vi File.Copy noi bo cua .NET) de: (1) khong chan
+        /// (block) UI thread trong luc copy file lon - MainForm co the await ham nay
+        /// ngay trong mnuEditPaste_Click va van phan hoi duoc cac tuong tac khac; (2)
+        /// de sau nay mo rong bao cao tien do (progress) hoac huy (cancel) giua luc
+        /// copy neu can, vi da tu kiem soat vong lap doc/ghi tung buffer.
+        /// </summary>
+        /// <param name="sourcePath">Duong dan file nguon.</param>
+        /// <param name="destinationPath">Duong dan file dich (bao gom ten file).</param>
+        /// <param name="overwrite">True neu cho phep ghi de file dich da ton tai.</param>
+        public async Task<OperationResult> CopyFileAsync(string sourcePath, string destinationPath, bool overwrite = false)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
                 return OperationResult.NotFound;
@@ -427,12 +455,46 @@ namespace FileExplorerApp.Services
 
             try
             {
-                File.Copy(sourcePath, destinationPath, overwrite);
+                // FileMode.Create: tao moi hoac ghi de (truncate) file dich neu da ton
+                // tai va overwrite == true - tuong duong hanh vi File.Copy(overwrite: true).
+                using (FileStream sourceStream = new FileStream(
+                    sourcePath, FileMode.Open, FileAccess.Read, FileShare.Read,
+                    CopyBufferSize, useAsync: true))
+                using (FileStream destinationStream = new FileStream(
+                    destinationPath, FileMode.Create, FileAccess.Write, FileShare.None,
+                    CopyBufferSize, useAsync: true))
+                {
+                    byte[] buffer = new byte[CopyBufferSize];
+                    int bytesRead;
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                    {
+                        await destinationStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
+                    }
+                }
+
+                // File.Copy() tu dong sao chep ca cac thuoc tinh (VD: ReadOnly, Hidden)
+                // va thoi gian tao/sua doi cua file nguon; tu doc/ghi bang FileStream thi
+                // khong tu lam dieu nay, nen can gan lai thu cong de giu hanh vi giong nhau.
+                try
+                {
+                    File.SetAttributes(destinationPath, File.GetAttributes(sourcePath));
+                    File.SetCreationTimeUtc(destinationPath, File.GetCreationTimeUtc(sourcePath));
+                    File.SetLastWriteTimeUtc(destinationPath, File.GetLastWriteTimeUtc(sourcePath));
+                }
+                catch (IOException) { /* Khong quan trong bang viec da copy xong noi dung - bo qua rieng loi nay. */ }
+                catch (UnauthorizedAccessException) { /* VD: khong doi duoc thuoc tinh tren dich (mang, o dia chi doc) - bo qua. */ }
+
                 return OperationResult.Success;
             }
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
+            {
+                // Nguon dang bi khoa boi ung dung khac (VD: dang mo trong Word) - tach
+                // rieng voi Failed, giong da lam voi RenameFile/DeleteFile/MoveFile.
+                return OperationResult.FileInUse;
             }
             catch (IOException)
             {
