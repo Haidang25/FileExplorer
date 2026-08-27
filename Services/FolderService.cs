@@ -555,11 +555,24 @@ namespace FileExplorerApp.Services
             }
             catch (OperationCanceledException)
             {
-                // Nguoi dung bam Huy giua chung - KHONG xoa nhung gi da sao chep duoc
-                // cho den luc do (khac voi CopyFileAsync chi huy MOT file don le va
-                // xoa ngay ban do dang) vi day co the la mot cay thu muc lon, xoa lai
-                // toan bo cung ton thoi gian tuong duong voi viec sao chep tiep; nguoi
-                // dung co the tu xoa thu muc dich do dang neu khong can.
+                // Nguoi dung bam Huy giua chung - xoa thu muc dich dang do dang (chi
+                // co MOT PHAN cay thu muc nguon, khong nguyen ven) de khong de lai
+                // "rac" nua vien nua, giong cach CopyFileAsync da xoa file dich do
+                // dang khi bi huy. AN TOAN xoa CA destinationPath (khong chi phan con
+                // thieu) vi ngay tren da kiem tra destinationPath CHUA TON TAI truoc
+                // khi ham nay bat dau tao no - moi thu ben trong deu do chinh lan
+                // Copy nay tao ra, khong phai du lieu co san cua nguoi dung.
+                try
+                {
+                    if (Directory.Exists(destinationPath))
+                    {
+                        ClearReadOnlyAttributeRecursive(destinationPath);
+                        Directory.Delete(destinationPath, recursive: true);
+                    }
+                }
+                catch (UnauthorizedAccessException) { /* Khong xoa duoc thu muc rac - bo qua, khong quan trong bang viec da huy theo yeu cau. */ }
+                catch (IOException) { /* VD: mot file ben trong dang bi khoa boi ung dung khac. */ }
+
                 return OperationResult.Cancelled;
             }
             catch (UnauthorizedAccessException)
