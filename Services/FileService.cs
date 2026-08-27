@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -449,8 +450,16 @@ namespace FileExplorerApp.Services
         /// FileOperationProgress phu hop voi ngu canh cua minh. Bo qua (null) neu
         /// khong can theo doi tien do.
         /// </param>
+        /// <param name="cancellationToken">
+        /// Token de huy giua chung (VD: nguoi dung bam nut Huy tren CopyProgressForm).
+        /// Duoc truyen thang vao ReadAsync/WriteAsync de dap ung huy ngay giua vong
+        /// lap doc/ghi buffer, khong phai cho copy xong het file moi kiem tra. Neu bi
+        /// huy, file dich (dang do dang, chua nguyen ven) se duoc xoa bo (best-effort)
+        /// truoc khi tra ve OperationResult.Cancelled - xem catch (OperationCanceledException) ben duoi.
+        /// </param>
         public async Task<OperationResult> CopyFileAsync(
-            string sourcePath, string destinationPath, bool overwrite = false, IProgress<long> progress = null)
+            string sourcePath, string destinationPath, bool overwrite = false,
+            IProgress<long> progress = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
                 return OperationResult.NotFound;
@@ -476,9 +485,10 @@ namespace FileExplorerApp.Services
                     byte[] buffer = new byte[CopyBufferSize];
                     int bytesRead;
                     long totalBytesWritten = 0;
-                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
                     {
-                        await destinationStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await destinationStream.WriteAsync(buffer, 0, bytesRead, cancellationToken).ConfigureAwait(false);
                         totalBytesWritten += bytesRead;
                         progress?.Report(totalBytesWritten);
                     }
@@ -497,6 +507,21 @@ namespace FileExplorerApp.Services
                 catch (UnauthorizedAccessException) { /* VD: khong doi duoc thuoc tinh tren dich (mang, o dia chi doc) - bo qua. */ }
 
                 return OperationResult.Success;
+            }
+            catch (OperationCanceledException)
+            {
+                // Xoa file dich dang do dang copy (moi co mot phan noi dung, chua
+                // nguyen ven) - tranh de lai file "rac" nua vien nua sau khi Huy,
+                // giong hanh vi Windows Explorer khi bam Cancel giua luc copy.
+                try
+                {
+                    if (File.Exists(destinationPath))
+                        File.Delete(destinationPath);
+                }
+                catch (IOException) { /* Khong xoa duoc file rac - bo qua, khong quan trong bang viec da huy theo yeu cau. */ }
+                catch (UnauthorizedAccessException) { /* Tuong tu. */ }
+
+                return OperationResult.Cancelled;
             }
             catch (UnauthorizedAccessException)
             {
