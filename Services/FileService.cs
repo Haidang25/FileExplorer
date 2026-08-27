@@ -435,13 +435,22 @@ namespace FileExplorerApp.Services
         /// FileStream + buffer (thay vi File.Copy noi bo cua .NET) de: (1) khong chan
         /// (block) UI thread trong luc copy file lon - MainForm co the await ham nay
         /// ngay trong mnuEditPaste_Click va van phan hoi duoc cac tuong tac khac; (2)
-        /// de sau nay mo rong bao cao tien do (progress) hoac huy (cancel) giua luc
-        /// copy neu can, vi da tu kiem soat vong lap doc/ghi tung buffer.
+        /// tu kiem soat vong lap doc/ghi tung buffer de co the bao cao tien do qua
+        /// tham so progress ben duoi.
         /// </summary>
         /// <param name="sourcePath">Duong dan file nguon.</param>
         /// <param name="destinationPath">Duong dan file dich (bao gom ten file).</param>
         /// <param name="overwrite">True neu cho phep ghi de file dich da ton tai.</param>
-        public async Task<OperationResult> CopyFileAsync(string sourcePath, string destinationPath, bool overwrite = false)
+        /// <param name="progress">
+        /// IProgress&lt;T&gt; (thuong la Progress&lt;long&gt; tao tren UI thread) de bao cao
+        /// so byte da doc/ghi xong CUA RIENG file nay (luy ke, khong phai delta) sau
+        /// moi lan doc/ghi mot buffer - noi goi (VD: FolderService khi copy ca thu
+        /// muc, hoac MainForm khi copy mot file don le) tu quy doi gia tri nay sang
+        /// FileOperationProgress phu hop voi ngu canh cua minh. Bo qua (null) neu
+        /// khong can theo doi tien do.
+        /// </param>
+        public async Task<OperationResult> CopyFileAsync(
+            string sourcePath, string destinationPath, bool overwrite = false, IProgress<long> progress = null)
         {
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
                 return OperationResult.NotFound;
@@ -466,9 +475,12 @@ namespace FileExplorerApp.Services
                 {
                     byte[] buffer = new byte[CopyBufferSize];
                     int bytesRead;
+                    long totalBytesWritten = 0;
                     while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false)) > 0)
                     {
                         await destinationStream.WriteAsync(buffer, 0, bytesRead).ConfigureAwait(false);
+                        totalBytesWritten += bytesRead;
+                        progress?.Report(totalBytesWritten);
                     }
                 }
 
