@@ -350,7 +350,7 @@ namespace FileExplorerApp.Services
             {
                 // Mot file nao do ben trong thu muc dang bi chuong trinh khac khoa -
                 // Directory.Delete(recursive: true) that bai toan bo (khong xoa duoc
-                // mot phan roi bo qua phan con lai nhu CopyDirectoryRecursive).
+                // mot phan roi bo qua phan con lai nhu CopyDirectoryRecursiveAsync).
                 return OperationResult.FileInUse;
             }
             catch (IOException)

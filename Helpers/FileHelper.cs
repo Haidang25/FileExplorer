@@ -47,7 +47,7 @@ namespace FileExplorerApp.Helpers
         /// Kiem tra destinationPath co la CHINH sourcePath hoac nam BEN TRONG cay
         /// con cua sourcePath hay khong - dung de chan truoc khi di chuyen/sao chep
         /// mot thu muc vao chinh no hoac vao mot thu muc con cua chinh no (VD: keo
-        /// "C:\A" vao "C:\A\B"), tranh de quy vo han (CopyDirectoryRecursive tu goi
+        /// "C:\A" vao "C:\A\B"), tranh de quy vo han (CopyDirectoryRecursiveAsync tu goi
         /// lai chinh no ben trong dich no dang tao) hoac loi he thong kho hieu tu
         /// Directory.Move.
         ///
