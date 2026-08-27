@@ -10,6 +10,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.Label lblCurrentItem;
         private System.Windows.Forms.ProgressBar progressBar;
         private System.Windows.Forms.Label lblPercent;
+        private System.Windows.Forms.Button btnCancel;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -35,6 +36,7 @@ namespace FileExplorerApp.Forms
             this.lblCurrentItem = new System.Windows.Forms.Label();
             this.progressBar = new System.Windows.Forms.ProgressBar();
             this.lblPercent = new System.Windows.Forms.Label();
+            this.btnCancel = new System.Windows.Forms.Button();
             this.components = new System.ComponentModel.Container();
             this.SuspendLayout();
             //
@@ -66,15 +68,26 @@ namespace FileExplorerApp.Forms
             this.lblPercent.Text = "0%";
             this.lblPercent.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
             //
+            // btnCancel
+            //
+            this.btnCancel.Location = new System.Drawing.Point(292, 104);
+            this.btnCancel.Name = "btnCancel";
+            this.btnCancel.Size = new System.Drawing.Size(112, 32);
+            this.btnCancel.TabIndex = 3;
+            this.btnCancel.Text = "Hủy";
+            this.btnCancel.Click += new System.EventHandler(this.btnCancel_Click);
+            //
             // CopyProgressForm
             //
+            this.CancelButton = this.btnCancel;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
-            this.ClientSize = new System.Drawing.Size(420, 116);
+            this.ClientSize = new System.Drawing.Size(420, 152);
             this.ControlBox = false;
             this.Controls.Add(this.lblCurrentItem);
             this.Controls.Add(this.progressBar);
             this.Controls.Add(this.lblPercent);
+            this.Controls.Add(this.btnCancel);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
