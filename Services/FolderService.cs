@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 
@@ -450,12 +451,13 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
-        /// Sao chep thu muc (va toan bo noi dung ben trong, de quy) sang vi tri khac.
-        ///
-        /// Neu mot thu muc con hoac file nao do ben trong khong doc/ghi duoc (VD:
-        /// mat quyen, file dang bi khoa boi ung dung khac), chi bo qua rieng muc do
-        /// va tiep tuc sao chep phan con lai cua cay thu muc, thay vi huy toan bo
-        /// thao tac. Dung SkippedPaths (xem sau ham nay) de biet co bo sot gi khong.
+        /// Sao chep thu muc (va toan bo noi dung ben trong, de quy) sang vi tri khac
+        /// (dong bo) - giu lai de tuong thich voi cac noi goi cu/don gian chua can
+        /// async (VD: MoveFolder khi fallback Copy+Delete giua 2 o dia khac nhau);
+        /// ben trong chi goi CopyFolderAsync (khong progress) roi cho ket qua ngay,
+        /// giong cach FileService.CopyFile() da lam voi CopyFileAsync(). Uu tien dung
+        /// CopyFolderAsync() truc tiep o cac noi co the await va can bao cao tien do
+        /// (VD: MainForm.mnuEditPaste_Click).
         /// </summary>
         /// <param name="sourcePath">Duong dan thu muc nguon.</param>
         /// <param name="destinationPath">Duong dan thu muc dich.</param>
@@ -470,15 +472,48 @@ namespace FileExplorerApp.Services
         /// </returns>
         public OperationResult CopyFolder(string sourcePath, string destinationPath, out List<string> skippedPaths)
         {
-            skippedPaths = new List<string>();
+            var skipped = new List<string>();
+            OperationResult result = CopyFolderAsync(sourcePath, destinationPath, skipped).GetAwaiter().GetResult();
+            skippedPaths = skipped;
+            return result;
+        }
 
+        /// <summary>
+        /// Sao chep thu muc (va toan bo noi dung ben trong, de quy) sang vi tri khac
+        /// theo kieu bat dong bo - tung file con duoc sao chep qua FileService.CopyFileAsync
+        /// (doc/ghi bang FileStream + buffer) thay vi File.Copy dong bo, de: (1) khong
+        /// chan UI thread ke ca khi thu muc chua file lon; (2) co the bao cao tien do
+        /// tong the qua tham so progress.
+        ///
+        /// Neu mot thu muc con hoac file nao do ben trong khong doc/ghi duoc (VD:
+        /// mat quyen, file dang bi khoa boi ung dung khac), chi bo qua rieng muc do
+        /// va tiep tuc sao chep phan con lai cua cay thu muc, thay vi huy toan bo
+        /// thao tac. Dung skippedPaths (tham so, khong phai out - async khong ho tro
+        /// out) de biet co bo sot gi khong.
+        /// </summary>
+        /// <param name="sourcePath">Duong dan thu muc nguon.</param>
+        /// <param name="destinationPath">Duong dan thu muc dich.</param>
+        /// <param name="skippedPaths">
+        /// Danh sach (da khoi tao san boi noi goi) de ham nay them vao duong dan
+        /// cac muc bi bo qua do loi quyen/IO trong luc sao chep de quy.
+        /// </param>
+        /// <param name="progress">
+        /// IProgress&lt;FileOperationProgress&gt; (thuong la Progress&lt;T&gt; tao tren UI
+        /// thread) de bao cao tien do tong the (so file da xong / tong so file, cong
+        /// them ti le byte cua file dang copy do dang). Bo qua (null) neu khong can
+        /// theo doi tien do - luc do ham nay khong ton chi phi CountFiles()/Report().
+        /// </param>
+        public async Task<OperationResult> CopyFolderAsync(
+            string sourcePath, string destinationPath, List<string> skippedPaths,
+            IProgress<FileOperationProgress> progress = null)
+        {
             if (string.IsNullOrWhiteSpace(sourcePath) || !Directory.Exists(sourcePath))
                 return OperationResult.NotFound;
 
             // Chan truoc khi sao chep thu muc vao chinh no hoac vao mot thu muc con
-            // cua chinh no - neu khong, CopyDirectoryRecursive se de quy vo han (moi
-            // lan tao destinationDir ben trong sourceDir lai bi chinh vong lap ben
-            // ngoai duyet tiep vao, gay tran ngan xep hoac day dia).
+            // cua chinh no - neu khong, CopyDirectoryRecursiveAsync se de quy vo han
+            // (moi lan tao destinationDir ben trong sourceDir lai bi chinh vong lap
+            // ben ngoai duyet tiep vao, gay tran ngan xep hoac day dia).
             if (FileHelper.IsSameOrSubdirectory(sourcePath, destinationPath))
                 return OperationResult.InvalidDestination;
 
@@ -491,11 +526,24 @@ namespace FileExplorerApp.Services
 
             try
             {
+                // Chi dem so file (CountFiles) khi thuc su co noi theo doi tien do -
+                // ban than viec dem cung phai duyet toan bo cay thu muc mot lan, nen
+                // tranh chi phi nay neu khong ai can den %.
+                CopyProgressState progressState = null;
+                if (progress != null)
+                {
+                    progressState = new CopyProgressState
+                    {
+                        Progress = progress,
+                        TotalFiles = CountFiles(sourcePath)
+                    };
+                }
+
                 // Chi loi o cap thu muc goc (khong tao duoc destinationDir dau tien -
                 // VD: destinationParent bi mat quyen dung luc kiem tra o tren) moi lam
                 // that bai toan bo thao tac - loi o cac thu muc/file con ben trong deu
-                // duoc CopyDirectoryRecursive tu bat va ghi vao skippedPaths.
-                CopyDirectoryRecursive(sourcePath, destinationPath, skippedPaths);
+                // duoc CopyDirectoryRecursiveAsync tu bat va ghi vao skippedPaths.
+                await CopyDirectoryRecursiveAsync(sourcePath, destinationPath, skippedPaths, progressState).ConfigureAwait(false);
                 return OperationResult.Success;
             }
             catch (UnauthorizedAccessException)
@@ -516,7 +564,8 @@ namespace FileExplorerApp.Services
         /// nay (Directory.CreateDirectory ngay dau ham) moi duoc nem ra ngoai, vi day
         /// la dieu kien tien quyet de co the sao chep bat cu thu gi vao ben trong no.
         /// </summary>
-        private static void CopyDirectoryRecursive(string sourceDir, string destinationDir, List<string> skippedPaths)
+        private static async Task CopyDirectoryRecursiveAsync(
+            string sourceDir, string destinationDir, List<string> skippedPaths, CopyProgressState progressState)
         {
             Directory.CreateDirectory(destinationDir);
 
@@ -524,13 +573,37 @@ namespace FileExplorerApp.Services
             {
                 foreach (string filePath in Directory.GetFiles(sourceDir))
                 {
+                    string fileName = Path.GetFileName(filePath);
                     try
                     {
-                        string destFilePath = Path.Combine(destinationDir, Path.GetFileName(filePath));
-                        File.Copy(filePath, destFilePath, overwrite: false);
+                        string destFilePath = Path.Combine(destinationDir, fileName);
+
+                        IProgress<long> fileProgress = progressState == null
+                            ? null
+                            : new FileBytesProgressAdapter(progressState, filePath);
+
+                        var fileService = new FileService();
+                        OperationResult copyResult = await fileService.CopyFileAsync(
+                            filePath, destFilePath, overwrite: false, progress: fileProgress).ConfigureAwait(false);
+
+                        if (copyResult != OperationResult.Success)
+                            skippedPaths.Add(filePath);
                     }
                     catch (UnauthorizedAccessException) { skippedPaths.Add(filePath); }
                     catch (IOException) { skippedPaths.Add(filePath); } // VD: file dang bi ung dung khac khoa.
+                    finally
+                    {
+                        // Luon tang FilesCompleted va bao cao lai du file vua roi
+                        // thanh cong hay bi bo qua - neu khong, mot file loi ngay
+                        // truoc khi CopyFileAsync kip goi Report() lan nao se lam
+                        // thanh % tong the bi "ket" o gia tri cu cho den file tiep
+                        // theo (hoac mai mai neu day la file cuoi cung).
+                        if (progressState != null)
+                        {
+                            progressState.FilesCompleted++;
+                            progressState.Report(fileName, 0, 0);
+                        }
+                    }
                 }
             }
             catch (UnauthorizedAccessException) { skippedPaths.Add(sourceDir); }
@@ -541,11 +614,96 @@ namespace FileExplorerApp.Services
                 foreach (string subDir in Directory.GetDirectories(sourceDir))
                 {
                     string destSubDir = Path.Combine(destinationDir, Path.GetFileName(subDir));
-                    CopyDirectoryRecursive(subDir, destSubDir, skippedPaths);
+                    await CopyDirectoryRecursiveAsync(subDir, destSubDir, skippedPaths, progressState).ConfigureAwait(false);
                 }
             }
             catch (UnauthorizedAccessException) { skippedPaths.Add(sourceDir); }
             catch (IOException) { skippedPaths.Add(sourceDir); } // Khong liet ke duoc danh sach thu muc con cua sourceDir.
+        }
+
+        /// <summary>
+        /// Dem so luong file (de quy qua toan bo thu muc con) cua mot thu muc, dung
+        /// de uoc tinh CopyProgressState.TotalFiles TRUOC khi bat dau
+        /// CopyDirectoryRecursiveAsync, phuc vu tinh % tien do tong the. Chi la UOC
+        /// TINH (co the it hon thuc te neu co nhanh bi bo qua do loi quyen/IO ngay
+        /// trong luc dem) - khong anh huong den qua trinh sao chep thuc te,
+        /// CopyDirectoryRecursiveAsync tu bat loi rieng cho tung muc o buoc do nhu cu.
+        /// </summary>
+        private static int CountFiles(string folderPath)
+        {
+            int count = 0;
+
+            try
+            {
+                count += Directory.GetFiles(folderPath).Length;
+
+                foreach (string subDir in Directory.GetDirectories(folderPath))
+                {
+                    count += CountFiles(subDir);
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Bo qua rieng nhanh nay - chi anh huong do chinh xac cua uoc tinh. */ }
+            catch (IOException) { /* Tuong tu. */ }
+
+            return count;
+        }
+
+        /// <summary>
+        /// Trang thai dung chung (mutable) cho MOT LAN goi CopyFolderAsync, cong don
+        /// so file da xong qua nhieu file/thu muc con de tinh FileOperationProgress
+        /// tren TOAN BO cay thu muc dang sao chep - xem CopyFolderAsync va
+        /// CopyDirectoryRecursiveAsync. Chi duoc tao khi co noi theo doi tien do
+        /// (progress != null trong CopyFolderAsync).
+        /// </summary>
+        private class CopyProgressState
+        {
+            public IProgress<FileOperationProgress> Progress;
+            public int TotalFiles;
+            public int FilesCompleted;
+
+            /// <summary>Dong goi va gui mot FileOperationProgress voi trang thai FilesCompleted/TotalFiles hien tai.</summary>
+            public void Report(string currentFileName, long currentFileBytesTransferred, long currentFileTotalBytes)
+            {
+                Progress.Report(new FileOperationProgress
+                {
+                    CurrentFileName = currentFileName,
+                    FilesCompleted = FilesCompleted,
+                    TotalFiles = TotalFiles,
+                    CurrentFileBytesTransferred = currentFileBytesTransferred,
+                    CurrentFileTotalBytes = currentFileTotalBytes
+                });
+            }
+        }
+
+        /// <summary>
+        /// Chuyen tiep IProgress&lt;long&gt; (so byte luy ke CUA MOT file, do
+        /// FileService.CopyFileAsync bao cao) thanh IProgress&lt;FileOperationProgress&gt;
+        /// (tien do CUA CA THU MUC, do CopyProgressState.Progress - VD: MainForm -
+        /// lang nghe), bang cach ghep them FilesCompleted/TotalFiles hien tai cua
+        /// CopyProgressState va dung luong cua file nay (doc mot lan luc khoi tao,
+        /// best-effort - loi thi coi nhu 0, khong lam gian doan qua trinh copy chi
+        /// vi khong lay duoc dung luong de hien thi %).
+        /// </summary>
+        private class FileBytesProgressAdapter : IProgress<long>
+        {
+            private readonly CopyProgressState _state;
+            private readonly string _fileName;
+            private readonly long _fileTotalBytes;
+
+            public FileBytesProgressAdapter(CopyProgressState state, string sourceFilePath)
+            {
+                _state = state;
+                _fileName = Path.GetFileName(sourceFilePath);
+
+                try { _fileTotalBytes = new FileInfo(sourceFilePath).Length; }
+                catch (IOException) { _fileTotalBytes = 0; }
+                catch (UnauthorizedAccessException) { _fileTotalBytes = 0; }
+            }
+
+            public void Report(long bytesTransferredForThisFile)
+            {
+                _state.Report(_fileName, bytesTransferredForThisFile, _fileTotalBytes);
+            }
         }
     }
 }
