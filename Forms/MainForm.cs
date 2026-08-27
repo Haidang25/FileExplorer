@@ -733,96 +733,163 @@ namespace FileExplorerApp.Forms
             // ghi nho vi ten moi chi hop le rieng cho muc da hoi.
             ConflictAction? rememberedAction = null;
 
-            foreach (string sourcePath in _clipboardPaths)
+            // Hien thanh tien do (tspProgress) + cap nhat trang thai (tsslStatus) tren
+            // status bar trong suot qua trinh dan. pasteProgress khai bao KIEU
+            // IProgress<FileOperationProgress> (khong phai Progress<FileOperationProgress>)
+            // vi Progress<T> cai dat IProgress<T>.Report() theo kieu EXPLICIT - goi
+            // truc tiep .Report() tren bien kieu Progress<T> se khong bien dich duoc.
+            // Duoc tao NGAY TAI DAY tren UI thread nen tu dong Post() callback ve dung
+            // UI thread moi lan Report(), du Report() thuc su duoc goi tu dau (VD: tu
+            // trong vong lap doc/ghi cua CopyFileAsync sau khi da ConfigureAwait(false))
+            // - xem them chu thich cua FileOperationProgress.
+            int totalItemsInBatch = _clipboardPaths.Count;
+            int currentItemIndex = 0;
+
+            IProgress<FileOperationProgress> pasteProgress = new Progress<FileOperationProgress>(p =>
             {
-                string name = Path.GetFileName(sourcePath);
-                string destinationPath = Path.Combine(_currentPath, name);
-                bool isDirectory = Directory.Exists(sourcePath);
-                bool hasConflict = File.Exists(destinationPath) || Directory.Exists(destinationPath);
-                bool overwriteFile = false; // Chi dat true khi nguoi dung xac nhan Overwrite cho truong hop file+Copy.
+                tspProgress.Value = p.PercentComplete;
+                tsslStatus.Text = totalItemsInBatch > 1
+                    ? $"Đang dán mục {currentItemIndex}/{totalItemsInBatch}: \"{p.CurrentFileName}\" ({p.PercentComplete}%)"
+                    : $"Đang dán \"{p.CurrentFileName}\"... ({p.PercentComplete}%)";
+            });
 
-                if (hasConflict)
+            tspProgress.Value = 0;
+            tspProgress.Visible = true;
+
+            try
+            {
+                foreach (string sourcePath in _clipboardPaths)
                 {
-                    ConflictAction action;
-                    string newName = null;
+                    currentItemIndex++;
 
-                    if (rememberedAction.HasValue)
+                    string name = Path.GetFileName(sourcePath);
+                    string destinationPath = Path.Combine(_currentPath, name);
+                    bool isDirectory = Directory.Exists(sourcePath);
+                    bool hasConflict = File.Exists(destinationPath) || Directory.Exists(destinationPath);
+                    bool overwriteFile = false; // Chi dat true khi nguoi dung xac nhan Overwrite cho truong hop file+Copy.
+
+                    if (hasConflict)
                     {
-                        action = rememberedAction.Value;
-                    }
-                    else
-                    {
-                        using (var dialog = new ConflictResolutionForm(sourcePath, _currentPath))
+                        ConflictAction action;
+                        string newName = null;
+
+                        if (rememberedAction.HasValue)
                         {
-                            DialogResult dialogResult = dialog.ShowDialog(this);
-                            action = dialogResult == DialogResult.OK ? dialog.SelectedAction : ConflictAction.Cancel;
-                            newName = dialog.NewName;
-
-                            if (dialog.ApplyToAll && action != ConflictAction.Rename)
-                                rememberedAction = action;
-                        }
-                    }
-
-                    if (action == ConflictAction.Cancel)
-                        break; // Nguoi dung dong dialog - dung het cac muc con lai trong clipboard.
-
-                    if (action == ConflictAction.Skip)
-                        continue; // Bo qua rieng muc nay, tiep tuc muc tiep theo.
-
-                    if (action == ConflictAction.Rename)
-                    {
-                        name = newName;
-                        destinationPath = Path.Combine(_currentPath, newName);
-                    }
-                    else if (action == ConflictAction.Overwrite)
-                    {
-                        if (!isDirectory && !_clipboardIsCut)
-                        {
-                            // File + Copy: File.Copy co tham so overwrite rieng, hieu
-                            // qua hon xoa-roi-tao-lai - danh dau de dung ben duoi.
-                            overwriteFile = true;
+                            action = rememberedAction.Value;
                         }
                         else
                         {
-                            // Thu muc (Directory.Move/CopyFolder khong co tham so
-                            // overwrite), hoac file+Cut (File.Move cung khong co) -
-                            // xoa truoc muc dich cu (vao Thung rac, an toan hon xoa
-                            // vinh vien) roi moi dan vao.
-                            OperationResult deleteResult = _recycleBinService.DeleteToRecycleBin(destinationPath);
-                            if (deleteResult != OperationResult.Success)
+                            using (var dialog = new ConflictResolutionForm(sourcePath, _currentPath))
                             {
-                                ShowOperationResultMessage(deleteResult, $"ghi đè \"{name}\"");
-                                continue;
+                                DialogResult dialogResult = dialog.ShowDialog(this);
+                                action = dialogResult == DialogResult.OK ? dialog.SelectedAction : ConflictAction.Cancel;
+                                newName = dialog.NewName;
+
+                                if (dialog.ApplyToAll && action != ConflictAction.Rename)
+                                    rememberedAction = action;
+                            }
+                        }
+
+                        if (action == ConflictAction.Cancel)
+                            break; // Nguoi dung dong dialog - dung het cac muc con lai trong clipboard.
+
+                        if (action == ConflictAction.Skip)
+                            continue; // Bo qua rieng muc nay, tiep tuc muc tiep theo.
+
+                        if (action == ConflictAction.Rename)
+                        {
+                            name = newName;
+                            destinationPath = Path.Combine(_currentPath, newName);
+                        }
+                        else if (action == ConflictAction.Overwrite)
+                        {
+                            if (!isDirectory && !_clipboardIsCut)
+                            {
+                                // File + Copy: File.Copy co tham so overwrite rieng, hieu
+                                // qua hon xoa-roi-tao-lai - danh dau de dung ben duoi.
+                                overwriteFile = true;
+                            }
+                            else
+                            {
+                                // Thu muc (Directory.Move/CopyFolder khong co tham so
+                                // overwrite), hoac file+Cut (File.Move cung khong co) -
+                                // xoa truoc muc dich cu (vao Thung rac, an toan hon xoa
+                                // vinh vien) roi moi dan vao.
+                                OperationResult deleteResult = _recycleBinService.DeleteToRecycleBin(destinationPath);
+                                if (deleteResult != OperationResult.Success)
+                                {
+                                    ShowOperationResultMessage(deleteResult, $"ghi đè \"{name}\"");
+                                    continue;
+                                }
                             }
                         }
                     }
-                }
 
-                OperationResult result;
-                if (isDirectory)
-                {
-                    if (_clipboardIsCut)
+                    OperationResult result;
+                    if (isDirectory)
                     {
-                        result = _folderService.MoveFolder(sourcePath, destinationPath);
+                        if (_clipboardIsCut)
+                        {
+                            result = _folderService.MoveFolder(sourcePath, destinationPath);
+                        }
+                        else
+                        {
+                            var skippedPaths = new List<string>();
+                            result = await _folderService.CopyFolderAsync(sourcePath, destinationPath, skippedPaths, pasteProgress);
+                            allSkippedPaths.AddRange(skippedPaths);
+                        }
                     }
                     else
                     {
-                        result = _folderService.CopyFolder(sourcePath, destinationPath, out List<string> skippedPaths);
-                        allSkippedPaths.AddRange(skippedPaths);
-                    }
-                }
-                else
-                {
-                    result = _clipboardIsCut
-                        ? _fileService.MoveFile(sourcePath, destinationPath)
-                        // CopyFileAsync: doc/ghi bang FileStream + buffer, khong chan UI
-                        // thread khi dan file lon - await ngay tai day, UI van phan hoi
-                        // duoc trong luc copy (VD: nguoi dung van co the di chuyen/resize
-                        // cua so) vi mnuEditPaste_Click da chuyen thanh async void.
-                        : await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile);
-                }
+                        if (_clipboardIsCut)
+                        {
+                            result = _fileService.MoveFile(sourcePath, destinationPath);
+                        }
+                        else
+                        {
+                            // Quy tu IProgress<long> (byte luy ke CUA RIENG file nay, do
+                            // CopyFileAsync bao cao) sang IProgress<FileOperationProgress>
+                            // (pasteProgress) - tuong tu FolderService.FileBytesProgressAdapter,
+                            // nhung o day chi co 1 file (TotalFiles = 1, FilesCompleted = 0)
+                            // nen khong can CopyProgressState rieng.
+                            long sourceFileSize = 0;
+                            try { sourceFileSize = new FileInfo(sourcePath).Length; }
+                            catch (IOException) { /* Khong lay duoc dung luong - van tiep tuc copy, chi khong hien % chinh xac. */ }
+                            catch (UnauthorizedAccessException) { /* Tuong tu. */ }
 
-                ShowOperationResultMessage(result, $"dan \"{name}\"");
+                            string currentFileName = name;
+                            var fileProgress = new Progress<long>(bytesTransferred =>
+                            {
+                                pasteProgress.Report(new FileOperationProgress
+                                {
+                                    CurrentFileName = currentFileName,
+                                    FilesCompleted = 0,
+                                    TotalFiles = 1,
+                                    CurrentFileBytesTransferred = bytesTransferred,
+                                    CurrentFileTotalBytes = sourceFileSize
+                                });
+                            });
+
+                            // CopyFileAsync: doc/ghi bang FileStream + buffer, khong chan UI
+                            // thread khi dan file lon - await ngay tai day, UI van phan hoi
+                            // duoc trong luc copy (VD: nguoi dung van co the di chuyen/resize
+                            // cua so) vi mnuEditPaste_Click da chuyen thanh async void.
+                            result = await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile, fileProgress);
+                        }
+                    }
+
+                    ShowOperationResultMessage(result, $"dan \"{name}\"");
+                }
+            }
+            finally
+            {
+                // Luon an lai thanh tien do va tra tsslStatus ve trang thai binh
+                // thuong sau khi dan xong - ke ca khi nguoi dung Cancel giua chung
+                // (break) hoac phat sinh loi khong luong truoc, tranh de lai thanh
+                // tien do dung yen tren status bar gay hieu lam la ung dung dang treo.
+                tspProgress.Visible = false;
+                tspProgress.Value = 0;
+                tsslStatus.Text = "Sẵn sàng";
             }
 
             if (allSkippedPaths.Count > 0)
