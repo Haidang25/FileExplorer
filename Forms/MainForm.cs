@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.VisualBasic;
@@ -737,8 +738,15 @@ namespace FileExplorerApp.Forms
             // tren status bar - ca hai deu duoc cap nhat tu CUNG mot pasteProgress ben
             // duoi. copyProgressForm.Show(this) la MODELESS (khong phai ShowDialog) nen
             // khong chan cac lenh await ben trong vong lap Paste.
+            //
+            // cts la nguon phat CancellationToken cho toan bo lan Paste nay - khi
+            // nguoi dung bam nut Huy tren copyProgressForm (su kien CancelRequested),
+            // chi can goi cts.Cancel(); FileService/FolderService tu kiem tra token
+            // nay giua vong lap doc/ghi buffer va giua tung file/thu muc con.
+            using (var cts = new CancellationTokenSource())
             using (var copyProgressForm = new CopyProgressForm())
             {
+                copyProgressForm.CancelRequested += (s, args) => cts.Cancel();
                 copyProgressForm.Show(this);
 
                 // Hien thanh tien do (tspProgress) + cap nhat trang thai (tsslStatus) tren
@@ -844,7 +852,7 @@ namespace FileExplorerApp.Forms
                             else
                             {
                                 var skippedPaths = new List<string>();
-                                result = await _folderService.CopyFolderAsync(sourcePath, destinationPath, skippedPaths, pasteProgress);
+                                result = await _folderService.CopyFolderAsync(sourcePath, destinationPath, skippedPaths, pasteProgress, cts.Token);
                                 allSkippedPaths.AddRange(skippedPaths);
                             }
                         }
@@ -883,9 +891,12 @@ namespace FileExplorerApp.Forms
                                 // thread khi dan file lon - await ngay tai day, UI van phan hoi
                                 // duoc trong luc copy (VD: nguoi dung van co the di chuyen/resize
                                 // cua so) vi mnuEditPaste_Click da chuyen thanh async void.
-                                result = await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile, fileProgress);
+                                result = await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile, fileProgress, cts.Token);
                             }
                         }
+
+                        if (result == OperationResult.Cancelled)
+                            break; // Nguoi dung bam Huy tren CopyProgressForm - dung ngay, khong hien thong bao ket qua cho muc dang do dang.
 
                         ShowOperationResultMessage(result, $"dan \"{name}\"");
                     }
