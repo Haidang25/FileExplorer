@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
 using FileExplorerApp.Models;
@@ -42,7 +43,11 @@ namespace FileExplorerApp.Services
         /// <returns>Danh sach FileItemModel (ca file lan thu muc) co Name chua keyword. Danh sach rong neu khong tim thay gi.</returns>
         public List<FileItemModel> SearchByName(string rootPath, string keyword, bool recursive = true)
         {
-            return Search(rootPath, keyword, recursive, includeHidden: true, cancellationToken: CancellationToken.None);
+            // SearchByName la ban rut gon, dong bo cho noi goi don gian (xem doc phia
+            // tren) nen van gom het vao List truoc khi tra ve; noi can "tra ket qua
+            // som" (VD: SearchForm) nen goi truc tiep Search() va foreach tren ket qua
+            // (IEnumerable, tra ve dan tung ket qua qua yield return) thay vi qua day.
+            return Search(rootPath, keyword, recursive, includeHidden: true, cancellationToken: CancellationToken.None).ToList();
         }
 
         /// <summary>
@@ -109,42 +114,54 @@ namespace FileExplorerApp.Services
         /// thu muc con dang do dang.
         /// </param>
         /// <returns>
-        /// Danh sach FileItemModel (ca file lan thu muc) co Name chua keyword. Danh
-        /// sach rong (khong phai null) neu rootPath khong hop le hoac khong tim thay
-        /// gi - khong nem exception ra ngoai (tru OperationCanceledException khi bi huy).
+        /// IEnumerable FileItemModel (ca file lan thu muc) co Name chua keyword, TRA
+        /// VE NGAY TUNG KET QUA MOT (yield return) trong luc quet, thay vi doi quet
+        /// xong toan bo cay thu muc con moi tra ve danh sach day du - nho vay noi goi
+        /// (VD: SearchForm chay tren luong nen) co the hien tung ket qua len UI ngay
+        /// khi tim thay, khong phai doi ca thu muc goc (co the rat lon/nhieu tang con)
+        /// quet xong. Enumerable rong (khong phai null) neu rootPath khong hop le
+        /// hoac khong tim thay gi - khong nem exception ra ngoai (tru
+        /// OperationCanceledException khi bi huy giua luc duyet).
         /// </returns>
-        public List<FileItemModel> Search(
+        public IEnumerable<FileItemModel> Search(
             string rootPath, string keyword, bool recursive, bool includeHidden, CancellationToken cancellationToken)
         {
-            var results = new List<FileItemModel>();
-
             if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath) || string.IsNullOrWhiteSpace(keyword))
-                return results;
+                yield break;
 
-            SearchRecursive(rootPath, keyword, recursive, includeHidden, cancellationToken, results);
-            return results;
+            foreach (FileItemModel item in SearchRecursive(rootPath, keyword, recursive, includeHidden, cancellationToken))
+            {
+                yield return item;
+            }
         }
 
         /// <summary>
-        /// Duyet de quy (neu recursive) mot thu muc, gom vao results moi muc (file
-        /// hoac thu muc con) co Name chua keyword. Loi quyen/IO tren tung nhanh RIENG
-        /// LE (VD: mat quyen doc mot thu muc con) duoc bo qua ngay tai do, khong lam
-        /// dung ca qua trinh - giong cach FolderService.GetSubFolders/FileService.GetFiles
-        /// da lam.
+        /// Duyet de quy (neu recursive) mot thu muc, TRA VE NGAY (yield return) tung
+        /// muc (file hoac thu muc con) co Name chua keyword - khong gom vao List roi
+        /// tra ve mot lan, de nguoi goi (Search()) nhan duoc ket qua som nhat co the,
+        /// thay vi phai doi quet xong toan bo cay thu muc con (co the rat sau/nhieu
+        /// muc) moi thay ket qua dau tien. Loi quyen/IO tren tung nhanh RIENG LE (VD:
+        /// mat quyen doc mot thu muc con) duoc bo qua ngay tai do, khong lam dung ca
+        /// qua trinh - giong cach FolderService.GetSubFolders/FileService.GetFiles da lam.
         /// </summary>
-        private static void SearchRecursive(
+        private static IEnumerable<FileItemModel> SearchRecursive(
             string folderPath, string keyword, bool recursive, bool includeHidden,
-            CancellationToken cancellationToken, List<FileItemModel> results)
+            CancellationToken cancellationToken)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
             IEnumerable<string> entryPaths;
             try
             {
+                // Directory.EnumerateFileSystemEntries (thay vi Directory.GetFileSystemEntries)
+                // tu no da lazy - khong doi liet ke xong toan bo thu muc con moi bat
+                // dau tra ve muc dau tien; ket hop voi yield return ben duoi thi ca
+                // chuoi tu day den SearchByName/nguoi goi cuoi cung deu "tra ket qua
+                // som" nhat co the.
                 entryPaths = Directory.EnumerateFileSystemEntries(folderPath);
             }
-            catch (UnauthorizedAccessException) { return; } // Khong co quyen liet ke thu muc nay - bo qua rieng nhanh nay.
-            catch (IOException) { return; } // VD: thu muc nam tren o dia vua thao ra.
+            catch (UnauthorizedAccessException) { yield break; } // Khong co quyen liet ke thu muc nay - bo qua rieng nhanh nay.
+            catch (IOException) { yield break; } // VD: thu muc nam tren o dia vua thao ra.
 
             foreach (string entryPath in entryPaths)
             {
@@ -168,18 +185,30 @@ namespace FileExplorerApp.Services
                 string name = Path.GetFileName(entryPath);
                 if (IsNameMatch(name, keyword))
                 {
+                    FileItemModel matchedItem = null;
                     try
                     {
-                        results.Add(FileItemModel.FromPath(entryPath));
+                        matchedItem = FileItemModel.FromPath(entryPath);
                     }
                     catch (UnauthorizedAccessException) { /* Khop ten nhung khong doc them duoc thong tin chi tiet - bo qua rieng muc nay. */ }
                     catch (IOException) { /* Tuong tu. */ }
                     catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua. */ }
+
+                    // yield return khong duoc phep dat truc tiep trong than try/catch
+                    // co catch (chi hop le trong try co finally) - nen tach FileItemModel.FromPath()
+                    // ra try/catch rieng phia tren, roi yield return ket qua o day.
+                    if (matchedItem != null)
+                        yield return matchedItem;
                 }
 
                 bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
                 if (isDirectory && recursive)
-                    SearchRecursive(entryPath, keyword, recursive, includeHidden, cancellationToken, results);
+                {
+                    foreach (FileItemModel childItem in SearchRecursive(entryPath, keyword, recursive, includeHidden, cancellationToken))
+                    {
+                        yield return childItem;
+                    }
+                }
             }
         }
 
