@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
@@ -96,6 +97,10 @@ namespace FileExplorerApp.Forms
                 CancellationToken token = _searchCts.Token;
                 int foundCount = 0;
 
+                // Do thoi gian tim kiem thuc te (tu luc bat dau den luc xong/bi huy) -
+                // hien kem so ket qua trong lblStatus, xem FormatElapsed() ben duoi.
+                var stopwatch = Stopwatch.StartNew();
+
                 // Buffer tich luy ket qua giua cac lan do vao lvwResults - xem
                 // ResultBatchSize va FlushResultBatch() ben duoi.
                 var batch = new List<FileItemModel>(ResultBatchSize);
@@ -124,20 +129,22 @@ namespace FileExplorerApp.Forms
                         if (batch.Count >= ResultBatchSize)
                         {
                             FlushResultBatch(batch);
-                            lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục.";
+                            lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục ({FormatElapsed(stopwatch.Elapsed)}).";
                         }
                     }
 
                     // Do het phan con lai trong buffer (chua du 1 lo) sau khi quet xong.
                     FlushResultBatch(batch);
-                    lblStatus.Text = $"Tìm thấy {foundCount} mục.";
+                    stopwatch.Stop();
+                    lblStatus.Text = $"Tìm thấy {foundCount} mục trong {FormatElapsed(stopwatch.Elapsed)}.";
                 }
                 catch (OperationCanceledException)
                 {
                     // Van do het nhung ket qua da tich luy duoc truoc khi bi huy,
                     // khong de mat phan con lai trong buffer.
                     FlushResultBatch(batch);
-                    lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục).";
+                    stopwatch.Stop();
+                    lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục sau {FormatElapsed(stopwatch.Elapsed)}).";
                 }
                 finally
                 {
@@ -155,6 +162,19 @@ namespace FileExplorerApp.Forms
         /// nhay hon, nhung phai doi lau hon moi thay lo dau tien).
         /// </summary>
         private const int ResultBatchSize = 50;
+
+        /// <summary>
+        /// Dinh dang mot khoang thoi gian (TimeSpan tu Stopwatch) thanh chuoi ngan
+        /// hien thi trong lblStatus - duoi 1 giay thi hien theo milli-giay (VD:
+        /// "370 ms", giong cach da bao cao trong buoc test 1.000 file truoc day cua
+        /// project nay), tu 1 giay tro len thi hien theo giay voi 1 so le (VD: "2.3 s").
+        /// </summary>
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            return elapsed.TotalSeconds < 1
+                ? $"{elapsed.TotalMilliseconds:0} ms"
+                : $"{elapsed.TotalSeconds:0.0} s";
+        }
 
         private void btnCancelSearch_Click(object sender, EventArgs e)
         {
