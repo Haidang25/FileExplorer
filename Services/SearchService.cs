@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Threading;
 using FileExplorerApp.Models;
 
@@ -32,7 +33,11 @@ namespace FileExplorerApp.Services
         /// SearchForm). SearchForm nen dung thang Search() de co ca hai tinh nang tren.
         /// </summary>
         /// <param name="rootPath">Thu muc goc bat dau tim kiem.</param>
-        /// <param name="keyword">Tu khoa can tim trong ten file/thu muc.</param>
+        /// <param name="keyword">
+        /// Tu khoa can tim trong ten file/thu muc. Neu co chua ky tu dai dien (*
+        /// hoac ?) thi tu dong so khop kieu wildcard tren toan bo ten (VD: "*.docx",
+        /// "báo?cáo.*"); neu khong thi tim theo kieu "chua tu khoa" nhu binh thuong.
+        /// </param>
         /// <param name="recursive">True: tim ca trong thu muc con (de quy). False: chi tim trong rootPath.</param>
         /// <returns>Danh sach FileItemModel (ca file lan thu muc) co Name chua keyword. Danh sach rong neu khong tim thay gi.</returns>
         public List<FileItemModel> SearchByName(string rootPath, string keyword, bool recursive = true)
@@ -86,7 +91,12 @@ namespace FileExplorerApp.Services
         /// tu nut Huy tren form vao day.
         /// </summary>
         /// <param name="rootPath">Thu muc goc bat dau tim kiem.</param>
-        /// <param name="keyword">Tu khoa can tim (so sanh voi Name, khong phan biet hoa/thuong).</param>
+        /// <param name="keyword">
+        /// Tu khoa can tim (so sanh voi Name, khong phan biet hoa/thuong). Neu co
+        /// chua ky tu dai dien (* hoac ?) thi tu dong so khop kieu wildcard tren
+        /// toan bo ten (VD: "*.docx", "báo?cáo.*"); neu khong thi tim theo kieu
+        /// "chua tu khoa" nhu binh thuong. Xem them IsNameMatch().
+        /// </param>
         /// <param name="recursive">True: tim ca trong thu muc con (de quy). False: chi tim truc tiep trong rootPath.</param>
         /// <param name="includeHidden">
         /// True: tim ca trong cac muc an/he thong (Hidden/System). False: bo qua hoan
@@ -156,7 +166,7 @@ namespace FileExplorerApp.Services
                 }
 
                 string name = Path.GetFileName(entryPath);
-                if (name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                if (IsNameMatch(name, keyword))
                 {
                     try
                     {
@@ -171,6 +181,30 @@ namespace FileExplorerApp.Services
                 if (isDirectory && recursive)
                     SearchRecursive(entryPath, keyword, recursive, includeHidden, cancellationToken, results);
             }
+        }
+
+        /// <summary>
+        /// Kiem tra name co khop voi keyword hay khong, tu dong nhan biet 2 kieu:
+        /// - Neu keyword co chua ky tu dai dien (* hoac ?): so khop kieu wildcard
+        ///   tren TOAN BO ten (giong hop thoai tim kiem cua Windows Explorer) - VD:
+        ///   "*.docx" khop moi file .docx, "báo?cáo.*" khop "báo cáo.txt" (? = 1 ky
+        ///   tu bat ky, * = 0 hoac nhieu ky tu bat ky).
+        /// - Neu khong co ky tu dai dien: giu nguyen hanh vi cu - "chua" keyword o
+        ///   bat ky vi tri nao trong ten (IndexOf), khong phan biet hoa/thuong.
+        /// Ca 2 truong hop deu khong phan biet hoa/thuong.
+        /// </summary>
+        private static bool IsNameMatch(string name, string keyword)
+        {
+            bool hasWildcard = keyword.IndexOf('*') >= 0 || keyword.IndexOf('?') >= 0;
+
+            if (!hasWildcard)
+                return name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
+
+            string pattern = "^" + Regex.Escape(keyword)
+                .Replace("\\*", ".*")
+                .Replace("\\?", ".") + "$";
+
+            return Regex.IsMatch(name, pattern, RegexOptions.IgnoreCase);
         }
 
         /// <summary>
