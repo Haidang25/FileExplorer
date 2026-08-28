@@ -43,6 +43,7 @@
         private System.Windows.Forms.TextBox txtPath;
         private System.Windows.Forms.TextBox txtSearch;
         private System.Windows.Forms.ComboBox cboFileTypeFilter;
+        private System.Windows.Forms.TextBox txtQuickFilter;
 
         private System.Windows.Forms.SplitContainer spcMain;
         private System.Windows.Forms.TreeView trvFolders;
@@ -168,6 +169,7 @@
             this.pnlAddressBar = new System.Windows.Forms.Panel();
             this.txtSearch = new System.Windows.Forms.TextBox();
             this.cboFileTypeFilter = new System.Windows.Forms.ComboBox();
+            this.txtQuickFilter = new System.Windows.Forms.TextBox();
             this.btnGo = new System.Windows.Forms.Button();
             this.txtPath = new System.Windows.Forms.TextBox();
             this.btnUp = new System.Windows.Forms.Button();
@@ -596,6 +598,7 @@
             // 
             this.pnlAddressBar.Controls.Add(this.txtSearch);
             this.pnlAddressBar.Controls.Add(this.cboFileTypeFilter);
+            this.pnlAddressBar.Controls.Add(this.txtQuickFilter);
             this.pnlAddressBar.Controls.Add(this.btnGo);
             this.pnlAddressBar.Controls.Add(this.txtPath);
             this.pnlAddressBar.Controls.Add(this.btnUp);
@@ -635,6 +638,19 @@
             this.cboFileTypeFilter.Size = new System.Drawing.Size(100, 23);
             this.cboFileTypeFilter.TabIndex = 4;
             this.cboFileTypeFilter.SelectedIndexChanged += new System.EventHandler(this.cboFileTypeFilter_SelectedIndexChanged);
+            //
+            // txtQuickFilter
+            //
+            this.txtQuickFilter.Dock = System.Windows.Forms.DockStyle.Right;
+            this.txtQuickFilter.ForeColor = System.Drawing.SystemColors.GrayText;
+            this.txtQuickFilter.Location = new System.Drawing.Point(632, 6);
+            this.txtQuickFilter.Name = "txtQuickFilter";
+            this.txtQuickFilter.Size = new System.Drawing.Size(180, 22);
+            this.txtQuickFilter.TabIndex = 5;
+            this.txtQuickFilter.Text = "Lọc theo tên...";
+            this.txtQuickFilter.Enter += new System.EventHandler(this.txtQuickFilter_Enter);
+            this.txtQuickFilter.Leave += new System.EventHandler(this.txtQuickFilter_Leave);
+            this.txtQuickFilter.TextChanged += new System.EventHandler(this.txtQuickFilter_TextChanged);
             //
             // btnGo
             // 

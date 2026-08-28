@@ -196,6 +196,13 @@ namespace FileExplorerApp.Forms
                 ? AppTheme.TextSecondary
                 : AppTheme.TextPrimary;
 
+            txtQuickFilter.BackColor = AppTheme.Surface;
+            txtQuickFilter.BorderStyle = BorderStyle.FixedSingle;
+            // Tuong tu txtSearch ngay tren - giu mau chu nhat khi dang hien placeholder.
+            txtQuickFilter.ForeColor = txtQuickFilter.Text == QuickFilterPlaceholderText
+                ? AppTheme.TextSecondary
+                : AppTheme.TextPrimary;
+
             // Vung lam viec: SplitContainer (mau nen chinh la mau duong phan
             // cach giua 2 panel), TreeView, ListView.
             spcMain.BackColor = AppTheme.Border;
@@ -309,6 +316,24 @@ namespace FileExplorerApp.Forms
         private void cboFileTypeFilter_SelectedIndexChanged(object sender, EventArgs e)
         {
             LoadListViewFiles();
+        }
+
+        /// <summary>
+        /// Kiem tra ten mot file/thu muc co khop voi noi dung dang go trong
+        /// txtQuickFilter hay khong - kieu "chua" (IndexOf), khong phan biet
+        /// hoa/thuong, giong cach o tim kiem cua Windows Explorer loc ngay trong
+        /// thu muc hien tai. Rong hoac dang hien chu placeholder (xem
+        /// QuickFilterPlaceholderText) thi khop moi ten (khong loc gi).
+        /// </summary>
+        /// <param name="name">Ten (khong bao gom duong dan) can kiem tra.</param>
+        private bool MatchesQuickFilter(string name)
+        {
+            string filterText = txtQuickFilter.Text;
+
+            if (string.IsNullOrEmpty(filterText) || filterText == QuickFilterPlaceholderText)
+                return true;
+
+            return name.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>Kieu ve icon o dia, dung noi bo cho CreateDriveIcon.</summary>
@@ -1262,6 +1287,13 @@ namespace FileExplorerApp.Forms
                     if (!entry.IsDirectory && !MatchesFileTypeFilter(entry.FullPath))
                         continue;
 
+                    // O loc nhanh theo ten (txtQuickFilter) ap dung cho CA file va
+                    // thu muc - khac voi bo loc nhom loai tep, o day nguoi dung dang
+                    // muon tim mot ten cu the trong thu muc hien tai (khong de quy,
+                    // khong mo SearchForm), nen thu muc khong duoc "mien" nhu tren.
+                    if (!MatchesQuickFilter(entry.Name))
+                        continue;
+
                     ListViewItem item;
 
                     if (entry.IsDirectory)
@@ -1790,6 +1822,46 @@ namespace FileExplorerApp.Forms
                 e.SuppressKeyPress = true;
                 mnuToolsSearch_Click(sender, e);
             }
+        }
+
+        #endregion
+
+        #region O loc nhanh theo ten trong thu muc hien tai (txtQuickFilter)
+
+        private const string QuickFilterPlaceholderText = "Lọc theo tên...";
+
+        /// <summary>Xoa chu placeholder khi nguoi dung bam vao o loc nhanh.</summary>
+        private void txtQuickFilter_Enter(object sender, EventArgs e)
+        {
+            if (txtQuickFilter.Text == QuickFilterPlaceholderText)
+            {
+                txtQuickFilter.Text = string.Empty;
+                txtQuickFilter.ForeColor = AppTheme.TextPrimary;
+            }
+        }
+
+        /// <summary>Khoi phuc chu placeholder neu nguoi dung roi o loc nhanh ma khong nhap gi.</summary>
+        private void txtQuickFilter_Leave(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(txtQuickFilter.Text))
+            {
+                txtQuickFilter.Text = QuickFilterPlaceholderText;
+                txtQuickFilter.ForeColor = AppTheme.TextSecondary;
+            }
+        }
+
+        /// <summary>
+        /// Loc lai lvwFiles ngay khi noi dung o loc nhanh thay doi - khac voi
+        /// txtSearch (phai nhan Enter moi mo SearchForm), o nay loc theo thoi gian
+        /// thuc TRONG thu muc hien tai, khong de quy/khong mo form nao ca. Khong
+        /// loc gi them khi dang la chinh chu placeholder (VD: TextChanged tu
+        /// txtQuickFilter_Leave gan lai placeholder) - MatchesQuickFilter() da tu
+        /// xu ly truong hop nay, nhung kiem tra o day de tranh goi LoadListViewFiles()
+        /// mot lan thua khi Leave/Enter doi Text (khong thuc su la nguoi dung dang loc).
+        /// </summary>
+        private void txtQuickFilter_TextChanged(object sender, EventArgs e)
+        {
+            LoadListViewFiles();
         }
 
         #endregion
