@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using FileExplorerApp.Models;
 
@@ -76,17 +77,96 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Tim kiem tong quat theo tu khoa, co ho tro huy (cancel) giua chung -
-        /// nen dung cho tim kiem tren thu muc lon de khong lam treo UI.
+        /// nen dung cho tim kiem tren thu muc lon de khong lam treo UI. Dung cho
+        /// SearchForm - chay tren luong nen (Task.Run) va truyen CancellationToken
+        /// tu nut Huy tren form vao day.
         /// </summary>
         /// <param name="rootPath">Thu muc goc bat dau tim kiem.</param>
-        /// <param name="keyword">Tu khoa can tim.</param>
-        /// <param name="recursive">True: tim ca trong thu muc con.</param>
-        /// <param name="cancellationToken">Token cho phep huy qua trinh tim kiem.</param>
-        public List<FileItemModel> Search(string rootPath, string keyword, bool recursive, CancellationToken cancellationToken)
+        /// <param name="keyword">Tu khoa can tim (so sanh voi Name, khong phan biet hoa/thuong).</param>
+        /// <param name="recursive">True: tim ca trong thu muc con (de quy). False: chi tim truc tiep trong rootPath.</param>
+        /// <param name="includeHidden">
+        /// True: tim ca trong cac muc an/he thong (Hidden/System). False: bo qua hoan
+        /// toan cac muc do - ca khong dua vao ket qua LAN khong de quy vao ben trong
+        /// neu do la thu muc an, giong tuy chon "Hien file/thu muc an" cua MainForm.
+        /// </param>
+        /// <param name="cancellationToken">
+        /// Token cho phep huy qua trinh tim kiem giua chung - duoc kiem tra truoc khi
+        /// xu ly moi muc, nen dung lai gan nhu ngay thay vi phai quet xong het cay
+        /// thu muc con dang do dang.
+        /// </param>
+        /// <returns>
+        /// Danh sach FileItemModel (ca file lan thu muc) co Name chua keyword. Danh
+        /// sach rong (khong phai null) neu rootPath khong hop le hoac khong tim thay
+        /// gi - khong nem exception ra ngoai (tru OperationCanceledException khi bi huy).
+        /// </returns>
+        public List<FileItemModel> Search(
+            string rootPath, string keyword, bool recursive, bool includeHidden, CancellationToken cancellationToken)
         {
-            // TODO: giong SearchByName nhung kiem tra cancellationToken.IsCancellationRequested
-            // (hoac ThrowIfCancellationRequested()) sau moi buoc de dung som khi bi huy.
-            throw new NotImplementedException();
+            var results = new List<FileItemModel>();
+
+            if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath) || string.IsNullOrWhiteSpace(keyword))
+                return results;
+
+            SearchRecursive(rootPath, keyword, recursive, includeHidden, cancellationToken, results);
+            return results;
+        }
+
+        /// <summary>
+        /// Duyet de quy (neu recursive) mot thu muc, gom vao results moi muc (file
+        /// hoac thu muc con) co Name chua keyword. Loi quyen/IO tren tung nhanh RIENG
+        /// LE (VD: mat quyen doc mot thu muc con) duoc bo qua ngay tai do, khong lam
+        /// dung ca qua trinh - giong cach FolderService.GetSubFolders/FileService.GetFiles
+        /// da lam.
+        /// </summary>
+        private static void SearchRecursive(
+            string folderPath, string keyword, bool recursive, bool includeHidden,
+            CancellationToken cancellationToken, List<FileItemModel> results)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            IEnumerable<string> entryPaths;
+            try
+            {
+                entryPaths = Directory.EnumerateFileSystemEntries(folderPath);
+            }
+            catch (UnauthorizedAccessException) { return; } // Khong co quyen liet ke thu muc nay - bo qua rieng nhanh nay.
+            catch (IOException) { return; } // VD: thu muc nam tren o dia vua thao ra.
+
+            foreach (string entryPath in entryPaths)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                FileAttributes attributes;
+                try
+                {
+                    attributes = File.GetAttributes(entryPath);
+                }
+                catch (UnauthorizedAccessException) { continue; } // Khong doc duoc thuoc tinh muc nay - bo qua rieng no.
+                catch (IOException) { continue; } // VD: shortcut/junction hong.
+
+                if (!includeHidden)
+                {
+                    bool isHiddenOrSystem = attributes.HasFlag(FileAttributes.Hidden) || attributes.HasFlag(FileAttributes.System);
+                    if (isHiddenOrSystem)
+                        continue; // Bo qua hoan toan - ca khoi ket qua lan khong de quy vao ben trong (neu la thu muc).
+                }
+
+                string name = Path.GetFileName(entryPath);
+                if (name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    try
+                    {
+                        results.Add(FileItemModel.FromPath(entryPath));
+                    }
+                    catch (UnauthorizedAccessException) { /* Khop ten nhung khong doc them duoc thong tin chi tiet - bo qua rieng muc nay. */ }
+                    catch (IOException) { /* Tuong tu. */ }
+                    catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua. */ }
+                }
+
+                bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
+                if (isDirectory && recursive)
+                    SearchRecursive(entryPath, keyword, recursive, includeHidden, cancellationToken, results);
+            }
         }
 
         /// <summary>
