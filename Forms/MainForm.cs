@@ -1338,6 +1338,38 @@ namespace FileExplorerApp.Forms
         {
             _listViewSorter.SetSortColumn(e.Column);
             lvwFiles.Sort();
+            UpdateColumnSortIndicators();
+        }
+
+        /// <summary>
+        /// Ten goc (khong co mui ten) cua tung cot tren lvwFiles, dung de dung lai
+        /// khi ve/xoa mui ten sap xep (xem UpdateColumnSortIndicators) - tranh phai
+        /// tu cat chuoi (VD: Substring bo 2 ky tu cuoi) moi lan doi, de nham lam mat
+        /// dan ten cot qua nhieu lan bam.
+        /// </summary>
+        private static readonly string[] ColumnBaseNames = { "Tên", "Kích thước", "Loại", "Ngày sửa" };
+
+        /// <summary>
+        /// Cap nhat lai Text cua ca 4 ColumnHeader tren lvwFiles de hien mui ten chi
+        /// chieu sap xep (▲ tang dan, ▼ giam dan) o CUOI ten cot dang duoc dung de
+        /// sap xep - cac cot khac chi hien ten goc, khong co mui ten. WinForms
+        /// ListView khong co API rieng de ve mui ten header (khac DataGridView) nen
+        /// dung cach don gian la doi thang Text cua ColumnHeader, thay vi phai
+        /// P/Invoke Win32 (SendMessage + HDF_SORTUP/HDF_SORTDOWN) de he thong tu ve.
+        /// Goi tu lvwFiles_ColumnClick moi lan doi cot/chieu sap xep.
+        /// </summary>
+        private void UpdateColumnSortIndicators()
+        {
+            var columns = new[] { colName, colSize, colType, colModified };
+
+            for (int i = 0; i < columns.Length; i++)
+            {
+                string arrow = i == _listViewSorter.SortColumn
+                    ? (_listViewSorter.Descending ? " ▼" : " ▲")
+                    : string.Empty;
+
+                columns[i].Text = ColumnBaseNames[i] + arrow;
+            }
         }
 
         /// <summary>
