@@ -1392,7 +1392,15 @@ namespace FileExplorerApp.Forms
 
         private void mnuToolsSearch_Click(object sender, EventArgs e)
         {
-            // TODO: mo form/hop thoai tim kiem, dung SearchService de tim va hien ket qua.
+            // Dien san thu muc hien tai lam thu muc goc, va tu khoa dang go tren
+            // thanh cong cu (neu khac chu placeholder "Tim kiem...") lam tu khoa -
+            // nguoi dung van doi duoc ca hai truoc khi bam Tim kiem trong SearchForm.
+            string initialKeyword = txtSearch.Text == SearchPlaceholderText ? null : txtSearch.Text;
+
+            using (var searchForm = new SearchForm(_currentPath, initialKeyword))
+            {
+                searchForm.ShowDialog(this);
+            }
         }
 
         private void mnuToolsFindDuplicates_Click(object sender, EventArgs e)
