@@ -117,6 +117,7 @@
     <Compile Include="Helpers\AppThemeRenderer.cs" />
     <Compile Include="Helpers\FileHelper.cs" />
     <Compile Include="Helpers\FormatHelper.cs" />
+    <Compile Include="Helpers\ListViewItemComparer.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
     <Compile Include="Models\ConflictAction.cs" />
     <Compile Include="Models\FileItemModel.cs" />

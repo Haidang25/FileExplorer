@@ -66,9 +66,16 @@ namespace FileExplorerApp.Forms
         // tranh trvFolders_AfterSelect goi lai NavigateTo va gay vong lap/History sai.
         private bool _isSyncingTreeView;
 
+        // Bo sap xep dung chung cho lvwFiles - gan cho lvwFiles.ListViewItemSorter
+        // ngay trong constructor (xem ben duoi), va duoc dieu khien qua
+        // lvwFiles_ColumnClick (click vao header cot). Xem chi tiet cach so sanh
+        // trong Helpers/ListViewItemComparer.cs.
+        private readonly ListViewItemComparer _listViewSorter = new ListViewItemComparer();
+
         public MainForm()
         {
             InitializeComponent();
+            lvwFiles.ListViewItemSorter = _listViewSorter;
             this.Text = "SFileManager";
             // Dung icon da gan cho file .exe (ApplicationIcon) lam icon cua form,
             // khong phu thuoc duong dan tuong doi luc chay.
@@ -1199,17 +1206,31 @@ namespace FileExplorerApp.Forms
                     if (entry.IsDirectory)
                     {
                         item = new ListViewItem(entry.Name, "folder") { Tag = entry.FullPath };
-                        item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
+                        // SubItems[1] (Kich thuoc) khong co gia tri hien thi cho thu
+                        // muc, nhung van gan Tag = 0L de ListViewItemComparer co gia
+                        // tri so de so sanh khi sap xep theo cot Kich thuoc (xem
+                        // ListViewItemComparer.CompareByColumn) - khong dung -1 vi se
+                        // bi hieu la "chua co gia tri" thay vi "kich thuoc = 0".
+                        var sizeSubItem = item.SubItems.Add(string.Empty); // Thu muc khong hien kich thuoc truc tiep.
+                        sizeSubItem.Tag = 0L;
                         item.SubItems.Add("Thư mục tệp");
-                        item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
+                        var modifiedSubItem = item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
+                        modifiedSubItem.Tag = entry.ModifiedDate;
                         lvwFiles.Items.Add(item);
                     }
                     else
                     {
                         item = new ListViewItem(entry.Name, GetFileImageKey(entry.FullPath)) { Tag = entry.FullPath };
-                        item.SubItems.Add(entry.SizeFormatted);
+                        // Tag cua tung SubItem giu lai GIA TRI GOC (long/DateTime) -
+                        // ListViewItemComparer dung gia tri nay de so sanh dung kieu
+                        // so/ngay thay vi so sanh chuoi da dinh dang (VD: "1 KB" >
+                        // "20 KB" theo chuoi nhung sai ve gia tri thuc, hoac ngay dang
+                        // "dd/MM/yyyy" sap xep chuoi se sai thu tu thang/nam).
+                        var sizeSubItem = item.SubItems.Add(entry.SizeFormatted);
+                        sizeSubItem.Tag = entry.Size;
                         item.SubItems.Add(FileHelper.GetFileType(entry.FullPath));
-                        item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
+                        var modifiedSubItem = item.SubItems.Add(FormatHelper.FormatDate(entry.ModifiedDate));
+                        modifiedSubItem.Tag = entry.ModifiedDate;
                         lvwFiles.Items.Add(item);
                         totalSize += entry.Size;
                     }
@@ -1304,6 +1325,19 @@ namespace FileExplorerApp.Forms
         private void lvwFiles_DoubleClick(object sender, EventArgs e)
         {
             OpenSelectedItem();
+        }
+
+        /// <summary>
+        /// Click vao header cot cua lvwFiles: sap xep lai danh sach theo cot do -
+        /// click lai CUNG mot cot se doi chieu tang/giam, giong hanh vi Windows
+        /// Explorer. Logic so sanh thuc te nam trong ListViewItemComparer
+        /// (_listViewSorter, da gan cho lvwFiles.ListViewItemSorter tu constructor) -
+        /// o day chi bao no doi cot/chieu roi goi Sort().
+        /// </summary>
+        private void lvwFiles_ColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            _listViewSorter.SetSortColumn(e.Column);
+            lvwFiles.Sort();
         }
 
         /// <summary>
