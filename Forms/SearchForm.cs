@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -14,9 +12,11 @@ namespace FileExplorerApp.Forms
     /// <summary>
     /// Man hinh tim kiem file/thu muc (menu Cong cu > Tim kiem..., hoac Enter tren o
     /// tim kiem cua thanh cong cu MainForm). Nhap tu khoa + thu muc goc + tuy chon,
-    /// goi SearchService.Search() tren luong nen (Task.Run) de khong lam treo UI, ho
-    /// tro Huy giua chung qua CancellationTokenSource - cung mau voi CopyProgressForm/
-    /// mnuEditPaste_Click da lam voi thao tac Copy.
+    /// goi SearchService.SearchAsync() (async IAsyncEnumerable) qua "await foreach"
+    /// de nhan va hien tung ket qua NGAY khi tim thay, khong lam treo UI ma cung
+    /// khong can tach luong nen (Task.Run) rieng - ho tro Huy giua chung qua
+    /// CancellationTokenSource, cung mau voi CopyProgressForm/mnuEditPaste_Click da
+    /// lam voi thao tac Copy.
     /// </summary>
     public partial class SearchForm : Form
     {
@@ -93,25 +93,33 @@ namespace FileExplorerApp.Forms
             using (_searchCts = new CancellationTokenSource())
             {
                 CancellationToken token = _searchCts.Token;
+                int foundCount = 0;
                 try
                 {
-                    // SearchService.Search() tra ve IEnumerable (dung yield return de
-                    // "tra ket qua som" trong luc quet - xem SearchService.cs) nhung
-                    // ban chat van la mot vong lap dong bo, co the mat thoi gian voi
-                    // thu muc lon - van chay qua Task.Run de khong chan UI thread,
-                    // giong ly do CopyFileAsync/CopyFolderAsync duoc thiet ke bat dong
-                    // bo. .ToList() ngay trong Task.Run() de qua trinh duyet (bao gom
-                    // viec kiem tra CancellationToken cua tung buoc yield) van chay
-                    // tren luong nen, khong phai tren UI thread luc await tra ve.
-                    List<FileItemModel> results = await Task.Run(
-                        () => _searchService.Search(rootFolder, keyword, recursive, includeHidden, token).ToList(), token);
+                    // SearchService.SearchAsync() la async iterator (IAsyncEnumerable) -
+                    // "await foreach" nhan tung ket qua NGAY khi tim thay, ngay trong
+                    // luc dang await (khac voi Search() dong bo cu, phai boc ca ham
+                    // bang Task.Run va doi den khi xong toan bo moi co ket qua dau
+                    // tien). Nho vay co the them tung dong vao lvwResults va cap nhat
+                    // lblStatus theo thoi gian thuc trong luc quet, khong can Task.Run.
+                    // Khong dung .WithCancellation(token) o day (extension do thuoc
+                    // package System.Linq.Async, chua duoc cai) - CancellationToken
+                    // da duoc truyen thang vao SearchAsync() lam tham so cuoi (co
+                    // [EnumeratorCancellation]) nen viec huy van hoat dong dung, chi
+                    // khac ve cu phap goi.
+                    await foreach (FileItemModel item in _searchService.SearchAsync(
+                        rootFolder, keyword, recursive, includeHidden, token))
+                    {
+                        AddResultItem(item);
+                        foundCount++;
+                        lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục.";
+                    }
 
-                    PopulateResults(results);
-                    lblStatus.Text = $"Tìm thấy {results.Count} mục.";
+                    lblStatus.Text = $"Tìm thấy {foundCount} mục.";
                 }
                 catch (OperationCanceledException)
                 {
-                    lblStatus.Text = "Đã hủy tìm kiếm.";
+                    lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục).";
                 }
                 finally
                 {
@@ -130,25 +138,19 @@ namespace FileExplorerApp.Forms
             _searchCts?.Cancel();
         }
 
-        /// <summary>Do danh sach ket qua vao lvwResults, dung BeginUpdate/EndUpdate de tranh nhap nhay khi co nhieu ket qua.</summary>
-        private void PopulateResults(List<FileItemModel> results)
+        /// <summary>
+        /// Them MOT ket qua vao lvwResults ngay khi tim thay (goi tu await foreach
+        /// trong btnSearch_Click) - thay cho PopulateResults(List) cu von phai doi
+        /// gom du toan bo ket qua roi moi do mot lan. Khong dung BeginUpdate/EndUpdate
+        /// o day nua vi moi lan goi chi them 1 dong (khac voi do ca loat cung luc).
+        /// </summary>
+        private void AddResultItem(FileItemModel item)
         {
-            lvwResults.BeginUpdate();
-            try
-            {
-                foreach (FileItemModel item in results)
-                {
-                    var listItem = new ListViewItem(item.Name) { Tag = item.FullPath };
-                    listItem.SubItems.Add(item.ParentPath);
-                    listItem.SubItems.Add(item.IsDirectory ? string.Empty : item.SizeFormatted);
-                    listItem.SubItems.Add(FormatHelper.FormatDate(item.ModifiedDate));
-                    lvwResults.Items.Add(listItem);
-                }
-            }
-            finally
-            {
-                lvwResults.EndUpdate();
-            }
+            var listItem = new ListViewItem(item.Name) { Tag = item.FullPath };
+            listItem.SubItems.Add(item.ParentPath);
+            listItem.SubItems.Add(item.IsDirectory ? string.Empty : item.SizeFormatted);
+            listItem.SubItems.Add(FormatHelper.FormatDate(item.ModifiedDate));
+            lvwResults.Items.Add(listItem);
         }
 
         private void btnClose_Click(object sender, EventArgs e)
