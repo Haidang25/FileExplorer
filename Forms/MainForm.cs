@@ -52,6 +52,27 @@ namespace FileExplorerApp.Forms
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
+        /// <summary>
+        /// Tap phan mo rong (khong phan biet hoa/thuong) cho tung nhom loc cua
+        /// cboFileTypeFilter - dung rieng bang nay thay vi tai su dung
+        /// FileHelper.FileIconCategory, vi FileIconCategory.Media gom CA am thanh
+        /// (.mp3, .wav, .flac) VA video chung 1 nhom, trong khi cboFileTypeFilter
+        /// can rieng nhom "Video" (khong gom am thanh). Nhom "Tất cả" khong can co
+        /// trong bang nay (xu ly rieng trong MatchesFileTypeFilter).
+        /// </summary>
+        private static readonly Dictionary<string, HashSet<string>> FileTypeFilterExtensions =
+            new Dictionary<string, HashSet<string>>
+            {
+                ["Ảnh"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".ico", ".webp" },
+                ["Văn bản"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    { ".txt", ".doc", ".docx", ".pdf", ".rtf", ".odt" },
+                ["Video"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    { ".mp4", ".avi", ".mkv", ".mov", ".wmv", ".flv", ".webm", ".m4v" },
+                ["Nén"] = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    { ".zip", ".rar", ".7z", ".tar", ".gz" },
+            };
+
         // Lich su cac thu muc da tham (cho nut Back tren ToolStrip). Moi lan NavigateTo
         // duoc goi, duong dan hien tai (truoc khi doi) duoc day vao day.
         private readonly Stack<string> _backHistory = new Stack<string>();
@@ -76,6 +97,10 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             lvwFiles.ListViewItemSorter = _listViewSorter;
+            // Chon san "Tất cả" (khong loc gi) - Items.AddRange trong Designer khong
+            // tu chon muc nao, ComboBoxStyle.DropDownList (khong cho go tay) se hien
+            // rong neu khong dat SelectedIndex ngay tu dau.
+            cboFileTypeFilter.SelectedIndex = 0;
             this.Text = "SFileManager";
             // Dung icon da gan cho file .exe (ApplicationIcon) lam icon cua form,
             // khong phu thuoc duong dan tuong doi luc chay.
@@ -255,6 +280,35 @@ namespace FileExplorerApp.Forms
                 default:
                     return "file";
             }
+        }
+
+        /// <summary>
+        /// Kiem tra mot file co khop voi nhom dang duoc chon tren cboFileTypeFilter
+        /// hay khong, dua theo phan mo rong (xem FileTypeFilterExtensions). Nhom
+        /// "Tất cả" (hoac khi cboFileTypeFilter chua chon gi/dang null - VD: truoc
+        /// khi InitializeComponent set SelectedIndex) luon khop moi file. CHI ap
+        /// dung cho file - LoadListViewFiles() da tu bo qua ham nay cho thu muc.
+        /// </summary>
+        /// <param name="filePath">Duong dan file can kiem tra.</param>
+        private bool MatchesFileTypeFilter(string filePath)
+        {
+            string selected = cboFileTypeFilter.SelectedItem as string;
+
+            if (string.IsNullOrEmpty(selected) || selected == "Tất cả")
+                return true;
+
+            if (!FileTypeFilterExtensions.TryGetValue(selected, out HashSet<string> extensions))
+                return true; // Nhom la, chua khai bao trong bang - an toan la khong loc gi ca.
+
+            return extensions.Contains(Path.GetExtension(filePath));
+        }
+
+        /// <summary>
+        /// Doi nhom loc tren cboFileTypeFilter: nap lai lvwFiles ngay theo nhom moi.
+        /// </summary>
+        private void cboFileTypeFilter_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            LoadListViewFiles();
         }
 
         /// <summary>Kieu ve icon o dia, dung noi bo cho CreateDriveIcon.</summary>
@@ -1201,6 +1255,13 @@ namespace FileExplorerApp.Forms
                 // sach nua (chi khong xuat hien trong ket qua tra ve).
                 foreach (FileItemModel entry in _fileService.GetItems(_currentPath, _showHiddenItems))
                 {
+                    // Bo loc theo nhom loai tep (cboFileTypeFilter) CHI ap dung cho
+                    // FILE - thu muc luon hien du chon nhom nao, giong Windows
+                    // Explorer khi loc theo "Kind"/"Type" van luon hien thu muc de
+                    // nguoi dung con di chuyen vao trong duoc. Xem MatchesFileTypeFilter().
+                    if (!entry.IsDirectory && !MatchesFileTypeFilter(entry.FullPath))
+                        continue;
+
                     ListViewItem item;
 
                     if (entry.IsDirectory)

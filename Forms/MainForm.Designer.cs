@@ -42,6 +42,7 @@
         private System.Windows.Forms.Button btnGo;
         private System.Windows.Forms.TextBox txtPath;
         private System.Windows.Forms.TextBox txtSearch;
+        private System.Windows.Forms.ComboBox cboFileTypeFilter;
 
         private System.Windows.Forms.SplitContainer spcMain;
         private System.Windows.Forms.TreeView trvFolders;
@@ -166,6 +167,7 @@
             this.tsbDelete = new System.Windows.Forms.ToolStripButton();
             this.pnlAddressBar = new System.Windows.Forms.Panel();
             this.txtSearch = new System.Windows.Forms.TextBox();
+            this.cboFileTypeFilter = new System.Windows.Forms.ComboBox();
             this.btnGo = new System.Windows.Forms.Button();
             this.txtPath = new System.Windows.Forms.TextBox();
             this.btnUp = new System.Windows.Forms.Button();
@@ -593,6 +595,7 @@
             // pnlAddressBar
             // 
             this.pnlAddressBar.Controls.Add(this.txtSearch);
+            this.pnlAddressBar.Controls.Add(this.cboFileTypeFilter);
             this.pnlAddressBar.Controls.Add(this.btnGo);
             this.pnlAddressBar.Controls.Add(this.txtPath);
             this.pnlAddressBar.Controls.Add(this.btnUp);
@@ -604,7 +607,7 @@
             this.pnlAddressBar.TabIndex = 2;
             // 
             // txtSearch
-            // 
+            //
             this.txtSearch.Dock = System.Windows.Forms.DockStyle.Right;
             this.txtSearch.ForeColor = System.Drawing.SystemColors.GrayText;
             this.txtSearch.Location = new System.Drawing.Point(832, 6);
@@ -615,7 +618,24 @@
             this.txtSearch.Enter += new System.EventHandler(this.txtSearch_Enter);
             this.txtSearch.KeyDown += new System.Windows.Forms.KeyEventHandler(this.txtSearch_KeyDown);
             this.txtSearch.Leave += new System.EventHandler(this.txtSearch_Leave);
-            // 
+            //
+            // cboFileTypeFilter
+            //
+            this.cboFileTypeFilter.Dock = System.Windows.Forms.DockStyle.Right;
+            this.cboFileTypeFilter.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cboFileTypeFilter.FormattingEnabled = true;
+            this.cboFileTypeFilter.Items.AddRange(new object[] {
+            "Tất cả",
+            "Ảnh",
+            "Văn bản",
+            "Video",
+            "Nén"});
+            this.cboFileTypeFilter.Location = new System.Drawing.Point(732, 6);
+            this.cboFileTypeFilter.Name = "cboFileTypeFilter";
+            this.cboFileTypeFilter.Size = new System.Drawing.Size(100, 23);
+            this.cboFileTypeFilter.TabIndex = 4;
+            this.cboFileTypeFilter.SelectedIndexChanged += new System.EventHandler(this.cboFileTypeFilter_SelectedIndexChanged);
+            //
             // btnGo
             // 
             this.btnGo.Dock = System.Windows.Forms.DockStyle.Right;
