@@ -136,7 +136,24 @@ namespace FileExplorerApp.Forms
                     // Do het phan con lai trong buffer (chua du 1 lo) sau khi quet xong.
                     FlushResultBatch(batch);
                     stopwatch.Stop();
-                    lblStatus.Text = $"Tìm thấy {foundCount} mục trong {FormatElapsed(stopwatch.Elapsed)}.";
+
+                    // Truong hop khong tim thay gi (foundCount == 0): thong bao rieng,
+                    // ro rang hon la de lblStatus hien "Tìm thấy 0 mục..." de nguoi
+                    // dung de nham la loi/dang tim, va goi y kiem tra lai tu khoa/tuy
+                    // chon (VD: quen bat "Tim trong thu muc con") - giong cach Windows
+                    // Explorer hien "Không tìm thấy mục nào khớp với tìm kiếm của bạn."
+                    lblStatus.Text = foundCount == 0
+                        ? $"Không tìm thấy mục nào khớp với \"{keyword}\" ({FormatElapsed(stopwatch.Elapsed)})."
+                        : $"Tìm thấy {foundCount} mục trong {FormatElapsed(stopwatch.Elapsed)}.";
+
+                    if (foundCount == 0)
+                    {
+                        MessageBox.Show(this,
+                            $"Không tìm thấy tệp/thư mục nào khớp với \"{keyword}\" trong " +
+                            $"\"{rootFolder}\"{(recursive ? " (kể cả thư mục con)" : "")}.\n\n" +
+                            "Hãy kiểm tra lại từ khóa hoặc thử bật tùy chọn tìm trong thư mục con.",
+                            "Không tìm thấy kết quả", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
                 }
                 catch (OperationCanceledException)
                 {
