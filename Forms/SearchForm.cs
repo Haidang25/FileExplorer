@@ -216,6 +216,35 @@ namespace FileExplorerApp.Forms
             batch.Clear();
         }
 
+        /// <summary>
+        /// Double-click mot ket qua trong lvwResults: mo thu muc chua file/thu muc
+        /// do tren MainForm (Owner cua SearchForm - xem cach mnuToolsSearch_Click
+        /// tao SearchForm(_currentPath, ...) roi ShowDialog(this)), giong hanh vi
+        /// "Open file location" cua Windows Explorer. Khong lam gi neu khong co muc
+        /// nao dang duoc double-click (VD: click vao vung trong cua ListView) hoac
+        /// Owner khong phai MainForm (phong truong hop SearchForm duoc mo boi mot
+        /// noi khac trong tuong lai).
+        /// </summary>
+        private void lvwResults_DoubleClick(object sender, EventArgs e)
+        {
+            if (lvwResults.SelectedItems.Count == 0)
+                return;
+
+            string fullPath = lvwResults.SelectedItems[0].Tag as string;
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return;
+
+            if (Owner is MainForm mainForm)
+            {
+                mainForm.NavigateToAndSelect(fullPath);
+                // Dong SearchForm ngay sau khi dieu huong xong, giong hanh vi
+                // Windows Explorer (chon "Open file location" tu ket qua tim kiem
+                // se dua nguoi dung ve luon cua so chinh) - tranh de 2 cua so (ket
+                // qua tim kiem + MainForm) mo cung luc gay roi.
+                Close();
+            }
+        }
+
         private void btnClose_Click(object sender, EventArgs e)
         {
             Close();

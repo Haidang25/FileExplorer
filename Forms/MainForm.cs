@@ -549,6 +549,33 @@ namespace FileExplorerApp.Forms
         /// phai tu tim lai trong danh sach. Khong lam gi neu khong tim thay muc do (VD:
         /// LoadListViewFiles dang loc theo _showHiddenItems va muc do bi an).
         /// </summary>
+        /// <summary>
+        /// Dieu huong MainForm den thu muc chua mot muc, roi chon/focus ngay muc do
+        /// tren lvwFiles - dung cho SearchForm (goi qua Owner, xem SearchForm.
+        /// lvwResults_DoubleClick) khi nguoi dung double-click mot ket qua tim kiem
+        /// va muon "mo thu muc chua tep" giong Windows Explorer, thay vi phai tu di
+        /// chuyen thu cong den do. Cong khai (public) vi SearchForm la mot Form
+        /// khac, khong the goi truc tiep NavigateTo()/SelectAndFocusListViewItem()
+        /// (ca hai deu private).
+        /// </summary>
+        /// <param name="fullPath">Duong dan day du cua file/thu muc can chon (tu FileItemModel.FullPath).</param>
+        public void NavigateToAndSelect(string fullPath)
+        {
+            if (string.IsNullOrWhiteSpace(fullPath))
+                return;
+
+            // Thu muc CHUA muc do - neu fullPath la file thi la thu muc cha; neu la
+            // chinh mot thu muc thi cung la thu muc cha cua NO (mo thu muc cha ra,
+            // roi chon chinh thu muc con nay trong danh sach - giong hanh vi "Open
+            // file location" cua Windows Explorer, ap dung nhat quan cho ca file lan thu muc).
+            string containingFolder = Path.GetDirectoryName(fullPath);
+            if (string.IsNullOrWhiteSpace(containingFolder) || !Directory.Exists(containingFolder))
+                return;
+
+            NavigateTo(containingFolder);
+            SelectAndFocusListViewItem(fullPath);
+        }
+
         /// <param name="fullPath">Duong dan day du cua muc can chon.</param>
         private void SelectAndFocusListViewItem(string fullPath)
         {

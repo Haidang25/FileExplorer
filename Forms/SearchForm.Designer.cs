@@ -187,6 +187,7 @@ namespace FileExplorerApp.Forms
             this.lvwResults.TabIndex = 9;
             this.lvwResults.UseCompatibleStateImageBehavior = false;
             this.lvwResults.View = System.Windows.Forms.View.Details;
+            this.lvwResults.DoubleClick += new System.EventHandler(this.lvwResults_DoubleClick);
             //
             // colResultName
             //
