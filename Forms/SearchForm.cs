@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -94,11 +95,16 @@ namespace FileExplorerApp.Forms
                 CancellationToken token = _searchCts.Token;
                 try
                 {
-                    // SearchService.Search() la ham dong bo (co the mat thoi gian voi
-                    // thu muc lon) - chay qua Task.Run de khong chan UI thread, giong
-                    // ly do CopyFileAsync/CopyFolderAsync duoc thiet ke bat dong bo.
+                    // SearchService.Search() tra ve IEnumerable (dung yield return de
+                    // "tra ket qua som" trong luc quet - xem SearchService.cs) nhung
+                    // ban chat van la mot vong lap dong bo, co the mat thoi gian voi
+                    // thu muc lon - van chay qua Task.Run de khong chan UI thread,
+                    // giong ly do CopyFileAsync/CopyFolderAsync duoc thiet ke bat dong
+                    // bo. .ToList() ngay trong Task.Run() de qua trinh duyet (bao gom
+                    // viec kiem tra CancellationToken cua tung buoc yield) van chay
+                    // tren luong nen, khong phai tren UI thread luc await tra ve.
                     List<FileItemModel> results = await Task.Run(
-                        () => _searchService.Search(rootFolder, keyword, recursive, includeHidden, token), token);
+                        () => _searchService.Search(rootFolder, keyword, recursive, includeHidden, token).ToList(), token);
 
                     PopulateResults(results);
                     lblStatus.Text = $"Tìm thấy {results.Count} mục.";

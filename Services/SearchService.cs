@@ -191,8 +191,8 @@ namespace FileExplorerApp.Services
                         matchedItem = FileItemModel.FromPath(entryPath);
                     }
                     catch (UnauthorizedAccessException) { /* Khop ten nhung khong doc them duoc thong tin chi tiet - bo qua rieng muc nay. */ }
-                    catch (IOException) { /* Tuong tu. */ }
-                    catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua. */ }
+                    catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua rieng, phai dat TRUOC IOException vi la lop con cua no. */ }
+                    catch (IOException) { /* Tuong tu FileNotFoundException. */ }
 
                     // yield return khong duoc phep dat truc tiep trong than try/catch
                     // co catch (chi hop le trong try co finally) - nen tach FileItemModel.FromPath()
