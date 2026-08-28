@@ -25,15 +25,19 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Tim kiem file/thu muc co ten chua tu khoa (khong phan biet hoa/thuong).
+        /// Ban rut gon, dong bo, khong huy duoc cua Search() - chi la lop vo mong goi
+        /// lai Search() voi includeHidden: true (luon tim ca muc an/he thong) va
+        /// CancellationToken.None (khong ho tro huy giua chung), danh cho cac noi goi
+        /// don gian chua can toi tuy chon do (VD: goi truc tiep tu code, khong qua
+        /// SearchForm). SearchForm nen dung thang Search() de co ca hai tinh nang tren.
         /// </summary>
         /// <param name="rootPath">Thu muc goc bat dau tim kiem.</param>
         /// <param name="keyword">Tu khoa can tim trong ten file/thu muc.</param>
         /// <param name="recursive">True: tim ca trong thu muc con (de quy). False: chi tim trong rootPath.</param>
+        /// <returns>Danh sach FileItemModel (ca file lan thu muc) co Name chua keyword. Danh sach rong neu khong tim thay gi.</returns>
         public List<FileItemModel> SearchByName(string rootPath, string keyword, bool recursive = true)
         {
-            // TODO: EnumerateFileSystemEntries de quy (neu recursive), so sanh
-            // Name.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0.
-            throw new NotImplementedException();
+            return Search(rootPath, keyword, recursive, includeHidden: true, cancellationToken: CancellationToken.None);
         }
 
         /// <summary>
