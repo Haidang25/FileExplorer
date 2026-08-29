@@ -622,11 +622,11 @@ namespace FileExplorerApp.Forms
             ShowOperationResultMessage(result, $"tao thu muc \"{name}\"");
 
             // Ghi log CA KHI thanh cong lan that bai (VD: trung ten, khong du
-            // quyen) - lich su thao tac nen phan anh nguoi dung DA THU lam gi,
-            // khong chi nhung lan thanh cong, giup tra soat sau nay (VD: "tai sao
-            // thu muc X khong duoc tao luc do") dung mot lan duy nhat qua LogOperation
-            // thay vi phai rai rac goi WriteLog o nhieu nhanh if/else khac nhau.
-            _logService.LogOperation(FileOperationType.CreateFolder, newFolderPath, null, result);
+            // quyen), kem theo THONG DIEP LOI cu the (giong het MessageBox se
+            // hien - xem LogOperationResult/BuildOperationResultMessage) khi that
+            // bai, giup tra soat sau nay (VD: "tai sao thu muc X khong duoc tao
+            // luc do") biet ngay NGUYEN NHAN thay vi chi thay ten enum tro tui.
+            LogOperationResult(FileOperationType.CreateFolder, newFolderPath, null, result, $"tạo thư mục \"{name}\"");
 
             if (result == OperationResult.Success)
             {
@@ -700,9 +700,9 @@ namespace FileExplorerApp.Forms
             OperationResult result = _fileService.CreateFile(_currentPath, name);
             ShowOperationResultMessage(result, $"tao file \"{name}\"");
 
-            // Ghi log ca khi thanh cong lan that bai - xem ghi chu tuong tu tai
-            // mnuFileNewFolder_Click.
-            _logService.LogOperation(FileOperationType.CreateFile, newFilePath, null, result);
+            // Ghi log ca khi thanh cong lan that bai, kem thong diep loi cu the -
+            // xem ghi chu tuong tu tai mnuFileNewFolder_Click.
+            LogOperationResult(FileOperationType.CreateFile, newFilePath, null, result, $"tạo file \"{name}\"");
 
             if (result == OperationResult.Success)
             {
@@ -719,55 +719,138 @@ namespace FileExplorerApp.Forms
         /// <param name="actionDescription">Mo ta ngan gon thao tac da thuc hien (VD: "tao thu muc \"abc\"").</param>
         private void ShowOperationResultMessage(OperationResult result, string actionDescription)
         {
+            string message = BuildOperationResultMessage(result, actionDescription);
+
+            string caption;
+            MessageBoxIcon icon;
             switch (result)
             {
                 case OperationResult.Success:
-                    MessageBox.Show($"Da {actionDescription} thanh cong.", "Thong bao",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    caption = "Thông báo";
+                    icon = MessageBoxIcon.Information;
                     break;
 
                 case OperationResult.Skipped:
-                    MessageBox.Show($"Khong the {actionDescription}: da co muc trung ten trong thu muc nay.",
-                        "Canh bao", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    caption = "Cảnh báo";
+                    icon = MessageBoxIcon.Warning;
                     break;
 
                 case OperationResult.AccessDenied:
-                    MessageBox.Show($"Khong the {actionDescription}: khong du quyen truy cap thu muc nay.",
-                        "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    break;
-
                 case OperationResult.NotFound:
-                    MessageBox.Show($"Khong the {actionDescription}: khong tim thay thu muc dich.",
-                        "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    caption = "Lỗi";
+                    icon = MessageBoxIcon.Error;
                     break;
 
                 case OperationResult.FileInUse:
-                    MessageBox.Show(
-                        $"Không thể {actionDescription}: tệp đang được chương trình khác sử dụng.\n" +
-                        "Vui lòng đóng chương trình đang mở tệp này rồi thử lại.",
-                        "Tệp đang được sử dụng", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    caption = "Tệp đang được sử dụng";
+                    icon = MessageBoxIcon.Warning;
                     break;
 
                 case OperationResult.InvalidDestination:
-                    MessageBox.Show(
-                        $"Không thể {actionDescription}: không thể di chuyển/sao chép một thư mục " +
-                        "vào chính nó hoặc vào một thư mục con của chính nó.",
-                        "Vị trí đích không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    caption = "Vị trí đích không hợp lệ";
+                    icon = MessageBoxIcon.Warning;
                     break;
 
                 case OperationResult.PartialSuccess:
-                    MessageBox.Show(
-                        $"Đã {actionDescription} sang vị trí mới, nhưng không xóa được bản gốc " +
-                        "(có thể do đang bị chương trình khác sử dụng hoặc thiếu quyền).\n" +
-                        "Vui lòng tự xóa bản gốc thủ công nếu cần.",
-                        "Hoàn tất một phần", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    caption = "Hoàn tất một phần";
+                    icon = MessageBoxIcon.Warning;
                     break;
 
                 default:
-                    MessageBox.Show($"Khong the {actionDescription}: ten khong hop le hoac co loi xay ra.",
-                        "Loi", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    caption = "Lỗi";
+                    icon = MessageBoxIcon.Error;
                     break;
             }
+
+            MessageBox.Show(message, caption, MessageBoxButtons.OK, icon);
+        }
+
+        /// <summary>
+        /// Tra ve THONG DIEP CHI TIET (khong phai caption/icon) ung voi mot
+        /// OperationResult cu the - tach rieng khoi ShowOperationResultMessage de
+        /// CUNG MOT NOI DUNG duoc dung o CA 2 noi: hien MessageBox cho nguoi dung
+        /// (nhu truoc gio) VA ghi vao LogEntryModel.Message khi ghi log that bai
+        /// (xem cac loi goi LogOperationResult trong cac handler Copy/Move/Delete/
+        /// Rename/CreateFile/CreateFolder) - tranh 2 noi
+        /// dinh nghia 2 chuoi mo ta khac nhau cho cung mot OperationResult, de
+        /// lech nhau ve sau khi sua chi 1 trong 2 cho.
+        /// </summary>
+        /// <param name="result">Ket qua thao tac.</param>
+        /// <param name="actionDescription">Mo ta ngan gon thao tac (VD: "tao thu muc \"abc\"").</param>
+        private static string BuildOperationResultMessage(OperationResult result, string actionDescription)
+        {
+            switch (result)
+            {
+                case OperationResult.Success:
+                    return $"Đã {actionDescription} thành công.";
+
+                case OperationResult.Skipped:
+                    return $"Không thể {actionDescription}: đã có mục trùng tên trong thư mục này.";
+
+                case OperationResult.AccessDenied:
+                    return $"Không thể {actionDescription}: không đủ quyền truy cập thư mục này.";
+
+                case OperationResult.NotFound:
+                    return $"Không thể {actionDescription}: không tìm thấy thư mục đích.";
+
+                case OperationResult.FileInUse:
+                    return $"Không thể {actionDescription}: tệp đang được chương trình khác sử dụng. " +
+                        "Vui lòng đóng chương trình đang mở tệp này rồi thử lại.";
+
+                case OperationResult.InvalidDestination:
+                    return $"Không thể {actionDescription}: không thể di chuyển/sao chép một thư mục " +
+                        "vào chính nó hoặc vào một thư mục con của chính nó.";
+
+                case OperationResult.PartialSuccess:
+                    return $"Đã {actionDescription} sang vị trí mới, nhưng không xóa được bản gốc " +
+                        "(có thể do đang bị chương trình khác sử dụng hoặc thiếu quyền). " +
+                        "Vui lòng tự xóa bản gốc thủ công nếu cần.";
+
+                case OperationResult.Cancelled:
+                    return $"Đã hủy {actionDescription} theo yêu cầu người dùng.";
+
+                default:
+                    return $"Không thể {actionDescription}: tên không hợp lệ hoặc có lỗi xảy ra.";
+            }
+        }
+
+        /// <summary>
+        /// Ghi log MOT thao tac, tu dong kem theo THONG DIEP LOI (giong het chuoi
+        /// MessageBox se hien, xem BuildOperationResultMessage) khi result KHONG
+        /// PHAI Success - de LogEntryModel.Message luon giai thich ro NGUYEN NHAN
+        /// that bai (VD: "khong du quyen truy cap", "da co muc trung ten") thay vi
+        /// chi ghi ten OperationResult enum tro tui (VD chi "AccessDenied") ma
+        /// nguoi xem log sau nay phai tu suy doan y nghia. Voi Success, KHONG kem
+        /// message (rong) vi khong can giai thich gi them cho mot thao tac da
+        /// thanh cong - tranh lam dong log dai them mot cach khong can thiet.
+        /// </summary>
+        /// <param name="operation">Loai thao tac.</param>
+        /// <param name="source">Duong dan nguon.</param>
+        /// <param name="destination">Duong dan dich (co the null).</param>
+        /// <param name="result">Ket qua thao tac.</param>
+        /// <param name="actionDescription">Mo ta ngan gon thao tac, dung de dung chung mot cau chu voi ShowOperationResultMessage (VD: "tao thu muc \"abc\"").</param>
+        /// <param name="extraNote">
+        /// Ghi chu CO DINH them vao Message BAT KE thanh cong hay that bai (VD:
+        /// "Xóa vào Thùng rác" de phan biet voi "Xóa vĩnh viễn" - ca hai cung
+        /// dung FileOperationType.Delete nen can ghi chu them de phan biet khi
+        /// xem lai log). Null/rong neu khong can. Khi that bai, noi voi thong
+        /// diep loi bang dau gach ngang " - " thanh MOT dong Message duy nhat.
+        /// </param>
+        /// <param name="itemCount">So luong muc lien quan (mac dinh 1).</param>
+        private void LogOperationResult(FileOperationType operation, string source, string destination, OperationResult result, string actionDescription, string extraNote = null, int itemCount = 1)
+        {
+            string message;
+            if (result == OperationResult.Success)
+            {
+                message = extraNote;
+            }
+            else
+            {
+                string failureReason = BuildOperationResultMessage(result, actionDescription);
+                message = string.IsNullOrEmpty(extraNote) ? failureReason : $"{extraNote} - {failureReason}";
+            }
+
+            _logService.LogOperation(operation, source, destination, result, message, itemCount);
         }
 
         private void mnuFileExit_Click(object sender, EventArgs e)
@@ -1026,12 +1109,15 @@ namespace FileExplorerApp.Forms
                         // mnuEditDelete_Click/lvwFiles_KeyDown) - moi muc trong batch
                         // co the co OperationResult KHAC NHAU (VD: muc dau Success,
                         // muc sau AccessDenied), gop chung se mat thong tin muc nao
-                        // that bai. _clipboardIsCut phan biet Move (Cut roi Paste)
-                        // voi Copy (Copy roi Paste) - ca thu muc lan file deu dung
-                        // chung logic nay vi FileOperationType.Move/Copy khong phan
-                        // biet file/thu muc (giong FileOperationType.Rename).
+                        // that bai, kem thong diep loi cu the. _clipboardIsCut phan
+                        // biet Move (Cut roi Paste) voi Copy (Copy roi Paste) - ca
+                        // thu muc lan file deu dung chung logic nay vi
+                        // FileOperationType.Move/Copy khong phan biet file/thu muc
+                        // (giong FileOperationType.Rename). actionDescription
+                        // ("dán ...") khop voi cau ShowOperationResultMessage se
+                        // hien ngay sau day, de MessageBox va log noi cung mot cau.
                         FileOperationType pasteOperationType = _clipboardIsCut ? FileOperationType.Move : FileOperationType.Copy;
-                        _logService.LogOperation(pasteOperationType, sourcePath, destinationPath, result);
+                        LogOperationResult(pasteOperationType, sourcePath, destinationPath, result, $"dán \"{name}\"");
 
                         if (result == OperationResult.Cancelled)
                             break; // Nguoi dung bam Huy tren CopyProgressForm - dung ngay, khong hien thong bao ket qua cho muc dang do dang.
@@ -1103,10 +1189,11 @@ namespace FileExplorerApp.Forms
                 // Ghi log tung muc rieng le (khong gop 1 dong ItemCount = selected.Count)
                 // vi moi muc co the co OperationResult KHAC NHAU (VD: muc A xoa
                 // thanh cong, muc B bi AccessDenied) - gop chung se lam mat thong
-                // tin muc nao that bai. "vao Thung rac" trong Message de phan biet
-                // voi nhanh xoa vinh vien (Shift+Delete) ben duoi, cung ghi
-                // FileOperationType.Delete nhung khac muc dich.
-                _logService.LogOperation(FileOperationType.Delete, path, null, result, "Xóa vào Thùng rác");
+                // tin muc nao that bai. "Xóa vào Thùng rác" trong extraNote de
+                // phan biet voi nhanh xoa vinh vien (Shift+Delete) ben duoi, cung
+                // ghi FileOperationType.Delete nhung khac muc dich; khi that bai,
+                // LogOperationResult tu noi them thong diep loi cu the vao sau.
+                LogOperationResult(FileOperationType.Delete, path, null, result, $"xóa \"{Path.GetFileName(path)}\"", "Xóa vào Thùng rác");
             }
 
             mnuViewRefresh_Click(sender, e);
@@ -1160,11 +1247,11 @@ namespace FileExplorerApp.Forms
                 ShowOperationResultMessage(result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"");
 
                 // Ghi log tung muc rieng le - xem ghi chu tuong tu tai
-                // mnuEditDelete_Click. "vinh vien" trong Message la thong tin QUAN
-                // TRONG can giu lai (khac voi xoa vao Thung rac van con co the
-                // khoi phuc duoc) vi FileOperationType khong co gia tri rieng cho
-                // xoa vinh vien.
-                _logService.LogOperation(FileOperationType.Delete, path, null, result, "Xóa vĩnh viễn (Shift+Delete)");
+                // mnuEditDelete_Click. "Xóa vĩnh viễn" trong extraNote la thong
+                // tin QUAN TRONG can giu lai (khac voi xoa vao Thung rac van con
+                // co the khoi phuc duoc) vi FileOperationType khong co gia tri
+                // rieng cho xoa vinh vien.
+                LogOperationResult(FileOperationType.Delete, path, null, result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"", "Xóa vĩnh viễn (Shift+Delete)");
             }
 
             mnuViewRefresh_Click(sender, e);
@@ -1229,11 +1316,22 @@ namespace FileExplorerApp.Forms
             // ky tu cam \ / : * ? " < > |) thay vi phai tu doan.
             if (!FileHelper.IsValidFileName(newName))
             {
+                const string invalidNameMessage =
+                    "Không được để trống, chứa ký tự \\ / : * ? \" < > |, kết thúc bằng khoảng trắng/dấu chấm, " +
+                    "trùng tên thiết bị hệ thống (CON, PRN...), hoặc dài quá 255 ký tự.";
+
                 MessageBox.Show(
-                    $"Tên \"{newName}\" không hợp lệ: không được để trống, chứa ký tự \\ / : * ? \" < > |, " +
-                    "kết thúc bằng khoảng trắng/dấu chấm, trùng tên thiết bị hệ thống (CON, PRN...), " +
-                    "hoặc dài quá 255 ký tự.",
+                    $"Tên \"{newName}\" không hợp lệ: {invalidNameMessage}",
                     "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+
+                // Ghi log CA TRUONG HOP nay - tuy chua goi den _fileService.Rename
+                // (bi chan tu som boi FileHelper.IsValidFileName), day van la MOT
+                // LAN NGUOI DUNG THU doi ten va that bai, nen van dang duoc ghi
+                // vao lich su giong cac loai that bai khac (trung ten, file dang
+                // bi khoa...) thay vi bo sot rieng truong hop nay.
+                LogOperationResult(FileOperationType.Rename, path, null, OperationResult.Failed,
+                    $"đổi tên \"{oldName}\" thành \"{newName}\"", $"Tên mới không hợp lệ: {invalidNameMessage}");
+
                 return; // CancelEdit = true da khoi phuc lai ten cu tren o hien thi.
             }
 
@@ -1241,14 +1339,14 @@ namespace FileExplorerApp.Forms
             string renamedPath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, newName);
 
             // Ghi log ca khi thanh cong lan that bai (VD: trung ten, file dang bi
-            // khoa boi chuong trinh khac) - xem ghi chu tuong tu tai
-            // mnuFileNewFolder_Click. Dung lai _fileService.Rename cho CA file lan
-            // thu muc (khong co RenameFolder rieng trong FileOperationType) nen
-            // ghi FileOperationType.Rename chung, dung voi thuc te loi goi Service
-            // ben tren. Source = duong dan CU (truoc doi ten), Destination = duong
-            // dan MOI (sau doi ten) - phan anh dung ban chat "truoc/sau" cua rename,
-            // giup GetLogs sau nay hien duoc ca ten cu lan ten moi tren cung 1 dong.
-            _logService.LogOperation(FileOperationType.Rename, path, renamedPath, result);
+            // khoa boi chuong trinh khac), kem thong diep loi cu the. Dung lai
+            // _fileService.Rename cho CA file lan thu muc (khong co RenameFolder
+            // rieng trong FileOperationType) nen ghi FileOperationType.Rename
+            // chung, dung voi thuc te loi goi Service ben tren. Source = duong
+            // dan CU (truoc doi ten), Destination = duong dan MOI (sau doi ten) -
+            // phan anh dung ban chat "truoc/sau" cua rename, giup GetLogs sau nay
+            // hien duoc ca ten cu lan ten moi tren cung 1 dong.
+            LogOperationResult(FileOperationType.Rename, path, renamedPath, result, $"đổi tên \"{oldName}\" thành \"{newName}\"");
 
             if (result == OperationResult.Success)
             {
@@ -1263,7 +1361,7 @@ namespace FileExplorerApp.Forms
             }
             else
             {
-                ShowOperationResultMessage(result, $"doi ten \"{oldName}\" thanh \"{newName}\"");
+                ShowOperationResultMessage(result, $"đổi tên \"{oldName}\" thành \"{newName}\"");
                 // Giu nguyen item.Text (khong gan gi) vi CancelEdit = true da tu dong
                 // khoi phuc lai ten cu tren o hien thi.
             }
