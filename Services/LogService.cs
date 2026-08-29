@@ -146,6 +146,14 @@ namespace FileExplorerApp.Services
         /// </summary>
         public const string LogFileHeader = "Id,Timestamp,Operation,Source,Destination,Result,Message,ItemCount,Duration";
 
+        /// <summary>
+        /// Khoa dong bo hoa MOI LAN GHI vao file log - xem "GHI LOG AN TOAN KHI
+        /// NHIEU THAO TAC LIEN TIEP" o remarks tren dau lop de biet ly do can
+        /// khoa va tai sao phai la STATIC (khong phai field rieng cua tung
+        /// instance LogService).
+        /// </summary>
+        private static readonly object WriteLock = new object();
+
         // TODO: co the cho phep truyen duong dan file log tuy chinh qua constructor,
         // hien tai dung mac dinh.
         // private readonly string _logFilePath;
@@ -208,38 +216,60 @@ namespace FileExplorerApp.Services
 
             try
             {
-                string logFilePath = GetLogFilePath();
-
-                // Dam bao thu muc ton tai ngay ca khi constructor truoc do da
-                // gap loi (VD AppData tam thoi khong truy cap duoc luc khoi tao
-                // LogService nhung da phuc hoi) - CreateDirectory an toan khi thu
-                // muc da co san (xem ghi chu tai constructor).
-                string logDirectory = Path.GetDirectoryName(logFilePath);
-                if (!string.IsNullOrEmpty(logDirectory))
+                // KHOA toan bo phan doc-kiem tra-roi-ghi ben duoi bang mot khoa
+                // STATIC dung chung cho MOI instance LogService (khong phai
+                // "lock (this)") - xem "GHI LOG AN TOAN KHI NHIEU THAO TAC LIEN
+                // TIEP" o remarks tren dau lop de biet day du ly do. Tom tat: neu
+                // khong khoa, 2 lenh WriteLog goi gan nhu dong thoi (VD: dan nhieu
+                // file lien tiep, hoac 2 luong nen doc lap cung ghi log) co the
+                // CUNG THAY file chua ton tai (File.Exists) roi CA HAI cung ghi
+                // header - lam file CSV co 2 dong header giua chung, phá vo gia
+                // dinh "dong dau la header" ma GetLogs se dua vao de parse.
+                lock (WriteLock)
                 {
-                    Directory.CreateDirectory(logDirectory);
-                }
+                    string logFilePath = GetLogFilePath();
 
-                // Chi ghi dong header MOT LAN DUY NHAT, luc file log CHUA TON TAI
-                // (lan ghi dau tien sau khi cai dat, hoac sau khi ClearLogs da xoa
-                // han file) - kiem tra File.Exists TRUOC khi mo file de tranh ghi
-                // lai header o giua file moi lan ung dung khoi dong lai.
-                bool isNewFile = !File.Exists(logFilePath);
-
-                // Dung FileMode.Append (khong phai File.AppendAllText goi lai tu
-                // dau moi lan) ket hop 1 StreamWriter duy nhat cho ca header (neu
-                // can) va dong du lieu - dam bao ca 2 dong (neu co) duoc ghi
-                // atomically hon la 2 lan mo/dong file rieng biet, giam nguy co
-                // chi ghi duoc header ma dong du lieu bi loi giua chung.
-                using (var stream = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
-                {
-                    if (isNewFile)
+                    // Dam bao thu muc ton tai ngay ca khi constructor truoc do da
+                    // gap loi (VD AppData tam thoi khong truy cap duoc luc khoi tao
+                    // LogService nhung da phuc hoi) - CreateDirectory an toan khi thu
+                    // muc da co san (xem ghi chu tai constructor).
+                    string logDirectory = Path.GetDirectoryName(logFilePath);
+                    if (!string.IsNullOrEmpty(logDirectory))
                     {
-                        writer.WriteLine(LogFileHeader);
+                        Directory.CreateDirectory(logDirectory);
                     }
 
-                    writer.WriteLine(FormatCsvRow(entry));
+                    // Chi ghi dong header MOT LAN DUY NHAT, luc file log CHUA TON TAI
+                    // (lan ghi dau tien sau khi cai dat, hoac sau khi ClearLogs da xoa
+                    // han file) - kiem tra File.Exists TRUOC khi mo file de tranh ghi
+                    // lai header o giua file moi lan ung dung khoi dong lai. An toan
+                    // truoc race-condition vi ca kiem tra lan ghi deu nam trong CUNG
+                    // MOT pham vi lock - khong con luong nao khac co the xen vao giua.
+                    bool isNewFile = !File.Exists(logFilePath);
+
+                    // Dung FileMode.Append (khong phai File.AppendAllText goi lai tu
+                    // dau moi lan) ket hop 1 StreamWriter duy nhat cho ca header (neu
+                    // can) va dong du lieu - dam bao ca 2 dong (neu co) duoc ghi
+                    // atomically hon la 2 lan mo/dong file rieng biet, giam nguy co
+                    // chi ghi duoc header ma dong du lieu bi loi giua chung.
+                    //
+                    // FileShare.Read (khong phai FileShare.None) van CHO PHEP mot
+                    // luong DOC file log (VD: LogForm dang mo xem log qua GetLogs)
+                    // trong luc WriteLog dang ghi - chi loai tru cac WriteLog KHAC
+                    // ghi dong thoi, dieu ma "lock" o day da tu dam bao trong pham
+                    // vi ung dung nay, nen FileShare.Read la du (khong can
+                    // FileShare.ReadWrite, vi khong co noi nao khac trong ung dung
+                    // GHI vao file nay ngoai WriteLog).
+                    using (var stream = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+                    {
+                        if (isNewFile)
+                        {
+                            writer.WriteLine(LogFileHeader);
+                        }
+
+                        writer.WriteLine(FormatCsvRow(entry));
+                    }
                 }
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
@@ -248,7 +278,11 @@ namespace FileExplorerApp.Services
                 // doan thao tac chinh cua nguoi dung. Khong co noi "hien thi loi"
                 // phu hop o day (WriteLog thuong duoc goi ngam sau moi thao tac
                 // file, khong phai tu hanh dong truc tiep cua nguoi dung), nen
-                // don gian la bo qua dong log nay va tiep tuc.
+                // don gian la bo qua dong log nay va tiep tuc. Voi khoa "lock" o
+                // tren, day gio chi con xay ra vi ly do BEN NGOAI ung dung (VD:
+                // mot chuong trinh KHAC - VD Excel dang mo file log - dang giu
+                // khoa doc/ghi rieng cua no), khong con do 2 luong noi bo ung dung
+                // tranh chap voi nhau.
             }
         }
 
