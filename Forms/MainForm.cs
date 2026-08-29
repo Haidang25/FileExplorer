@@ -35,6 +35,26 @@ namespace FileExplorerApp.Forms
         private readonly RecycleBinService _recycleBinService = new RecycleBinService();
         private readonly LogService _logService = new LogService();
 
+        /// <summary>
+        /// Theo doi thay doi (tao/xoa/doi ten/sua) trong _currentPath tu BEN NGOAI
+        /// ung dung (Explorer, chuong trinh khac...) de tu dong lam moi lvwFiles -
+        /// xem RestartFolderMonitoring/Watcher_*Changed. Chi thuc su bat theo doi
+        /// khi Settings.Default.AutoRefreshEnabled = true (xem RestartFolderMonitoring).
+        /// </summary>
+        private readonly FileMonitorService _fileMonitorService = new FileMonitorService();
+
+        /// <summary>
+        /// Gop nhieu su kien FileSystemWatcher lien tiep trong thoi gian ngan (VD:
+        /// sao chep hang tram file lien tuc vao thu muc dang mo) thanh MOT lan
+        /// LoadListViewFiles() duy nhat, thay vi nap lai ListView moi khi co 1 su
+        /// kien - tranh giat/lag ListView va giam tai I/O khong can thiet. Khoang
+        /// cho (Interval) lay tu Settings.Default.WatcherDelayMs (nguoi dung tuy
+        /// chinh duoc o SettingsForm). Timer nay chay tren luong UI (System.Windows.
+        /// Forms.Timer), nen Tick co the goi thang LoadListViewFiles() ma khong can
+        /// Invoke them.
+        /// </summary>
+        private readonly System.Windows.Forms.Timer _watcherDebounceTimer = new System.Windows.Forms.Timer();
+
         // TODO: thay bang duong dan dang duoc chon tren TreeView/ListView khi da co
         // giao dien dieu huong thuc te. Tam thoi mac dinh la Desktop de New Folder/New File
         // co noi de tao.
@@ -111,9 +131,124 @@ namespace FileExplorerApp.Forms
             LoadIconImages();
             LoadTreeViewFolders();
             LoadDisplaySettings();
+            InitializeFolderMonitoring();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
+            // Cung la noi RestartFolderMonitoring lan dau duoc goi (ben trong
+            // mnuViewRefresh_Click) de bat theo doi _currentPath mac dinh ngay tu dau.
             mnuViewRefresh_Click(this, EventArgs.Empty);
+
+            // Dam bao FileMonitorService/_watcherDebounceTimer duoc giai phong
+            // dung luc dong cua so - khong sua Dispose(bool) trong
+            // MainForm.Designer.cs (file do Designer tu sinh lai, sua tay o do
+            // de bi mat khi mo lai bang Visual Studio Designer).
+            this.FormClosed += MainForm_FormClosed;
+        }
+
+        /// <summary>
+        /// Cau hinh timer debounce (Interval tu Settings.Default.WatcherDelayMs)
+        /// va dang ky 4 su kien du lieu cua FileMonitorService (Created/Deleted/
+        /// Changed/Renamed) - tat ca deu chi lam MOT viec: (re)start
+        /// _watcherDebounceTimer, KHONG goi thang LoadListViewFiles() ngay lap
+        /// tuc (xem _watcherDebounceTimer). MonitorError duoc bo qua co y (khong
+        /// hien MessageBox) vi day la loi nen tang (VD: o dia rut giua chung) ma
+        /// nguoi dung khong the xu ly gi tu hop thoai - qua nhieu MessageBox bat
+        /// ngo khi dang thao tac se gay kho chiu hon la huu ich.
+        /// </summary>
+        private void InitializeFolderMonitoring()
+        {
+            _watcherDebounceTimer.Interval = Math.Max(Settings.Default.WatcherDelayMs, 50);
+            _watcherDebounceTimer.Tick += WatcherDebounceTimer_Tick;
+
+            _fileMonitorService.FileCreated += (sender, e) => OnExternalChangeDetected();
+            _fileMonitorService.FileDeleted += (sender, e) => OnExternalChangeDetected();
+            _fileMonitorService.FileChanged += (sender, e) => OnExternalChangeDetected();
+            _fileMonitorService.FileRenamed += (sender, e) => OnExternalChangeDetected();
+        }
+
+        /// <summary>
+        /// Handler CHUNG cho ca 4 su kien Created/Deleted/Changed/Renamed - noi
+        /// dung xu ly giong het nhau (lam moi toan bo ListView), nen khong can
+        /// phan biet TUNG loai thay doi cu the o day (khac voi LogService, noi
+        /// tung loai thao tac can ghi log rieng - day chi la "co gi do thay doi,
+        /// nap lai cho chac"). Duoc goi tu luong THREADPOOL cua FileSystemWatcher
+        /// (xem remarks tren cac su kien trong FileMonitorService), nen BAT BUOC
+        /// phai qua BeginInvoke truoc khi dung _watcherDebounceTimer (mot Control/
+        /// Component gan voi luong UI) - goi thang se nem
+        /// InvalidOperationException ("Cross-thread operation not valid").
+        /// </summary>
+        private void OnExternalChangeDetected()
+        {
+            if (!IsHandleCreated || IsDisposed)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    // Khoi dong lai (restart) timer moi lan co su kien moi trong
+                    // luc timer dang dem - Stop() roi Start() lai tu dau bao dam
+                    // LoadListViewFiles() chi chay SAU KHI da yen (khong co su
+                    // kien moi nao) trong dung khoang WatcherDelayMs, thay vi cu
+                    // moi WatcherDelayMs lai chay mot lan du van con thay doi
+                    // dang dien ra (VD: dang giua qua trinh sao chep hang loat).
+                    _watcherDebounceTimer.Stop();
+                    _watcherDebounceTimer.Start();
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+                // Form dang trong qua trinh dong (handle vua bi huy giua luc
+                // BeginInvoke duoc goi) - bo qua, khong con y nghia lam moi
+                // ListView cua mot Form sap dong.
+            }
+        }
+
+        private void WatcherDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _watcherDebounceTimer.Stop();
+
+            // Chi nap lai NOI DUNG (khong goi lai toan bo mnuViewRefresh_Click)
+            // vi khong can dong bo lai txtPath (duong dan khong doi, chi noi
+            // dung ben trong thay doi) va - quan trong hon - KHONG duoc goi lai
+            // RestartFolderMonitoring() tu day (se lam trong "Dispose roi tao
+            // lai watcher" moi lan co thay doi, lang phi khong can thiet vi
+            // _currentPath khong doi trong tinh huong nay).
+            LoadListViewFiles();
+        }
+
+        /// <summary>
+        /// (Bat/tat va) tro FileMonitorService sang theo doi _currentPath hien
+        /// tai - goi moi khi _currentPath thay doi (dau mnuViewRefresh_Click, noi
+        /// DUY NHAT dieu huong nao cung di qua) VA sau khi nguoi dung doi
+        /// Settings.Default.AutoRefreshEnabled trong SettingsForm.
+        /// </summary>
+        private void RestartFolderMonitoring()
+        {
+            _watcherDebounceTimer.Stop();
+            _fileMonitorService.StopMonitoring();
+
+            if (!Settings.Default.AutoRefreshEnabled)
+                return;
+
+            try
+            {
+                _fileMonitorService.StartMonitoring(_currentPath, includeSubdirectories: false);
+            }
+            catch (ArgumentException)
+            {
+                // _currentPath khong ton tai/khong hop le (hiem - VD thu muc vua
+                // bi xoa boi chuong trinh khac dung luc dieu huong toi) - bo qua,
+                // LoadListViewFiles() (goi ngay sau do trong mnuViewRefresh_Click)
+                // se tu bao loi phu hop cho nguoi dung, khong can bao trung o day.
+            }
+        }
+
+        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            _watcherDebounceTimer.Stop();
+            _watcherDebounceTimer.Dispose();
+            _fileMonitorService.Dispose();
         }
 
         /// <summary>
@@ -1420,6 +1555,13 @@ namespace FileExplorerApp.Forms
             // luon dung ke ca khi phan duyet noi dung ben duoi gap loi.
             txtPath.Text = _currentPath;
 
+            // Moi lan noi dung duoc nap lai deu co the vi _currentPath VUA DOI
+            // (NavigateTo/Back/Forward/Up deu goi mnuViewRefresh_Click ngay sau
+            // khi gan _currentPath moi) - tro FileMonitorService sang thu muc
+            // moi TRUOC khi nap ListView, de khong bo lo thay doi nao xay ra
+            // ngay sau khi nap xong nhung truoc khi watcher kip bat.
+            RestartFolderMonitoring();
+
             LoadListViewFiles();
         }
 
@@ -1803,6 +1945,15 @@ namespace FileExplorerApp.Forms
                     // ngay, khong can khoi dong lai ung dung.
                     ApplyTheme();
                     LoadDisplaySettings();
+
+                    // Nguoi dung co the vua doi WatcherDelayMs - cap nhat lai
+                    // Interval cua timer debounce NGAY, tranh phai dong/mo lai
+                    // ung dung moi thay doi co hieu luc.
+                    _watcherDebounceTimer.Interval = Math.Max(Settings.Default.WatcherDelayMs, 50);
+
+                    // mnuViewRefresh_Click goi RestartFolderMonitoring() ben
+                    // trong, tu dong bat/tat theo doi theo AutoRefreshEnabled
+                    // moi nhat - khong can tu goi rieng o day.
                     mnuViewRefresh_Click(this, EventArgs.Empty);
                 }
             }
