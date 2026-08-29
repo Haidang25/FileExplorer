@@ -1212,18 +1212,28 @@ namespace FileExplorerApp.Forms
             }
 
             OperationResult result = _fileService.Rename(path, newName);
+            string renamedPath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, newName);
+
+            // Ghi log ca khi thanh cong lan that bai (VD: trung ten, file dang bi
+            // khoa boi chuong trinh khac) - xem ghi chu tuong tu tai
+            // mnuFileNewFolder_Click. Dung lai _fileService.Rename cho CA file lan
+            // thu muc (khong co RenameFolder rieng trong FileOperationType) nen
+            // ghi FileOperationType.Rename chung, dung voi thuc te loi goi Service
+            // ben tren. Source = duong dan CU (truoc doi ten), Destination = duong
+            // dan MOI (sau doi ten) - phan anh dung ban chat "truoc/sau" cua rename,
+            // giup GetLogs sau nay hien duoc ca ten cu lan ten moi tren cung 1 dong.
+            _logService.LogOperation(FileOperationType.Rename, path, renamedPath, result);
 
             if (result == OperationResult.Success)
             {
-                string newPath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, newName);
                 item.Text = newName;
-                item.Tag = newPath;
+                item.Tag = renamedPath;
 
                 // Doi thu tu (thu muc/file van con dung nhom truoc/sau) co the thay doi
                 // vi ten moi co the sap xep khac ten cu - lam moi lai toan bo cho chac
                 // chan dung thu tu, dong thoi chon lai chinh muc vua doi ten.
                 mnuViewRefresh_Click(sender, e);
-                SelectAndFocusListViewItem(newPath);
+                SelectAndFocusListViewItem(renamedPath);
             }
             else
             {
