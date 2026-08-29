@@ -234,10 +234,18 @@ namespace FileExplorerApp.Forms
             var cts = new CancellationTokenSource();
             _sizeCalculationCts = cts;
 
+            // Progress<T> tu dong "chup" SynchronizationContext hien tai (UI thread,
+            // vi dang tao ben trong LoadItem/handler cua Form) ngay luc khoi tao -
+            // moi lan FolderService goi progress.Report tu luong threadpool dang
+            // duyet, callback ReportFolderScanProgress se tu dong duoc marshal ve
+            // chay tren UI thread, an toan de gan thang vao Text ma khong can
+            // BeginInvoke/Invoke thu cong.
+            var progress = new Progress<FolderStatistics>(partial => ReportFolderScanProgress(partial, cts));
+
             FolderStatistics stats;
             try
             {
-                stats = await _folderService.GetFolderStatisticsAsync(folderPath, cts.Token);
+                stats = await _folderService.GetFolderStatisticsAsync(folderPath, progress, cts.Token);
             }
             catch (OperationCanceledException)
             {
@@ -254,6 +262,29 @@ namespace FileExplorerApp.Forms
 
             lblSizeValue.Text = $"{FormatHelper.FormatSize(stats.TotalBytes)} ({stats.TotalBytes:N0} byte)";
             lblContentsValue.Text = $"{stats.FileCount:N0} tệp, {stats.FolderCount:N0} thư mục con";
+        }
+
+        /// <summary>
+        /// Chay tren UI thread (xem StartFolderSizeCalculation) moi khi
+        /// FolderService bao cao tien trinh duyet MOT PHAN (chua phai ket qua cuoi
+        /// cung) cua thu muc lon - cap nhat lblSizeValue/lblContentsValue ngay
+        /// giua chung de nguoi dung thay so dang tang thay vi nhin "Đang tính..."
+        /// tinh khong doi trong nhieu giay.
+        /// </summary>
+        /// <param name="partial">Gia tri tich luy tam thoi tai thoi diem bao cao.</param>
+        /// <param name="cts">CancellationTokenSource cua phep tinh dang chay - kiem tra de bo qua bao cao "cu" neu da bi huy/thay the boi mot muc khac.</param>
+        private void ReportFolderScanProgress(FolderStatistics partial, CancellationTokenSource cts)
+        {
+            // _sizeCalculationCts co the da tro sang mot CancellationTokenSource
+            // KHAC (nguoi dung mo Properties cho muc moi trong luc dang tinh muc
+            // cu) truoc khi Report nay den luot chay tren UI thread - kiem tra
+            // tham chieu de chac chan bao cao nay van con thuoc ve lan tinh HIEN
+            // TAI, tranh ghi de nham ket qua cua muc dang xem bang so lieu cu.
+            if (IsDisposed || cts.IsCancellationRequested || !ReferenceEquals(_sizeCalculationCts, cts))
+                return;
+
+            lblSizeValue.Text = $"Đang tính... ({FormatHelper.FormatSize(partial.TotalBytes)})";
+            lblContentsValue.Text = $"Đang tính... ({partial.FileCount:N0} tệp, {partial.FolderCount:N0} thư mục con)";
         }
 
         /// <summary>

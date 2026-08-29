@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -274,7 +275,33 @@ namespace FileExplorerApp.Services
         /// <param name="cancellationToken">Token de huy giua chung (VD: nguoi dung dong PropertiesForm truoc khi tinh xong).</param>
         public Task<FolderStatistics> GetFolderStatisticsAsync(string folderPath, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return Task.Run(() => GetFolderStatisticsCore(folderPath, cancellationToken), cancellationToken);
+            return GetFolderStatisticsAsync(folderPath, progress: null, cancellationToken: cancellationToken);
+        }
+
+        /// <summary>
+        /// Nhu <see cref="GetFolderStatisticsAsync(string, CancellationToken)"/> nhung
+        /// nhan them IProgress&lt;FolderStatistics&gt; de bao cao TIEN TRINH dang duyet
+        /// (tong dung luong/so tep/so thu muc con da dem duoc TINH DEN THOI DIEM HIEN
+        /// TAI, chua phai ket qua cuoi cung) - dung cho thu muc lon co the mat vai
+        /// giay den vai chuc giay de duyet het, giup nguoi dung thay ung dung dang
+        /// chay chu khong bi treo, thay vi chi thay "Đang tính..." tinh trong suot
+        /// qua trinh (xem PropertiesForm.StartFolderSizeCalculation).
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <param name="progress">
+        /// Nhan bao cao tien trinh (co the null neu khong can - se hanh xu giong het
+        /// ban khong co progress). Duoc goi TU LUONG THREADPOOL dang duyet, KHONG
+        /// phai luong UI - IProgress&lt;T&gt;.Report tu dong marshal ve dung
+        /// SynchronizationContext luc IProgress duoc tao (VD: Progress&lt;T&gt; tao
+        /// tren UI thread se tu dong goi lai callback tren UI thread).
+        /// </param>
+        /// <param name="cancellationToken">Token de huy giua chung.</param>
+        public Task<FolderStatistics> GetFolderStatisticsAsync(
+            string folderPath,
+            IProgress<FolderStatistics> progress,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.Run(() => GetFolderStatisticsCore(folderPath, cancellationToken, progress), cancellationToken);
         }
 
         /// <summary>
@@ -290,6 +317,13 @@ namespace FileExplorerApp.Services
             return stats.TotalBytes;
         }
 
+        // Khoang cach toi thieu giua 2 lan bao cao tien trinh - bao cao qua day
+        // (VD: sau moi file) se gui hang nghin lan Report cho thu muc lon, lam
+        // ngop SynchronizationContext cua UI thread (moi Report la mot lan
+        // BeginInvoke ngam) ma khong mang lai loi ich hien thi tuong ung - 150ms
+        // van du "muot" de nguoi dung thay so dang tang, giong Windows Explorer.
+        private static readonly TimeSpan FolderScanProgressInterval = TimeSpan.FromMilliseconds(150);
+
         /// <summary>
         /// Phan logic duyet de quy thuc su, dung chung boi ca ban dong bo
         /// (GetFolderStatistics) lan bat dong bo (GetFolderStatisticsAsync) - tach
@@ -297,7 +331,14 @@ namespace FileExplorerApp.Services
         /// (se chay dung bo tren threadpool nhung code lai trong ham "dong bo",
         /// gay nham lan khi doc).
         /// </summary>
-        private FolderStatistics GetFolderStatisticsCore(string folderPath, CancellationToken cancellationToken)
+        /// <param name="progress">
+        /// Bao cao tien trinh (co the null - se bo qua hoan toan, khong anh huong
+        /// hieu nang/hanh vi so voi truoc khi co tham so nay). Duoc goi dinh ky
+        /// (xem FolderScanProgressInterval) VOI GIA TRI TICH LUY TAM THOI trong
+        /// luc duyet, KHONG PHAI ket qua cuoi cung - noi goi khong nen coi day la
+        /// dau hieu da xong (chi gia tri return moi la ket qua that su).
+        /// </param>
+        private FolderStatistics GetFolderStatisticsCore(string folderPath, CancellationToken cancellationToken, IProgress<FolderStatistics> progress = null)
         {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
                 return new FolderStatistics();
@@ -305,6 +346,11 @@ namespace FileExplorerApp.Services
             long totalBytes = 0;
             long fileCount = 0;
             long folderCount = 0;
+
+            // Chi tao Stopwatch khi thuc su co progress de theo doi - tranh chi
+            // phi khong can thiet (du rat nho) cho duong goi khong quan tam tien
+            // trinh (VD: cac noi goi GetFolderStatistics/GetFolderSize dong bo cu).
+            Stopwatch progressStopwatch = progress != null ? Stopwatch.StartNew() : null;
 
             // Dung Stack tu quan ly thay vi de quy ham (recursion) that su - tranh
             // StackOverflowException voi cay thu muc qua sau (hiem nhung co the xay
@@ -349,6 +395,12 @@ namespace FileExplorerApp.Services
                         // ket qua da cong duoc, khong lam gian doan ca phep tinh.
                         // KHONG tang fileCount vi khong the xac nhan file van con
                         // ton tai/hop le tai thoi diem duyet.
+                    }
+
+                    if (progressStopwatch != null && progressStopwatch.Elapsed >= FolderScanProgressInterval)
+                    {
+                        progress.Report(new FolderStatistics { TotalBytes = totalBytes, FileCount = fileCount, FolderCount = folderCount });
+                        progressStopwatch.Restart();
                     }
                 }
 
