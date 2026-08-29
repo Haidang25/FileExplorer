@@ -138,6 +138,7 @@ namespace FileExplorerApp.Forms
             {
                 const string unreadable = "Không đọc được";
                 lblSizeValue.Text = unreadable;
+                lblContentsValue.Text = unreadable;
                 lblCreatedValue.Text = unreadable;
                 lblModifiedValue.Text = unreadable;
                 lblAccessedValue.Text = unreadable;
@@ -150,22 +151,25 @@ namespace FileExplorerApp.Forms
             }
             else
             {
-                // "Kich thuoc": voi file, dung FileItemModel.SizeFormatted (giong
-                // cot "Kich thuoc" tren lvwFiles) va hien them so byte chinh xac
-                // trong ngoac, giong Windows Explorer. Voi thu muc, tinh TONG dung
-                // luong de quy qua toan bo file/thu muc con (FolderService.
-                // GetFolderSize) - hien "Đang tính..." truoc, sau do chay ngam
-                // tren Task rieng (xem StartFolderSizeCalculation) de khong dong
-                // bang giao dien voi thu muc lon/nhieu file, roi cap nhat lai
-                // lblSizeValue khi xong.
+                // "Kich thuoc"/"Noi dung": voi file, dung FileItemModel.SizeFormatted
+                // (giong cot "Kich thuoc" tren lvwFiles) va hien them so byte chinh
+                // xac trong ngoac, giong Windows Explorer; "Noi dung" khong ap dung
+                // cho file nen de "--". Voi thu muc, tinh dong thoi TONG dung luong
+                // VA so luong tep/thu muc con de quy qua toan bo cay thu muc con
+                // (FolderService.GetFolderStatistics) - hien "Đang tính..." truoc,
+                // sau do chay ngam tren Task rieng (xem StartFolderSizeCalculation)
+                // de khong dong bang giao dien voi thu muc lon/nhieu file, roi cap
+                // nhat lai ca hai nhan khi xong.
                 if (item.IsDirectory)
                 {
                     lblSizeValue.Text = "Đang tính...";
+                    lblContentsValue.Text = "Đang tính...";
                     StartFolderSizeCalculation(item.FullPath);
                 }
                 else
                 {
                     lblSizeValue.Text = $"{item.SizeFormatted} ({item.Size:N0} byte)";
+                    lblContentsValue.Text = "--";
                 }
 
                 lblCreatedValue.Text = FormatHelper.FormatDate(item.CreatedDate);
@@ -207,11 +211,12 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Chay FolderService.GetFolderSize tren mot Task nen (Task.Run) de tinh
-        /// tong dung luong de quy cua thu muc ma khong lam dong bang giao dien
-        /// PropertiesForm, sau do cap nhat lblSizeValue tren luong UI khi xong.
+        /// Chay FolderService.GetFolderStatistics tren mot Task nen (Task.Run) de
+        /// tinh dong thoi tong dung luong VA so luong tep/thu muc con de quy cua
+        /// thu muc ma khong lam dong bang giao dien PropertiesForm, sau do cap
+        /// nhat lblSizeValue/lblContentsValue tren luong UI khi xong.
         /// </summary>
-        /// <param name="folderPath">Duong dan thu muc can tinh tong dung luong.</param>
+        /// <param name="folderPath">Duong dan thu muc can tinh dung luong/so luong.</param>
         private void StartFolderSizeCalculation(string folderPath)
         {
             _sizeCalculationCts?.Cancel();
@@ -220,10 +225,10 @@ namespace FileExplorerApp.Forms
 
             Task.Run(() =>
             {
-                long size;
+                FolderStatistics stats;
                 try
                 {
-                    size = _folderService.GetFolderSize(folderPath, cts.Token);
+                    stats = _folderService.GetFolderStatistics(folderPath, cts.Token);
                 }
                 catch (OperationCanceledException)
                 {
@@ -247,7 +252,8 @@ namespace FileExplorerApp.Forms
                         if (IsDisposed || cts.IsCancellationRequested)
                             return;
 
-                        lblSizeValue.Text = $"{FormatHelper.FormatSize(size)} ({size:N0} byte)";
+                        lblSizeValue.Text = $"{FormatHelper.FormatSize(stats.TotalBytes)} ({stats.TotalBytes:N0} byte)";
+                        lblContentsValue.Text = $"{stats.FileCount:N0} tệp, {stats.FolderCount:N0} thư mục con";
                     }));
                 }
                 catch (ObjectDisposedException)

@@ -238,10 +238,33 @@ namespace FileExplorerApp.Services
         /// <param name="cancellationToken">Token de huy giua chung.</param>
         public long GetFolderSize(string folderPath, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
-                return 0;
+            return GetFolderStatistics(folderPath, cancellationToken).TotalBytes;
+        }
 
-            long total = 0;
+        /// <summary>
+        /// Tinh dong thoi tong dung luong VA so luong tep/thu muc con (de quy toan
+        /// bo cay thu muc) trong MOT lan duyet duy nhat - dung chung mot Stack voi
+        /// GetFolderSize thay vi duyet rieng 2 lan (mot lan cho dung luong, mot lan
+        /// cho so luong) de khong ton gap doi thoi gian I/O voi thu muc lon.
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <returns>FolderStatistics gom TotalBytes/FileCount/FolderCount. Tra ve gia tri 0 neu folderPath khong ton tai.</returns>
+        public FolderStatistics GetFolderStatistics(string folderPath)
+        {
+            return GetFolderStatistics(folderPath, CancellationToken.None);
+        }
+
+        /// <summary>Nhu <see cref="GetFolderStatistics(string)"/> nhung nhan them CancellationToken - xem ghi chu tai GetFolderSize.</summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <param name="cancellationToken">Token de huy giua chung.</param>
+        public FolderStatistics GetFolderStatistics(string folderPath, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return new FolderStatistics();
+
+            long totalBytes = 0;
+            long fileCount = 0;
+            long folderCount = 0;
 
             // Dung Stack tu quan ly thay vi de quy ham (recursion) that su - tranh
             // StackOverflowException voi cay thu muc qua sau (hiem nhung co the xay
@@ -276,13 +299,16 @@ namespace FileExplorerApp.Services
 
                     try
                     {
-                        total += new FileInfo(file).Length;
+                        totalBytes += new FileInfo(file).Length;
+                        fileCount++;
                     }
                     catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
                     {
                         // Bo qua file khong doc duoc kich thuoc (VD: file he thong
                         // duoc bao ve, hoac bi xoa dung luc duyet toi) - giu nguyen
                         // ket qua da cong duoc, khong lam gian doan ca phep tinh.
+                        // KHONG tang fileCount vi khong the xac nhan file van con
+                        // ton tai/hop le tai thoi diem duyet.
                     }
                 }
 
@@ -298,11 +324,17 @@ namespace FileExplorerApp.Services
 
                 foreach (string subDir in subDirs)
                 {
+                    folderCount++;
                     pending.Push(subDir);
                 }
             }
 
-            return total;
+            return new FolderStatistics
+            {
+                TotalBytes = totalBytes,
+                FileCount = fileCount,
+                FolderCount = folderCount
+            };
         }
 
         /// <summary>
@@ -825,5 +857,23 @@ namespace FileExplorerApp.Services
                 _state.Report(_fileName, bytesTransferredForThisFile, _fileTotalBytes);
             }
         }
+    }
+
+    /// <summary>
+    /// Ket qua duyet de quy mot thu muc: tong dung luong (byte) va so luong tep/
+    /// thu muc con tim duoc. Tra ve boi FolderService.GetFolderStatistics - tach
+    /// rieng thanh struct (khong phai tuple) de ten cac truong ro rang tai noi
+    /// goi (VD: PropertiesForm) thay vi Item1/Item2/Item3.
+    /// </summary>
+    public struct FolderStatistics
+    {
+        /// <summary>Tong dung luong (byte) cua tat ca tep tim duoc (de quy).</summary>
+        public long TotalBytes { get; set; }
+
+        /// <summary>So luong TEP (khong tinh thu muc) tim duoc, de quy toan bo cay thu muc con.</summary>
+        public long FileCount { get; set; }
+
+        /// <summary>So luong THU MUC CON tim duoc (khong tinh chinh thu muc goc), de quy toan bo cay thu muc con.</summary>
+        public long FolderCount { get; set; }
     }
 }

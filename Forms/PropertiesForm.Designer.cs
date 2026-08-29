@@ -27,6 +27,8 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.Label lblLocationValue;
         private System.Windows.Forms.Label lblSizeCaption;
         private System.Windows.Forms.Label lblSizeValue;
+        private System.Windows.Forms.Label lblContentsCaption;
+        private System.Windows.Forms.Label lblContentsValue;
         private System.Windows.Forms.Label lblCreatedCaption;
         private System.Windows.Forms.Label lblCreatedValue;
         private System.Windows.Forms.Label lblModifiedCaption;
@@ -76,6 +78,8 @@ namespace FileExplorerApp.Forms
             this.lblLocationValue = new System.Windows.Forms.Label();
             this.lblSizeCaption = new System.Windows.Forms.Label();
             this.lblSizeValue = new System.Windows.Forms.Label();
+            this.lblContentsCaption = new System.Windows.Forms.Label();
+            this.lblContentsValue = new System.Windows.Forms.Label();
             this.lblCreatedCaption = new System.Windows.Forms.Label();
             this.lblCreatedValue = new System.Windows.Forms.Label();
             this.lblModifiedCaption = new System.Windows.Forms.Label();
@@ -181,67 +185,85 @@ namespace FileExplorerApp.Forms
             this.lblSizeValue.TabIndex = 8;
             this.lblSizeValue.Text = "lblSizeValue";
             //
+            // lblContentsCaption
+            //
+            this.lblContentsCaption.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.lblContentsCaption.ForeColor = FileExplorerApp.Helpers.AppTheme.TextSecondary;
+            this.lblContentsCaption.Location = new System.Drawing.Point(16, 148);
+            this.lblContentsCaption.Name = "lblContentsCaption";
+            this.lblContentsCaption.Size = new System.Drawing.Size(100, 20);
+            this.lblContentsCaption.TabIndex = 9;
+            this.lblContentsCaption.Text = "Nội dung:";
+            //
+            // lblContentsValue
+            //
+            this.lblContentsValue.Location = new System.Drawing.Point(120, 148);
+            this.lblContentsValue.Name = "lblContentsValue";
+            this.lblContentsValue.Size = new System.Drawing.Size(276, 20);
+            this.lblContentsValue.TabIndex = 10;
+            this.lblContentsValue.Text = "lblContentsValue";
+            //
             // lblCreatedCaption
             //
             this.lblCreatedCaption.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblCreatedCaption.ForeColor = FileExplorerApp.Helpers.AppTheme.TextSecondary;
-            this.lblCreatedCaption.Location = new System.Drawing.Point(16, 148);
+            this.lblCreatedCaption.Location = new System.Drawing.Point(16, 172);
             this.lblCreatedCaption.Name = "lblCreatedCaption";
             this.lblCreatedCaption.Size = new System.Drawing.Size(100, 20);
-            this.lblCreatedCaption.TabIndex = 9;
+            this.lblCreatedCaption.TabIndex = 11;
             this.lblCreatedCaption.Text = "Ngày tạo:";
             //
             // lblCreatedValue
             //
-            this.lblCreatedValue.Location = new System.Drawing.Point(120, 148);
+            this.lblCreatedValue.Location = new System.Drawing.Point(120, 172);
             this.lblCreatedValue.Name = "lblCreatedValue";
             this.lblCreatedValue.Size = new System.Drawing.Size(276, 20);
-            this.lblCreatedValue.TabIndex = 10;
+            this.lblCreatedValue.TabIndex = 12;
             this.lblCreatedValue.Text = "lblCreatedValue";
             //
             // lblModifiedCaption
             //
             this.lblModifiedCaption.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblModifiedCaption.ForeColor = FileExplorerApp.Helpers.AppTheme.TextSecondary;
-            this.lblModifiedCaption.Location = new System.Drawing.Point(16, 172);
+            this.lblModifiedCaption.Location = new System.Drawing.Point(16, 196);
             this.lblModifiedCaption.Name = "lblModifiedCaption";
             this.lblModifiedCaption.Size = new System.Drawing.Size(100, 20);
-            this.lblModifiedCaption.TabIndex = 11;
+            this.lblModifiedCaption.TabIndex = 13;
             this.lblModifiedCaption.Text = "Ngày sửa đổi:";
             //
             // lblModifiedValue
             //
-            this.lblModifiedValue.Location = new System.Drawing.Point(120, 172);
+            this.lblModifiedValue.Location = new System.Drawing.Point(120, 196);
             this.lblModifiedValue.Name = "lblModifiedValue";
             this.lblModifiedValue.Size = new System.Drawing.Size(276, 20);
-            this.lblModifiedValue.TabIndex = 12;
+            this.lblModifiedValue.TabIndex = 14;
             this.lblModifiedValue.Text = "lblModifiedValue";
             //
             // lblAccessedCaption
             //
             this.lblAccessedCaption.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
             this.lblAccessedCaption.ForeColor = FileExplorerApp.Helpers.AppTheme.TextSecondary;
-            this.lblAccessedCaption.Location = new System.Drawing.Point(16, 196);
+            this.lblAccessedCaption.Location = new System.Drawing.Point(16, 220);
             this.lblAccessedCaption.Name = "lblAccessedCaption";
             this.lblAccessedCaption.Size = new System.Drawing.Size(100, 20);
-            this.lblAccessedCaption.TabIndex = 13;
+            this.lblAccessedCaption.TabIndex = 15;
             this.lblAccessedCaption.Text = "Ngày truy cập:";
             //
             // lblAccessedValue
             //
-            this.lblAccessedValue.Location = new System.Drawing.Point(120, 196);
+            this.lblAccessedValue.Location = new System.Drawing.Point(120, 220);
             this.lblAccessedValue.Name = "lblAccessedValue";
             this.lblAccessedValue.Size = new System.Drawing.Size(276, 20);
-            this.lblAccessedValue.TabIndex = 14;
+            this.lblAccessedValue.TabIndex = 16;
             this.lblAccessedValue.Text = "lblAccessedValue";
             //
             // pnlSeparatorBottom
             //
             this.pnlSeparatorBottom.BackColor = FileExplorerApp.Helpers.AppTheme.Border;
-            this.pnlSeparatorBottom.Location = new System.Drawing.Point(16, 228);
+            this.pnlSeparatorBottom.Location = new System.Drawing.Point(16, 252);
             this.pnlSeparatorBottom.Name = "pnlSeparatorBottom";
             this.pnlSeparatorBottom.Size = new System.Drawing.Size(380, 1);
-            this.pnlSeparatorBottom.TabIndex = 15;
+            this.pnlSeparatorBottom.TabIndex = 17;
             //
             // grpAttributes
             //
@@ -249,10 +271,10 @@ namespace FileExplorerApp.Forms
             this.grpAttributes.Controls.Add(this.chkHidden);
             this.grpAttributes.Controls.Add(this.chkSystem);
             this.grpAttributes.Controls.Add(this.chkArchive);
-            this.grpAttributes.Location = new System.Drawing.Point(16, 244);
+            this.grpAttributes.Location = new System.Drawing.Point(16, 268);
             this.grpAttributes.Name = "grpAttributes";
             this.grpAttributes.Size = new System.Drawing.Size(380, 112);
-            this.grpAttributes.TabIndex = 16;
+            this.grpAttributes.TabIndex = 18;
             this.grpAttributes.TabStop = false;
             this.grpAttributes.Text = "Thuộc tính";
             //
@@ -290,26 +312,26 @@ namespace FileExplorerApp.Forms
             //
             // btnOK
             //
-            this.btnOK.Location = new System.Drawing.Point(140, 368);
+            this.btnOK.Location = new System.Drawing.Point(140, 392);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(84, 32);
-            this.btnOK.TabIndex = 17;
+            this.btnOK.TabIndex = 19;
             this.btnOK.Text = "OK";
             //
             // btnCancel
             //
-            this.btnCancel.Location = new System.Drawing.Point(228, 368);
+            this.btnCancel.Location = new System.Drawing.Point(228, 392);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(84, 32);
-            this.btnCancel.TabIndex = 18;
+            this.btnCancel.TabIndex = 20;
             this.btnCancel.Text = "Hủy";
             //
             // btnApply
             //
-            this.btnApply.Location = new System.Drawing.Point(316, 368);
+            this.btnApply.Location = new System.Drawing.Point(316, 392);
             this.btnApply.Name = "btnApply";
             this.btnApply.Size = new System.Drawing.Size(80, 32);
-            this.btnApply.TabIndex = 19;
+            this.btnApply.TabIndex = 21;
             this.btnApply.Text = "Áp dụng";
             //
             // PropertiesForm
@@ -318,7 +340,7 @@ namespace FileExplorerApp.Forms
             this.CancelButton = this.btnCancel;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
-            this.ClientSize = new System.Drawing.Size(412, 416);
+            this.ClientSize = new System.Drawing.Size(412, 440);
             this.Controls.Add(this.picIcon);
             this.Controls.Add(this.lblName);
             this.Controls.Add(this.pnlSeparatorTop);
@@ -328,6 +350,8 @@ namespace FileExplorerApp.Forms
             this.Controls.Add(this.lblLocationValue);
             this.Controls.Add(this.lblSizeCaption);
             this.Controls.Add(this.lblSizeValue);
+            this.Controls.Add(this.lblContentsCaption);
+            this.Controls.Add(this.lblContentsValue);
             this.Controls.Add(this.lblCreatedCaption);
             this.Controls.Add(this.lblCreatedValue);
             this.Controls.Add(this.lblModifiedCaption);
