@@ -1088,6 +1088,14 @@ namespace FileExplorerApp.Forms
             {
                 OperationResult result = _recycleBinService.DeleteToRecycleBin(path);
                 ShowOperationResultMessage(result, $"xoa \"{Path.GetFileName(path)}\"");
+
+                // Ghi log tung muc rieng le (khong gop 1 dong ItemCount = selected.Count)
+                // vi moi muc co the co OperationResult KHAC NHAU (VD: muc A xoa
+                // thanh cong, muc B bi AccessDenied) - gop chung se lam mat thong
+                // tin muc nao that bai. "vao Thung rac" trong Message de phan biet
+                // voi nhanh xoa vinh vien (Shift+Delete) ben duoi, cung ghi
+                // FileOperationType.Delete nhung khac muc dich.
+                _logService.LogOperation(FileOperationType.Delete, path, null, result, "Xóa vào Thùng rác");
             }
 
             mnuViewRefresh_Click(sender, e);
@@ -1139,6 +1147,13 @@ namespace FileExplorerApp.Forms
             {
                 OperationResult result = _fileService.DeletePermanently(path);
                 ShowOperationResultMessage(result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"");
+
+                // Ghi log tung muc rieng le - xem ghi chu tuong tu tai
+                // mnuEditDelete_Click. "vinh vien" trong Message la thong tin QUAN
+                // TRONG can giu lai (khac voi xoa vao Thung rac van con co the
+                // khoi phuc duoc) vi FileOperationType khong co gia tri rieng cho
+                // xoa vinh vien.
+                _logService.LogOperation(FileOperationType.Delete, path, null, result, "Xóa vĩnh viễn (Shift+Delete)");
             }
 
             mnuViewRefresh_Click(sender, e);
