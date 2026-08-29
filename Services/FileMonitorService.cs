@@ -93,6 +93,19 @@ namespace FileExplorerApp.Services
             {
                 IncludeSubdirectories = includeSubdirectories,
 
+                // Filter (mau ten file can theo doi) - CO Y dat la "*" thay vi
+                // dung mac dinh "*.*" cua FileSystemWatcher. Day la MOT CAM BAY
+                // KINH DIEN: .NET (ke thua tu quy uoc DOS 8.3 cu) coi "*.*"
+                // nghia la "co dau cham trong ten", nen mac dinh SE BO SOT moi
+                // file/thu muc KHONG CO PHAN MO RONG (VD: "README", "Makefile",
+                // hoac mot thu muc bat ky ten "Reports" khong co dau cham) -
+                // nhung muc nay van la du lieu hop le nguoi dung can thay ngay
+                // tren ListView khi duoc tao/xoa/doi ten tu ben ngoai. "*" (khong
+                // co dau cham) khop VOI TAT CA ten, khong bi gioi han boi quy uoc
+                // 8.3 nay - day la ly do vi sao KHONG the dung "*.*" ("khop moi
+                // thu") nhu truc giac ten goi cua no.
+                Filter = "*",
+
                 // FileName/DirectoryName: bat Created/Deleted/Renamed cho ca file
                 // lan thu muc con. LastWrite: bat Changed khi noi dung file duoc
                 // ghi lai (thoi gian sua doi thay doi). Size: bat Changed them
