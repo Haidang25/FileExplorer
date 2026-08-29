@@ -29,6 +29,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.ColumnHeader colLogMessage;
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Button btnRefresh;
+        private System.Windows.Forms.Button btnExportCsv;
         private System.Windows.Forms.Button btnClearLogs;
         private System.Windows.Forms.Button btnClose;
 
@@ -75,6 +76,7 @@ namespace FileExplorerApp.Forms
             this.colLogMessage = new System.Windows.Forms.ColumnHeader();
             this.lblStatus = new System.Windows.Forms.Label();
             this.btnRefresh = new System.Windows.Forms.Button();
+            this.btnExportCsv = new System.Windows.Forms.Button();
             this.btnClearLogs = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
             this.grpFilters.SuspendLayout();
@@ -96,7 +98,7 @@ namespace FileExplorerApp.Forms
             this.grpFilters.Controls.Add(this.lblFilterOperation);
             this.grpFilters.Location = new System.Drawing.Point(12, 12);
             this.grpFilters.Name = "grpFilters";
-            this.grpFilters.Size = new System.Drawing.Size(876, 88);
+            this.grpFilters.Size = new System.Drawing.Size(996, 88);
             this.grpFilters.TabIndex = 0;
             this.grpFilters.TabStop = false;
             this.grpFilters.Text = "Bộ lọc";
@@ -104,7 +106,7 @@ namespace FileExplorerApp.Forms
             // btnResetFilter
             //
             this.btnResetFilter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnResetFilter.Location = new System.Drawing.Point(780, 50);
+            this.btnResetFilter.Location = new System.Drawing.Point(900, 50);
             this.btnResetFilter.Name = "btnResetFilter";
             this.btnResetFilter.Size = new System.Drawing.Size(80, 27);
             this.btnResetFilter.TabIndex = 9;
@@ -114,7 +116,7 @@ namespace FileExplorerApp.Forms
             // btnApplyFilter
             //
             this.btnApplyFilter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnApplyFilter.Location = new System.Drawing.Point(694, 50);
+            this.btnApplyFilter.Location = new System.Drawing.Point(814, 50);
             this.btnApplyFilter.Name = "btnApplyFilter";
             this.btnApplyFilter.Size = new System.Drawing.Size(80, 27);
             this.btnApplyFilter.TabIndex = 8;
@@ -210,7 +212,7 @@ namespace FileExplorerApp.Forms
             this.lvwLogs.HideSelection = false;
             this.lvwLogs.Location = new System.Drawing.Point(12, 106);
             this.lvwLogs.Name = "lvwLogs";
-            this.lvwLogs.Size = new System.Drawing.Size(876, 422);
+            this.lvwLogs.Size = new System.Drawing.Size(996, 422);
             this.lvwLogs.TabIndex = 1;
             this.lvwLogs.UseCompatibleStateImageBehavior = false;
             this.lvwLogs.View = System.Windows.Forms.View.Details;
@@ -277,23 +279,33 @@ namespace FileExplorerApp.Forms
             this.btnRefresh.Text = "Làm mới";
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
             //
+            // btnExportCsv
+            //
+            this.btnExportCsv.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnExportCsv.Location = new System.Drawing.Point(674, 534);
+            this.btnExportCsv.Name = "btnExportCsv";
+            this.btnExportCsv.Size = new System.Drawing.Size(120, 32);
+            this.btnExportCsv.TabIndex = 4;
+            this.btnExportCsv.Text = "Xuất CSV";
+            this.btnExportCsv.Click += new System.EventHandler(this.btnExportCsv_Click);
+            //
             // btnClearLogs
             //
             this.btnClearLogs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClearLogs.Location = new System.Drawing.Point(674, 534);
+            this.btnClearLogs.Location = new System.Drawing.Point(800, 534);
             this.btnClearLogs.Name = "btnClearLogs";
-            this.btnClearLogs.Size = new System.Drawing.Size(120, 32);
-            this.btnClearLogs.TabIndex = 4;
+            this.btnClearLogs.Size = new System.Drawing.Size(100, 32);
+            this.btnClearLogs.TabIndex = 5;
             this.btnClearLogs.Text = "Xóa lịch sử";
             this.btnClearLogs.Click += new System.EventHandler(this.btnClearLogs_Click);
             //
             // btnClose
             //
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClose.Location = new System.Drawing.Point(788, 534);
+            this.btnClose.Location = new System.Drawing.Point(908, 534);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(100, 32);
-            this.btnClose.TabIndex = 5;
+            this.btnClose.TabIndex = 6;
             this.btnClose.Text = "Đóng";
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
             //
@@ -301,17 +313,18 @@ namespace FileExplorerApp.Forms
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
-            this.ClientSize = new System.Drawing.Size(900, 578);
+            this.ClientSize = new System.Drawing.Size(1020, 578);
             this.Controls.Add(this.grpFilters);
             this.Controls.Add(this.lvwLogs);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnRefresh);
+            this.Controls.Add(this.btnExportCsv);
             this.Controls.Add(this.btnClearLogs);
             this.Controls.Add(this.btnClose);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(760, 420);
+            this.MinimumSize = new System.Drawing.Size(880, 420);
             this.Name = "LogForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Nhật ký hoạt động";

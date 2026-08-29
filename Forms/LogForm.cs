@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -27,6 +29,15 @@ namespace FileExplorerApp.Forms
     {
         private readonly LogService _logService = new LogService();
         private List<LogEntryModel> _allLogs = new List<LogEntryModel>();
+
+        /// <summary>
+        /// Danh sach dang HIEN THI tren lvwLogs sau khi ap dung bo loc hien tai -
+        /// luu lai rieng (thay vi doc lai tu lvwLogs.Items) de btnExportCsv_Click
+        /// xuat DUNG nhung gi nguoi dung dang xem (da loc), khong phai toan bo
+        /// _allLogs chua loc - hop ly hon vi nguoi dung thuong loc truoc roi moi
+        /// xuat dung phan can (VD: chi xuat cac thao tac That bai trong thang nay).
+        /// </summary>
+        private List<LogEntryModel> _currentFilteredLogs = new List<LogEntryModel>();
 
         public LogForm()
         {
@@ -94,6 +105,7 @@ namespace FileExplorerApp.Forms
                 && (!filterByOperation || entry.Operation == selectedOperation)
                 && (!filterByResult || entry.Result == selectedResult));
 
+            _currentFilteredLogs = filtered;
             PopulateListView(filtered);
         }
 
@@ -235,6 +247,118 @@ namespace FileExplorerApp.Forms
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error);
             }
+        }
+
+        /// <summary>
+        /// Xuat danh sach log DANG HIEN THI (da loc - xem _currentFilteredLogs)
+        /// ra mot file .csv do nguoi dung tu chon vi tri luu, dung CUNG dinh
+        /// dang cot voi file log noi bo (xem LogService.LogFileHeader) de nguoi
+        /// dung quen thuoc co the mo lai file xuat ra bang chinh cong cu ho da
+        /// dung xem file log goc (VD Excel), va de nhat quan trong toan ung dung.
+        /// </summary>
+        /// <remarks>
+        /// Day la file XUAT RIENG (ban sao), khong phai file log goc dang duoc
+        /// LogService ghi/doc - vi vay KHONG can khoa WriteLock: file xuat ra la
+        /// mot file MOI, doc lap hoan toan voi file log that dang duoc WriteLog
+        /// quan ly, khong co nguy co tranh chap ghi voi cac thao tac khac.
+        /// </remarks>
+        private void btnExportCsv_Click(object sender, EventArgs e)
+        {
+            if (_currentFilteredLogs.Count == 0)
+            {
+                MessageBox.Show(
+                    this,
+                    "Không có dòng log nào để xuất (danh sách đang hiển thị rỗng). Hãy điều chỉnh lại bộ lọc nếu cần.",
+                    "Xuất CSV",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "Tệp CSV (*.csv)|*.csv|Tất cả tệp (*.*)|*.*";
+                saveDialog.DefaultExt = "csv";
+                saveDialog.AddExtension = true;
+                saveDialog.FileName = $"log_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+                if (saveDialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                try
+                {
+                    ExportToCsv(saveDialog.FileName, _currentFilteredLogs);
+                    MessageBox.Show(
+                        this,
+                        $"Đã xuất {_currentFilteredLogs.Count} dòng log ra:\n{saveDialog.FileName}",
+                        "Xuất CSV",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+                {
+                    // Khac voi loi ghi log ngam (LogService.WriteLog nuot loi) - day
+                    // la thao tac nguoi dung CHU DONG bam va CHO KET QUA, nen phai
+                    // bao loi cu the (VD: file dich dang mo trong chuong trinh khac,
+                    // khong du quyen ghi vao thu muc dich) de ho biet ma xu ly,
+                    // khong duoc im lang nhu WriteLog.
+                    MessageBox.Show(
+                        this,
+                        $"Không thể ghi file CSV (có thể tệp đang được mở bởi chương trình khác, hoặc không đủ quyền ghi vào vị trí đã chọn):\n{ex.Message}",
+                        "Lỗi",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ghi danh sach LogEntryModel ra file CSV tai duong dan chi dinh, dung
+        /// LAI dung dinh dang cot va cach escape RFC 4180 voi LogService (xem
+        /// LogService.FormatCsvRow/EscapeCsvField) de file xuat ra tuong thich
+        /// hoan toan neu can doc lai bang cong cu/ma nguon xu ly file log noi bo.
+        /// </summary>
+        private static void ExportToCsv(string filePath, List<LogEntryModel> entries)
+        {
+            using (var writer = new StreamWriter(filePath, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+            {
+                writer.WriteLine(LogService.LogFileHeader);
+
+                foreach (LogEntryModel entry in entries)
+                {
+                    string[] fields =
+                    {
+                        entry.Id.ToString(),
+                        entry.Timestamp.ToString("o", CultureInfo.InvariantCulture),
+                        entry.Operation.ToString(),
+                        EscapeCsvField(entry.Source),
+                        EscapeCsvField(entry.Destination),
+                        entry.Result.ToString(),
+                        EscapeCsvField(entry.Message),
+                        entry.ItemCount.ToString(CultureInfo.InvariantCulture),
+                        entry.Duration.HasValue ? entry.Duration.Value.TotalSeconds.ToString(CultureInfo.InvariantCulture) : string.Empty
+                    };
+
+                    writer.WriteLine(string.Join(",", fields));
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ban sao cua LogService.EscapeCsvField (private, khong the goi thang tu
+        /// day) - GIU NGUYEN cung logic escape RFC 4180 de file xuat ra tuong
+        /// thich voi cach GetLogs cua LogService parse lai neu can.
+        /// </summary>
+        private static string EscapeCsvField(string field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return string.Empty;
+
+            bool needsQuoting = field.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0;
+            if (!needsQuoting)
+                return field;
+
+            return "\"" + field.Replace("\"", "\"\"") + "\"";
         }
 
         private void btnClose_Click(object sender, EventArgs e)
