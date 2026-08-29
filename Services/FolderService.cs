@@ -259,6 +259,46 @@ namespace FileExplorerApp.Services
         /// <param name="cancellationToken">Token de huy giua chung.</param>
         public FolderStatistics GetFolderStatistics(string folderPath, CancellationToken cancellationToken)
         {
+            return GetFolderStatisticsCore(folderPath, cancellationToken);
+        }
+
+        /// <summary>
+        /// Phien ban bat dong bo (async) cua GetFolderStatistics - chay phep duyet
+        /// (I/O + tinh toan CPU-bound, khong co await ben trong) tren mot luong
+        /// threadpool rieng qua Task.Run, giup noi goi (VD: PropertiesForm) dung
+        /// duoc "await" thay vi tu quan ly Task.Run/BeginInvoke thu cong, dong thoi
+        /// khong lam dong bang luong UI khi thu muc lon/nhieu file. Day la cach lam
+        /// bat dong bo nhat quan voi CopyFolderAsync trong cung service nay.
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <param name="cancellationToken">Token de huy giua chung (VD: nguoi dung dong PropertiesForm truoc khi tinh xong).</param>
+        public Task<FolderStatistics> GetFolderStatisticsAsync(string folderPath, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.Run(() => GetFolderStatisticsCore(folderPath, cancellationToken), cancellationToken);
+        }
+
+        /// <summary>
+        /// Nhu <see cref="GetFolderStatisticsAsync(string, CancellationToken)"/> nhung
+        /// tra ve tong dung luong (byte) thay vi FolderStatistics day du - dung khi
+        /// chi can dung luong, khong can dem so tep/thu muc con.
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <param name="cancellationToken">Token de huy giua chung.</param>
+        public async Task<long> GetFolderSizeAsync(string folderPath, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            FolderStatistics stats = await GetFolderStatisticsAsync(folderPath, cancellationToken).ConfigureAwait(false);
+            return stats.TotalBytes;
+        }
+
+        /// <summary>
+        /// Phan logic duyet de quy thuc su, dung chung boi ca ban dong bo
+        /// (GetFolderStatistics) lan bat dong bo (GetFolderStatisticsAsync) - tach
+        /// rieng de tranh GetFolderStatisticsAsync goi nguoc lai GetFolderStatistics
+        /// (se chay dung bo tren threadpool nhung code lai trong ham "dong bo",
+        /// gay nham lan khi doc).
+        /// </summary>
+        private FolderStatistics GetFolderStatisticsCore(string folderPath, CancellationToken cancellationToken)
+        {
             if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
                 return new FolderStatistics();
 

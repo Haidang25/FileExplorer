@@ -211,62 +211,49 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Chay FolderService.GetFolderStatistics tren mot Task nen (Task.Run) de
-        /// tinh dong thoi tong dung luong VA so luong tep/thu muc con de quy cua
-        /// thu muc ma khong lam dong bang giao dien PropertiesForm, sau do cap
-        /// nhat lblSizeValue/lblContentsValue tren luong UI khi xong.
+        /// Goi FolderService.GetFolderStatisticsAsync (chay tren threadpool qua
+        /// Task.Run ben trong service, xem FolderService) de tinh dong thoi tong
+        /// dung luong VA so luong tep/thu muc con de quy cua thu muc ma khong lam
+        /// dong bang giao dien PropertiesForm, roi cap nhat lblSizeValue/
+        /// lblContentsValue sau khi await xong.
         /// </summary>
+        /// <remarks>
+        /// async void (khong phai async Task) vi day la mot event-like "fire and
+        /// forget" duoc goi tu LoadItem (khong phai handler su kien that su, nhung
+        /// cung khong co noi nao de await ket qua - LoadItem can tra ve ngay de
+        /// InitializeComponent/hien thi cac truong khac khong bi cho). Ngoai
+        /// OperationCanceledException (co the xay ra binh thuong khi huy) da duoc
+        /// bat rieng, khong de exception nao khac thoat ra khoi async void (se lam
+        /// crash ung dung ngay tai SynchronizationContext thay vi o mot Task co the
+        /// quan sat duoc).
+        /// </remarks>
         /// <param name="folderPath">Duong dan thu muc can tinh dung luong/so luong.</param>
-        private void StartFolderSizeCalculation(string folderPath)
+        private async void StartFolderSizeCalculation(string folderPath)
         {
             _sizeCalculationCts?.Cancel();
             var cts = new CancellationTokenSource();
             _sizeCalculationCts = cts;
 
-            Task.Run(() =>
+            FolderStatistics stats;
+            try
             {
-                FolderStatistics stats;
-                try
-                {
-                    stats = _folderService.GetFolderStatistics(folderPath, cts.Token);
-                }
-                catch (OperationCanceledException)
-                {
-                    return; // Form da dong hoac dang nap muc khac - khong can cap nhat UI nua.
-                }
+                stats = await _folderService.GetFolderStatisticsAsync(folderPath, cts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                return; // Form da dong hoac dang nap muc khac - khong can cap nhat UI nua.
+            }
 
-                if (cts.IsCancellationRequested)
-                    return;
+            // Sau await, code tiep tuc tren dung SynchronizationContext cua UI
+            // thread (WinForms tu dong dam bao dieu nay) nen co the gan thang vao
+            // Text ma khong can BeginInvoke/Invoke thu cong nhu truoc. Van kiem tra
+            // IsDisposed/token vi nguoi dung co the da dong form hoac mo lai
+            // PropertiesForm cho muc khac trong luc dang cho GetFolderStatisticsAsync.
+            if (IsDisposed || cts.IsCancellationRequested)
+                return;
 
-                // BeginInvoke thay vi Invoke: khong can cho Task nen bi block cho
-                // UI thread xu ly xong - phu hop vi ket qua chi de hien thi, khong
-                // co gi phai dong bo ngay lap tuc. IsHandleCreated/IsDisposed de
-                // tranh goi vao mot form da dong (VD nguoi dung dong qua nhanh).
-                if (!IsHandleCreated || IsDisposed)
-                    return;
-
-                try
-                {
-                    BeginInvoke(new Action(() =>
-                    {
-                        if (IsDisposed || cts.IsCancellationRequested)
-                            return;
-
-                        lblSizeValue.Text = $"{FormatHelper.FormatSize(stats.TotalBytes)} ({stats.TotalBytes:N0} byte)";
-                        lblContentsValue.Text = $"{stats.FileCount:N0} tệp, {stats.FolderCount:N0} thư mục con";
-                    }));
-                }
-                catch (ObjectDisposedException)
-                {
-                    // Form/handle bi dispose dung giua khoang kiem tra va goi
-                    // BeginInvoke (hiem, do dua giua cac luong) - bo qua an toan.
-                }
-                catch (InvalidOperationException)
-                {
-                    // Handle chua/khong con hop le (VD dong ngay sau khi mo) -
-                    // tuong tu, bo qua an toan vi khong con noi nao de hien ket qua.
-                }
-            });
+            lblSizeValue.Text = $"{FormatHelper.FormatSize(stats.TotalBytes)} ({stats.TotalBytes:N0} byte)";
+            lblContentsValue.Text = $"{stats.FileCount:N0} tệp, {stats.FolderCount:N0} thư mục con";
         }
 
         /// <summary>
