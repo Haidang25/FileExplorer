@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Text;
 using FileExplorerApp.Models;
 using FileExplorerApp.Properties;
 
@@ -176,13 +178,118 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Ghi mot dong log da co san (LogEntryModel) vao file CSV (xem "QUYET
-        /// DINH THIET KE" o remarks tren dau lop).
+        /// DINH THIET KE" o remarks tren dau lop) - tao file + ghi dong header
+        /// truoc neu day la lan ghi dau tien, sau do APPEND (khong ghi de) mot
+        /// dong moi ung voi entry.
         /// </summary>
+        /// <remarks>
+        /// Loi ghi log (VD: file dang bi khoa boi trinh xem log khac, o dia day,
+        /// mat quyen truy cap AppData) se duoc NUOT (khong nem ra ngoai) - ghi
+        /// log la mot tinh nang PHU TRO, khong duoc phep lam gian doan hoac lam
+        /// that bai thao tac file/thu muc CHINH cua nguoi dung (VD: Copy/Delete)
+        /// chi vi khong ghi duoc 1 dong log cho chinh thao tac do. Day la ly do
+        /// WriteLog tra ve void (khong phai OperationResult) - noi goi khong can
+        /// va khong nen re nhanh xu ly theo ket qua ghi log.
+        /// </remarks>
         /// <param name="entry">Dong log can ghi.</param>
         public void WriteLog(LogEntryModel entry)
         {
-            // TODO: append entry.ToString() (hoac dinh dang co cau truc hon) vao file log.
-            throw new NotImplementedException();
+            if (entry == null)
+                return;
+
+            try
+            {
+                string logFilePath = GetLogFilePath();
+
+                // Dam bao thu muc ton tai ngay ca khi constructor truoc do da
+                // gap loi (VD AppData tam thoi khong truy cap duoc luc khoi tao
+                // LogService nhung da phuc hoi) - CreateDirectory an toan khi thu
+                // muc da co san (xem ghi chu tai constructor).
+                string logDirectory = Path.GetDirectoryName(logFilePath);
+                if (!string.IsNullOrEmpty(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+
+                // Chi ghi dong header MOT LAN DUY NHAT, luc file log CHUA TON TAI
+                // (lan ghi dau tien sau khi cai dat, hoac sau khi ClearLogs da xoa
+                // han file) - kiem tra File.Exists TRUOC khi mo file de tranh ghi
+                // lai header o giua file moi lan ung dung khoi dong lai.
+                bool isNewFile = !File.Exists(logFilePath);
+
+                // Dung FileMode.Append (khong phai File.AppendAllText goi lai tu
+                // dau moi lan) ket hop 1 StreamWriter duy nhat cho ca header (neu
+                // can) va dong du lieu - dam bao ca 2 dong (neu co) duoc ghi
+                // atomically hon la 2 lan mo/dong file rieng biet, giam nguy co
+                // chi ghi duoc header ma dong du lieu bi loi giua chung.
+                using (var stream = new FileStream(logFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+                {
+                    if (isNewFile)
+                    {
+                        writer.WriteLine(LogFileHeader);
+                    }
+
+                    writer.WriteLine(FormatCsvRow(entry));
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Nuot loi - xem <remarks> tren: ghi log khong duoc phep lam gian
+                // doan thao tac chinh cua nguoi dung. Khong co noi "hien thi loi"
+                // phu hop o day (WriteLog thuong duoc goi ngam sau moi thao tac
+                // file, khong phai tu hanh dong truc tiep cua nguoi dung), nen
+                // don gian la bo qua dong log nay va tiep tuc.
+            }
+        }
+
+        /// <summary>
+        /// Chuyen mot LogEntryModel thanh MOT DONG CSV (chua bao gom ky tu xuong
+        /// dong cuoi dong) dung thu tu cot cua LogFileHeader. Xem "Cau truc dong
+        /// CSV" o remarks tren dau lop de biet dinh dang chinh xac tung cot.
+        /// </summary>
+        private static string FormatCsvRow(LogEntryModel entry)
+        {
+            string[] fields =
+            {
+                entry.Id.ToString(),
+                entry.Timestamp.ToString("o", CultureInfo.InvariantCulture),
+                entry.Operation.ToString(),
+                EscapeCsvField(entry.Source),
+                EscapeCsvField(entry.Destination),
+                entry.Result.ToString(),
+                EscapeCsvField(entry.Message),
+                entry.ItemCount.ToString(CultureInfo.InvariantCulture),
+                entry.Duration.HasValue ? entry.Duration.Value.TotalSeconds.ToString(CultureInfo.InvariantCulture) : string.Empty
+            };
+
+            return string.Join(",", fields);
+        }
+
+        /// <summary>
+        /// Escape MOT truong CSV theo RFC 4180: bao trong dau ngoac kep neu
+        /// truong chua dau phay, dau ngoac kep, hoac ky tu xuong dong (CR/LF) -
+        /// vi day la 3 ky tu co the lam sai lech cach doc lai file CSV neu khong
+        /// escape. Ben trong dau ngoac kep, moi dau ngoac kep phai duoc nhan doi
+        /// ("" thay vi ") de phan biet voi dau ngoac kep dong truong.
+        /// </summary>
+        /// <remarks>
+        /// Chi Source/Destination/Message thuc su can qua ham nay (xem "Cau truc
+        /// dong CSV" - cac cot con lai la Guid/enum/so nguyen/so thap phan, ve
+        /// ban chat khong the chua dau phay/ngoac kep/xuong dong nen khong can
+        /// escape, nhung goi ham nay cho chung van an toan/khong thay doi gi vi
+        /// khong khop dieu kien needsQuoting).
+        /// </remarks>
+        private static string EscapeCsvField(string field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return string.Empty;
+
+            bool needsQuoting = field.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0;
+            if (!needsQuoting)
+                return field;
+
+            return "\"" + field.Replace("\"", "\"\"") + "\"";
         }
 
         /// <summary>
