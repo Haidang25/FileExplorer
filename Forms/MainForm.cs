@@ -1022,6 +1022,17 @@ namespace FileExplorerApp.Forms
                             }
                         }
 
+                        // Ghi log tung muc rieng le (giong cach lam voi Delete o
+                        // mnuEditDelete_Click/lvwFiles_KeyDown) - moi muc trong batch
+                        // co the co OperationResult KHAC NHAU (VD: muc dau Success,
+                        // muc sau AccessDenied), gop chung se mat thong tin muc nao
+                        // that bai. _clipboardIsCut phan biet Move (Cut roi Paste)
+                        // voi Copy (Copy roi Paste) - ca thu muc lan file deu dung
+                        // chung logic nay vi FileOperationType.Move/Copy khong phan
+                        // biet file/thu muc (giong FileOperationType.Rename).
+                        FileOperationType pasteOperationType = _clipboardIsCut ? FileOperationType.Move : FileOperationType.Copy;
+                        _logService.LogOperation(pasteOperationType, sourcePath, destinationPath, result);
+
                         if (result == OperationResult.Cancelled)
                             break; // Nguoi dung bam Huy tren CopyProgressForm - dung ngay, khong hien thong bao ket qua cho muc dang do dang.
 
