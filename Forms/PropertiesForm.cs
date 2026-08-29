@@ -1,9 +1,12 @@
 using System;
 using System.Drawing;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
+using FileExplorerApp.Services;
 
 namespace FileExplorerApp.Forms
 {
@@ -37,6 +40,15 @@ namespace FileExplorerApp.Forms
         // dan nen khong that su can phan biet, nhung luu lai de ro rang y dinh).
         private bool _isDirectory;
 
+        // Dung de tinh tong dung luong thu muc de quy (GetFolderSize) tren mot
+        // Task rieng, tranh dong bang giao dien khi thu muc lon/nhieu file.
+        private readonly FolderService _folderService = new FolderService();
+
+        // Huy phep tinh dung luong dang chay (neu co) khi form dong truoc khi
+        // tinh xong - tranh Task chay ngam vo ich sau khi ket qua khong con noi
+        // nao de hien nua (form da Dispose).
+        private CancellationTokenSource _sizeCalculationCts;
+
         public PropertiesForm()
         {
             InitializeComponent();
@@ -46,6 +58,7 @@ namespace FileExplorerApp.Forms
             btnApply.Click += btnApply_Click;
             chkReadOnly.CheckedChanged += AttributeCheckBox_CheckedChanged;
             chkHidden.CheckedChanged += AttributeCheckBox_CheckedChanged;
+            this.FormClosed += (sender, e) => _sizeCalculationCts?.Cancel();
         }
 
         /// <summary>
@@ -112,22 +125,15 @@ namespace FileExplorerApp.Forms
             // (ParentPath null, VD "C:\"), hien lai chinh FullPath.
             lblLocationValue.Text = item.ParentPath ?? item.FullPath;
 
-            // "Kich thuoc": thu muc hien tai KHONG tinh tong dung luong de quy (se
-            // can duyet toan bo cay thu muc con, co the rat cham voi thu muc lon,
-            // giong ly do FolderService/FileService khong lam san) - hien "--" thay
-            // vi mot con so gay hieu lam la da tinh chinh xac. Voi file, dung dung
-            // FileItemModel.SizeFormatted (giong cot "Kich thuoc" tren lvwFiles) va
-            // hien them so byte chinh xac trong ngoac, giong Windows Explorer.
-            lblSizeValue.Text = item.IsDirectory
-                ? "--"
-                : $"{item.SizeFormatted} ({item.Size:N0} byte)";
-
             // AttributeReadFailed: FileItemModel khong doc duoc thuoc tinh that (VD
             // file he thong duoc Windows bao ve nhu pagefile.sys/hiberfil.sys) - cac
             // gia tri Size/ngay thang/Attributes luc nay chi la mac dinh an toan
             // (KHONG phai du lieu that), nen hien "Không đọc được" thay vi mot con so
             // 0/ngay 01/01/0001 gay hieu lam, va khoa hang checkbox thuoc tinh lai de
             // nguoi dung khong vo tinh "Ap dung" thuoc tinh sai (tat ca deu dang tat).
+            // Kiem tra truoc "Kich thuoc" vi neu chinh thu muc/file da khong doc
+            // duoc thuoc tinh co ban thi cung khong nen mat cong tinh tong dung
+            // luong de quy (rat co the se lai gap loi quyen truy cap tuong tu).
             if (item.AttributeReadFailed)
             {
                 const string unreadable = "Không đọc được";
@@ -144,6 +150,24 @@ namespace FileExplorerApp.Forms
             }
             else
             {
+                // "Kich thuoc": voi file, dung FileItemModel.SizeFormatted (giong
+                // cot "Kich thuoc" tren lvwFiles) va hien them so byte chinh xac
+                // trong ngoac, giong Windows Explorer. Voi thu muc, tinh TONG dung
+                // luong de quy qua toan bo file/thu muc con (FolderService.
+                // GetFolderSize) - hien "Đang tính..." truoc, sau do chay ngam
+                // tren Task rieng (xem StartFolderSizeCalculation) de khong dong
+                // bang giao dien voi thu muc lon/nhieu file, roi cap nhat lai
+                // lblSizeValue khi xong.
+                if (item.IsDirectory)
+                {
+                    lblSizeValue.Text = "Đang tính...";
+                    StartFolderSizeCalculation(item.FullPath);
+                }
+                else
+                {
+                    lblSizeValue.Text = $"{item.SizeFormatted} ({item.Size:N0} byte)";
+                }
+
                 lblCreatedValue.Text = FormatHelper.FormatDate(item.CreatedDate);
                 lblModifiedValue.Text = FormatHelper.FormatDate(item.ModifiedDate);
                 lblAccessedValue.Text = FormatHelper.FormatDate(item.LastAccessedDate);
@@ -180,6 +204,63 @@ namespace FileExplorerApp.Forms
             // tu kich hoat AttributeCheckBox_CheckedChanged va bat nham btnApply -
             // tat lai o day de Ap dung chi bat khi NGUOI DUNG thuc su doi thuoc tinh.
             btnApply.Enabled = false;
+        }
+
+        /// <summary>
+        /// Chay FolderService.GetFolderSize tren mot Task nen (Task.Run) de tinh
+        /// tong dung luong de quy cua thu muc ma khong lam dong bang giao dien
+        /// PropertiesForm, sau do cap nhat lblSizeValue tren luong UI khi xong.
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc can tinh tong dung luong.</param>
+        private void StartFolderSizeCalculation(string folderPath)
+        {
+            _sizeCalculationCts?.Cancel();
+            var cts = new CancellationTokenSource();
+            _sizeCalculationCts = cts;
+
+            Task.Run(() =>
+            {
+                long size;
+                try
+                {
+                    size = _folderService.GetFolderSize(folderPath, cts.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    return; // Form da dong hoac dang nap muc khac - khong can cap nhat UI nua.
+                }
+
+                if (cts.IsCancellationRequested)
+                    return;
+
+                // BeginInvoke thay vi Invoke: khong can cho Task nen bi block cho
+                // UI thread xu ly xong - phu hop vi ket qua chi de hien thi, khong
+                // co gi phai dong bo ngay lap tuc. IsHandleCreated/IsDisposed de
+                // tranh goi vao mot form da dong (VD nguoi dung dong qua nhanh).
+                if (!IsHandleCreated || IsDisposed)
+                    return;
+
+                try
+                {
+                    BeginInvoke(new Action(() =>
+                    {
+                        if (IsDisposed || cts.IsCancellationRequested)
+                            return;
+
+                        lblSizeValue.Text = $"{FormatHelper.FormatSize(size)} ({size:N0} byte)";
+                    }));
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Form/handle bi dispose dung giua khoang kiem tra va goi
+                    // BeginInvoke (hiem, do dua giua cac luong) - bo qua an toan.
+                }
+                catch (InvalidOperationException)
+                {
+                    // Handle chua/khong con hop le (VD dong ngay sau khi mo) -
+                    // tuong tu, bo qua an toan vi khong con noi nao de hien ket qua.
+                }
+            });
         }
 
         /// <summary>

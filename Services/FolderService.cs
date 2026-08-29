@@ -219,13 +219,90 @@ namespace FileExplorerApp.Services
         /// <summary>
         /// Tinh tong dung luong cua thu muc (de quy toan bo thu muc con).
         /// Co the mat thoi gian voi thu muc lon - nen chay bat dong bo (async)
-        /// hoac chay tren luong rieng khi tich hop vao UI.
+        /// hoac chay tren luong rieng khi tich hop vao UI (xem PropertiesForm).
         /// </summary>
         /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <returns>Tong so byte cua tat ca file tim duoc (de quy). Tra ve 0 neu folderPath khong ton tai.</returns>
         public long GetFolderSize(string folderPath)
         {
-            // TODO: de quy qua toan bo file/thu muc con va cong tong Length.
-            throw new NotImplementedException();
+            return GetFolderSize(folderPath, CancellationToken.None);
+        }
+
+        /// <summary>
+        /// Nhu <see cref="GetFolderSize(string)"/> nhung nhan them CancellationToken de
+        /// nguoi goi (VD: PropertiesForm chay tren Task.Run) co the huy giua chung neu
+        /// nguoi dung dong hop thoai truoc khi tinh xong - tranh lang phi duyet tiep
+        /// mot cay thu muc rat lon sau khi ket qua khong con can dung nua.
+        /// </summary>
+        /// <param name="folderPath">Duong dan thu muc.</param>
+        /// <param name="cancellationToken">Token de huy giua chung.</param>
+        public long GetFolderSize(string folderPath, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+                return 0;
+
+            long total = 0;
+
+            // Dung Stack tu quan ly thay vi de quy ham (recursion) that su - tranh
+            // StackOverflowException voi cay thu muc qua sau (hiem nhung co the xay
+            // ra voi duong dan long hoac thu muc loop qua ReparsePoint bi loi).
+            var pending = new Stack<string>();
+            pending.Push(folderPath);
+
+            while (pending.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                string currentDir = pending.Pop();
+
+                // Moi thu muc con duoc xu ly doc lap - neu MOT thu muc con bi tu
+                // choi quyen truy cap (UnauthorizedAccessException) hoac bi xoa/di
+                // chuyen giua luc dang duyet (IOException/DirectoryNotFoundException),
+                // chi bo qua nhanh do va tiep tuc voi cac thu muc con khac thay vi
+                // lam hong toan bo phep tinh tong.
+                string[] files;
+                try
+                {
+                    files = Directory.GetFiles(currentDir);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
+                {
+                    continue;
+                }
+
+                foreach (string file in files)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
+                    {
+                        total += new FileInfo(file).Length;
+                    }
+                    catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
+                    {
+                        // Bo qua file khong doc duoc kich thuoc (VD: file he thong
+                        // duoc bao ve, hoac bi xoa dung luc duyet toi) - giu nguyen
+                        // ket qua da cong duoc, khong lam gian doan ca phep tinh.
+                    }
+                }
+
+                string[] subDirs;
+                try
+                {
+                    subDirs = Directory.GetDirectories(currentDir);
+                }
+                catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
+                {
+                    continue;
+                }
+
+                foreach (string subDir in subDirs)
+                {
+                    pending.Push(subDir);
+                }
+            }
+
+            return total;
         }
 
         /// <summary>
