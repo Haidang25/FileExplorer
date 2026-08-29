@@ -1229,6 +1229,39 @@ namespace FileExplorerApp.Forms
             lvwFiles.Focus();
         }
 
+        private void mnuEditProperties_Click(object sender, EventArgs e)
+        {
+            ShowPropertiesForSelectedItem();
+        }
+
+        /// <summary>
+        /// Mo PropertiesForm cho DUY NHAT mot muc dang duoc chon tren lvwFiles -
+        /// giong Windows Explorer, hop thoai Properties chi ho tro xem/sua mot muc
+        /// tai mot thoi diem (chon nhieu muc thi menu Thuoc tinh se bi vo hieu hoa,
+        /// xem cmsListView_Opening). Duoc goi tu ca menu Chinh sua > Thuoc tinh,
+        /// menu chuot phai > Thuoc tinh, va phim tat Alt+Enter (lvwFiles_KeyDown).
+        /// </summary>
+        private void ShowPropertiesForSelectedItem()
+        {
+            if (lvwFiles.SelectedItems.Count != 1)
+                return;
+
+            string path = lvwFiles.SelectedItems[0].Tag as string;
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            using (var propertiesForm = new PropertiesForm(path))
+            {
+                propertiesForm.ShowDialog(this);
+            }
+
+            // Thuoc tinh ReadOnly/Hidden co the da bi doi trong hop thoai (nut Ap
+            // dung/OK) - lam moi lai danh sach de icon/mau chu (item bi an thuong
+            // hien mau khac, xem LoadListViewFiles) phan anh dung trang thai moi.
+            mnuViewRefresh_Click(sender: this, e: EventArgs.Empty);
+            SelectAndFocusListViewItem(path);
+        }
+
         #endregion
 
         #region Menu Xem (View)
@@ -1520,6 +1553,7 @@ namespace FileExplorerApp.Forms
             cmsPaste.Enabled = _clipboardPaths.Count > 0;
             cmsDelete.Enabled = hasSelection;
             cmsRename.Enabled = hasSingleSelection;
+            cmsProperties.Enabled = hasSingleSelection;
         }
 
         private void mnuViewShowHidden_Click(object sender, EventArgs e)
