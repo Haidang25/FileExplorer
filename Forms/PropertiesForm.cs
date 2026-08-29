@@ -81,6 +81,8 @@ namespace FileExplorerApp.Forms
 
             chkReadOnly.Checked = item.IsReadOnly;
             chkHidden.Checked = item.IsHidden;
+            chkSystem.Checked = item.IsSystem;
+            chkArchive.Checked = item.IsArchiveFlag;
 
             // picIcon: dung icon that cua FILE tu he thong (giong bieu tuong
             // Windows Explorer hien trong hop thoai Properties that), khong dung

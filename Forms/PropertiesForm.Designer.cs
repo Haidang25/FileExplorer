@@ -39,6 +39,8 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.GroupBox grpAttributes;
         private System.Windows.Forms.CheckBox chkReadOnly;
         private System.Windows.Forms.CheckBox chkHidden;
+        private System.Windows.Forms.CheckBox chkSystem;
+        private System.Windows.Forms.CheckBox chkArchive;
 
         private System.Windows.Forms.Button btnOK;
         private System.Windows.Forms.Button btnCancel;
@@ -84,6 +86,8 @@ namespace FileExplorerApp.Forms
             this.grpAttributes = new System.Windows.Forms.GroupBox();
             this.chkReadOnly = new System.Windows.Forms.CheckBox();
             this.chkHidden = new System.Windows.Forms.CheckBox();
+            this.chkSystem = new System.Windows.Forms.CheckBox();
+            this.chkArchive = new System.Windows.Forms.CheckBox();
             this.btnOK = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
             this.btnApply = new System.Windows.Forms.Button();
@@ -243,9 +247,11 @@ namespace FileExplorerApp.Forms
             //
             this.grpAttributes.Controls.Add(this.chkReadOnly);
             this.grpAttributes.Controls.Add(this.chkHidden);
+            this.grpAttributes.Controls.Add(this.chkSystem);
+            this.grpAttributes.Controls.Add(this.chkArchive);
             this.grpAttributes.Location = new System.Drawing.Point(16, 244);
             this.grpAttributes.Name = "grpAttributes";
-            this.grpAttributes.Size = new System.Drawing.Size(380, 88);
+            this.grpAttributes.Size = new System.Drawing.Size(380, 112);
             this.grpAttributes.TabIndex = 16;
             this.grpAttributes.TabStop = false;
             this.grpAttributes.Text = "Thuộc tính";
@@ -254,21 +260,37 @@ namespace FileExplorerApp.Forms
             //
             this.chkReadOnly.Location = new System.Drawing.Point(16, 28);
             this.chkReadOnly.Name = "chkReadOnly";
-            this.chkReadOnly.Size = new System.Drawing.Size(340, 24);
+            this.chkReadOnly.Size = new System.Drawing.Size(170, 24);
             this.chkReadOnly.TabIndex = 0;
             this.chkReadOnly.Text = "Chỉ đọc (Read-only)";
             //
             // chkHidden
             //
-            this.chkHidden.Location = new System.Drawing.Point(16, 52);
+            this.chkHidden.Location = new System.Drawing.Point(192, 28);
             this.chkHidden.Name = "chkHidden";
-            this.chkHidden.Size = new System.Drawing.Size(340, 24);
+            this.chkHidden.Size = new System.Drawing.Size(170, 24);
             this.chkHidden.TabIndex = 1;
             this.chkHidden.Text = "Ẩn (Hidden)";
             //
+            // chkSystem
+            //
+            this.chkSystem.Location = new System.Drawing.Point(16, 56);
+            this.chkSystem.Name = "chkSystem";
+            this.chkSystem.Size = new System.Drawing.Size(170, 24);
+            this.chkSystem.TabIndex = 2;
+            this.chkSystem.Text = "Hệ thống (System)";
+            //
+            // chkArchive
+            //
+            this.chkArchive.Location = new System.Drawing.Point(192, 56);
+            this.chkArchive.Name = "chkArchive";
+            this.chkArchive.Size = new System.Drawing.Size(170, 24);
+            this.chkArchive.TabIndex = 3;
+            this.chkArchive.Text = "Lưu trữ (Archive)";
+            //
             // btnOK
             //
-            this.btnOK.Location = new System.Drawing.Point(140, 344);
+            this.btnOK.Location = new System.Drawing.Point(140, 368);
             this.btnOK.Name = "btnOK";
             this.btnOK.Size = new System.Drawing.Size(84, 32);
             this.btnOK.TabIndex = 17;
@@ -276,7 +298,7 @@ namespace FileExplorerApp.Forms
             //
             // btnCancel
             //
-            this.btnCancel.Location = new System.Drawing.Point(228, 344);
+            this.btnCancel.Location = new System.Drawing.Point(228, 368);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(84, 32);
             this.btnCancel.TabIndex = 18;
@@ -284,7 +306,7 @@ namespace FileExplorerApp.Forms
             //
             // btnApply
             //
-            this.btnApply.Location = new System.Drawing.Point(316, 344);
+            this.btnApply.Location = new System.Drawing.Point(316, 368);
             this.btnApply.Name = "btnApply";
             this.btnApply.Size = new System.Drawing.Size(80, 32);
             this.btnApply.TabIndex = 19;
@@ -296,7 +318,7 @@ namespace FileExplorerApp.Forms
             this.CancelButton = this.btnCancel;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
-            this.ClientSize = new System.Drawing.Size(412, 392);
+            this.ClientSize = new System.Drawing.Size(412, 416);
             this.Controls.Add(this.picIcon);
             this.Controls.Add(this.lblName);
             this.Controls.Add(this.pnlSeparatorTop);

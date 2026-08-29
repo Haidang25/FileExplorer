@@ -50,6 +50,15 @@ namespace FileExplorerApp.Models
         /// <summary>True neu muc la file/thu muc he thong (System).</summary>
         public bool IsSystem => Attributes.HasFlag(FileAttributes.System);
 
+        /// <summary>
+        /// True neu muc dang bat co Archive - co nay duoc he dieu hanh tu dong BAT
+        /// moi khi file duoc tao/sua doi, dung boi cac phan mem sao luu (backup) de
+        /// biet muc nao thay doi tu lan sao luu truoc; KHONG lien quan den dinh
+        /// dang nen (.zip/.rar). Da co san trong FileAttributes tu Windows nen chi
+        /// can doc lai, khong can tinh toan them.
+        /// </summary>
+        public bool IsArchiveFlag => Attributes.HasFlag(FileAttributes.Archive);
+
         /// <summary>True neu muc la duong dan tat (Reparse point / shortcut thu muc, symlink...).</summary>
         public bool IsSystemLink => Attributes.HasFlag(FileAttributes.ReparsePoint);
 
