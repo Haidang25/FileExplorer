@@ -164,6 +164,56 @@ namespace FileExplorerApp.Forms
             _fileMonitorService.FileDeleted += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.FileChanged += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.FileRenamed += (sender, e) => OnExternalChangeDetected();
+            _fileMonitorService.MonitorError += FileMonitorService_MonitorError;
+        }
+
+        /// <summary>
+        /// Xu ly su kien MonitorError cua FileMonitorService - CHI phan ung dac
+        /// biet voi InternalBufferOverflowException (tran bo dem noi bo cua
+        /// FileSystemWatcher), cac loai loi khac (VD: o dia bi rut, mat quyen
+        /// truy cap thu muc dang theo doi) van duoc BO QUA co y giong truoc day
+        /// (khong hien MessageBox gay kho chiu, va ung dung khong the tu sua
+        /// nhung loi nen tang do tu hop thoai).
+        /// </summary>
+        /// <remarks>
+        /// TRAN BO DEM la truong hop RIENG BIET, quan trong hon han cac loi
+        /// khac: no xay ra khi qua NHIEU thay doi xay ra don don trong thoi
+        /// gian ngan (VD: giai nen/sao chep hang chuc nghin file cung luc vao
+        /// thu muc dang theo doi) vuot qua kich thuoc bo dem noi bo cua
+        /// FileSystemWatcher - luc nay FileSystemWatcher SE MAT (khong raise)
+        /// mot so su kien Created/Deleted/Changed/Renamed xay ra trong luc
+        /// tran, ma KHONG CO CACH NAO biet chinh xac da mat su kien nao. Vi
+        /// vay, KHONG THE tin tuong debounce+LoadListViewFiles thong thuong
+        /// (dua vao cac su kien RIENG LE) nua trong tinh huong nay - phai NAP
+        /// LAI TOAN BO danh sach ngay (khong qua _watcherDebounceTimer, vi ban
+        /// chat day KHONG PHAI "nhieu su kien lien tiep can gop lai" ma la
+        /// "khong con biet chinh xac trang thai thuc te, phai doc lai tu dau
+        /// de dam bao dung") de dam bao lvwFiles khop lai voi thuc te tren dia,
+        /// du co the mat mot vai giay hien thi sai truoc do.
+        /// </remarks>
+        private void FileMonitorService_MonitorError(object sender, ErrorEventArgs e)
+        {
+            if (!(e.GetException() is InternalBufferOverflowException))
+                return;
+
+            if (!IsHandleCreated || IsDisposed)
+                return;
+
+            try
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    // Dung timer debounce dang cho (neu co) - khong can gop chung
+                    // voi bat ky su kien le te nao khac, nap lai toan bo NGAY.
+                    _watcherDebounceTimer.Stop();
+                    LoadListViewFiles();
+                }));
+            }
+            catch (InvalidOperationException)
+            {
+                // Form dang trong qua trinh dong - xem ly do tuong tu tai
+                // OnExternalChangeDetected.
+            }
         }
 
         /// <summary>
