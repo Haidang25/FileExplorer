@@ -52,11 +52,37 @@ namespace FileExplorerApp.Forms
         /// Khoi tao PropertiesForm va nap ngay thong tin cua mot file/thu muc cu the.
         /// </summary>
         /// <param name="path">Duong dan day du toi file hoac thu muc can xem thuoc tinh.</param>
-        /// <exception cref="FileNotFoundException">path khong ton tai (ca file lan thu muc) - nem thang tu FileItemModel.FromPath.</exception>
+        /// <remarks>
+        /// FileItemModel.FromPath tu no da tu bat loi doc thuoc tinh CHI TIET (Size/
+        /// ngay thang/Attributes) cua tung muc - xem FileItemModel.FromFileInfo. O
+        /// day chi con can bat them cac loi hiem hon xay ra ngay khi XAC DINH muc
+        /// (FileNotFoundException neu duong dan khong con ton tai - VD bi xoa giua
+        /// luc chon va mo Properties - hoac UnauthorizedAccessException/IOException
+        /// neu chinh Directory.Exists/File.Exists/khoi tao FileInfo that bai voi
+        /// duong dan he thong dac biet), de PropertiesForm khong bao gio crash ca
+        /// ung dung chi vi mo thuoc tinh mot file he thong.
+        /// </remarks>
         public PropertiesForm(string path) : this()
         {
-            FileItemModel item = FileItemModel.FromPath(path);
-            LoadItem(item);
+            try
+            {
+                FileItemModel item = FileItemModel.FromPath(path);
+                LoadItem(item);
+            }
+            catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException
+                || ex is IOException || ex is System.Security.SecurityException)
+            {
+                MessageBox.Show(
+                    this,
+                    $"Không thể đọc thuộc tính của mục này:\n{ex.Message}",
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+
+                this.Text = "Thuộc tính";
+                grpAttributes.Enabled = false;
+                btnApply.Enabled = false;
+            }
         }
 
         /// <summary>
@@ -96,14 +122,37 @@ namespace FileExplorerApp.Forms
                 ? "--"
                 : $"{item.SizeFormatted} ({item.Size:N0} byte)";
 
-            lblCreatedValue.Text = FormatHelper.FormatDate(item.CreatedDate);
-            lblModifiedValue.Text = FormatHelper.FormatDate(item.ModifiedDate);
-            lblAccessedValue.Text = FormatHelper.FormatDate(item.LastAccessedDate);
+            // AttributeReadFailed: FileItemModel khong doc duoc thuoc tinh that (VD
+            // file he thong duoc Windows bao ve nhu pagefile.sys/hiberfil.sys) - cac
+            // gia tri Size/ngay thang/Attributes luc nay chi la mac dinh an toan
+            // (KHONG phai du lieu that), nen hien "Không đọc được" thay vi mot con so
+            // 0/ngay 01/01/0001 gay hieu lam, va khoa hang checkbox thuoc tinh lai de
+            // nguoi dung khong vo tinh "Ap dung" thuoc tinh sai (tat ca deu dang tat).
+            if (item.AttributeReadFailed)
+            {
+                const string unreadable = "Không đọc được";
+                lblSizeValue.Text = unreadable;
+                lblCreatedValue.Text = unreadable;
+                lblModifiedValue.Text = unreadable;
+                lblAccessedValue.Text = unreadable;
 
-            chkReadOnly.Checked = item.IsReadOnly;
-            chkHidden.Checked = item.IsHidden;
-            chkSystem.Checked = item.IsSystem;
-            chkArchive.Checked = item.IsArchiveFlag;
+                chkReadOnly.Checked = false;
+                chkHidden.Checked = false;
+                chkSystem.Checked = false;
+                chkArchive.Checked = false;
+                grpAttributes.Enabled = false;
+            }
+            else
+            {
+                lblCreatedValue.Text = FormatHelper.FormatDate(item.CreatedDate);
+                lblModifiedValue.Text = FormatHelper.FormatDate(item.ModifiedDate);
+                lblAccessedValue.Text = FormatHelper.FormatDate(item.LastAccessedDate);
+
+                chkReadOnly.Checked = item.IsReadOnly;
+                chkHidden.Checked = item.IsHidden;
+                chkSystem.Checked = item.IsSystem;
+                chkArchive.Checked = item.IsArchiveFlag;
+            }
 
             // picIcon: dung icon that cua FILE tu he thong (giong bieu tuong
             // Windows Explorer hien trong hop thoai Properties that), khong dung

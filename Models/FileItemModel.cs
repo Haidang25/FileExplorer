@@ -63,6 +63,16 @@ namespace FileExplorerApp.Models
         public bool IsSystemLink => Attributes.HasFlag(FileAttributes.ReparsePoint);
 
         /// <summary>
+        /// True neu khong doc duoc thuoc tinh that cua muc nay tu he thong (VD: file
+        /// he thong duoc Windows bao ve nhu pagefile.sys/hiberfil.sys, hoac muc nam
+        /// trong thu muc bi chan quyen truy cap) - khi do Size/CreatedDate/
+        /// ModifiedDate/LastAccessedDate/Attributes chi la gia tri mac dinh an toan,
+        /// KHONG phai du lieu that, va giao dien nen bao cho nguoi dung biet thay vi
+        /// hien nhu binh thuong.
+        /// </summary>
+        public bool AttributeReadFailed { get; set; }
+
+        /// <summary>
         /// Kich thuoc da dinh dang de hien thi (VD: "1.25 MB").
         /// Voi thu muc mac dinh tra ve rong tru khi Size duoc gan (VD: tinh tong dung luong).
         /// </summary>
@@ -75,45 +85,84 @@ namespace FileExplorerApp.Models
         /// <summary>
         /// Tao FileItemModel tu mot FileInfo (file cu the tren dia).
         /// </summary>
+        /// <remarks>
+        /// Voi file he thong duoc bao ve (VD: pagefile.sys, hiberfil.sys, hoac file
+        /// nam trong thu muc bi chan quyen) cac thuoc tinh nhu Attributes/Length/
+        /// CreationTime co the nem UnauthorizedAccessException hoac IOException
+        /// ngay khi doc (khong phai luc mo file, ma la luc he dieu hanh tu choi tra
+        /// thong tin). Bat loi tai day va tra ve gia tri an toan (0, DateTime.MinValue,
+        /// FileAttributes.Normal) thay vi de loi lam sap ung dung - nguoi dung van
+        /// thay duoc ten/duong dan, chi thieu vai thong tin chi tiet (AttributeReadFailed = true).
+        /// </remarks>
         public static FileItemModel FromFileInfo(FileInfo fileInfo)
         {
             if (fileInfo == null) throw new ArgumentNullException(nameof(fileInfo));
 
-            return new FileItemModel
+            var item = new FileItemModel
             {
                 Name = fileInfo.Name,
                 FullPath = fileInfo.FullName,
                 ParentPath = fileInfo.DirectoryName,
                 Extension = fileInfo.Extension,
-                IsDirectory = false,
-                Size = fileInfo.Exists ? fileInfo.Length : 0,
-                CreatedDate = fileInfo.CreationTime,
-                ModifiedDate = fileInfo.LastWriteTime,
-                LastAccessedDate = fileInfo.LastAccessTime,
-                Attributes = fileInfo.Attributes
+                IsDirectory = false
             };
+
+            try
+            {
+                item.Size = fileInfo.Exists ? fileInfo.Length : 0;
+                item.CreatedDate = fileInfo.CreationTime;
+                item.ModifiedDate = fileInfo.LastWriteTime;
+                item.LastAccessedDate = fileInfo.LastAccessTime;
+                item.Attributes = fileInfo.Attributes;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
+            {
+                item.Size = 0;
+                item.CreatedDate = DateTime.MinValue;
+                item.ModifiedDate = DateTime.MinValue;
+                item.LastAccessedDate = DateTime.MinValue;
+                item.Attributes = FileAttributes.Normal;
+                item.AttributeReadFailed = true;
+            }
+
+            return item;
         }
 
         /// <summary>
         /// Tao FileItemModel tu mot DirectoryInfo (thu muc cu the tren dia).
         /// </summary>
+        /// <remarks>Xem ghi chu tai FromFileInfo - ap dung tuong tu cho thu muc he thong bi chan quyen.</remarks>
         public static FileItemModel FromDirectoryInfo(DirectoryInfo directoryInfo)
         {
             if (directoryInfo == null) throw new ArgumentNullException(nameof(directoryInfo));
 
-            return new FileItemModel
+            var item = new FileItemModel
             {
                 Name = directoryInfo.Name,
                 FullPath = directoryInfo.FullName,
                 ParentPath = directoryInfo.Parent?.FullName,
                 Extension = string.Empty,
                 IsDirectory = true,
-                Size = 0,
-                CreatedDate = directoryInfo.CreationTime,
-                ModifiedDate = directoryInfo.LastWriteTime,
-                LastAccessedDate = directoryInfo.LastAccessTime,
-                Attributes = directoryInfo.Attributes
+                Size = 0
             };
+
+            try
+            {
+                item.CreatedDate = directoryInfo.CreationTime;
+                item.ModifiedDate = directoryInfo.LastWriteTime;
+                item.LastAccessedDate = directoryInfo.LastAccessTime;
+                item.Attributes = directoryInfo.Attributes;
+            }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is IOException || ex is System.Security.SecurityException)
+            {
+                item.CreatedDate = DateTime.MinValue;
+                item.ModifiedDate = DateTime.MinValue;
+                item.LastAccessedDate = DateTime.MinValue;
+                item.Attributes = FileAttributes.Normal;
+                item.AttributeReadFailed = true;
+            }
+
+            return item;
         }
 
         /// <summary>
