@@ -1786,7 +1786,10 @@ namespace FileExplorerApp.Forms
 
         private void mnuToolsLogs_Click(object sender, EventArgs e)
         {
-            // TODO: mo man hinh xem lich su thao tac, dung LogService.GetLogs.
+            using (var logForm = new LogForm())
+            {
+                logForm.ShowDialog(this);
+            }
         }
 
         private void mnuToolsSettings_Click(object sender, EventArgs e)

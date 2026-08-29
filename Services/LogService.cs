@@ -357,22 +357,86 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Lay toan bo danh sach log hien co, sap xep theo thoi gian gan nhat truoc.
+        /// Doc TOAN BO file (khong khoa WriteLock khi doc - xem ghi chu "FileShare.Read"
+        /// tai WriteLog: doc dong thoi voi ghi la an toan vi FileStream mo o che do
+        /// FileShare.Read cho phep mot luong khac doc trong luc ghi).
         /// </summary>
+        /// <remarks>
+        /// Neu file log khong ton tai (chua ghi lan nao) hoac khong doc duoc (VD:
+        /// dang bi khoa boi chuong trinh khac, mat quyen truy cap), tra ve danh
+        /// sach RONG thay vi nem loi - man hinh xem log (LogForm) chi nen hien
+        /// "chua co lich su" thay vi crash/bao loi kho hieu cho nguoi dung.
+        /// Dong nao khong parse duoc (VD: file log bi hong/sua tay sai dinh dang)
+        /// se duoc BO QUA (khong lam hong ca danh sach) - xem ParseCsvLine/TryParseLogLine.
+        /// </remarks>
         public List<LogEntryModel> GetLogs()
         {
-            // TODO: doc file log, parse tung dong thanh LogEntryModel, sap xep theo Timestamp giam dan.
-            throw new NotImplementedException();
+            var result = new List<LogEntryModel>();
+            string logFilePath = GetLogFilePath();
+
+            if (!File.Exists(logFilePath))
+                return result;
+
+            try
+            {
+                using (var stream = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    string line = reader.ReadLine();
+                    bool isFirstLine = true;
+
+                    while (line != null)
+                    {
+                        // Dong dau tien la header ten cot (LogFileHeader) - bo qua,
+                        // khong phai du lieu. So sanh chinh xac header thay vi luon
+                        // bo qua "dong dau tien bat ky" de neu file bi hong/thieu
+                        // header thi van co co hoi parse dong dau nhu du lieu binh
+                        // thuong thay vi mat luon 1 dong log hop le.
+                        if (isFirstLine)
+                        {
+                            isFirstLine = false;
+                            if (string.Equals(line, LogFileHeader, StringComparison.Ordinal))
+                            {
+                                line = reader.ReadLine();
+                                continue;
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            LogEntryModel entry = TryParseLogLine(line);
+                            if (entry != null)
+                            {
+                                result.Add(entry);
+                            }
+                        }
+
+                        line = reader.ReadLine();
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Khong doc duoc file log (VD: dang bi khoa boi chuong trinh khac) -
+                // tra ve nhung gi da doc duoc (co the la danh sach rong) thay vi nem
+                // loi, giu dung nguyen tac "log la tinh nang phu tro, khong lam gian
+                // doan/that bai man hinh chinh" ap dung tuong tu nhu WriteLog.
+            }
+
+            // Gan nhat truoc - thuan tien nhat cho nguoi dung xem lich su (thao tac
+            // vua roi luon nam tren cung danh sach, khong can cuon xuong cuoi).
+            result.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
+            return result;
         }
 
         /// <summary>
-        /// Lay danh sach log trong mot khoang thoi gian.
+        /// Lay danh sach log trong mot khoang thoi gian (ca hai dau bao gom).
         /// </summary>
         /// <param name="fromDate">Tu ngay.</param>
         /// <param name="toDate">Den ngay.</param>
         public List<LogEntryModel> GetLogs(DateTime fromDate, DateTime toDate)
         {
-            // TODO: goi GetLogs() roi loc theo Timestamp trong khoang [fromDate, toDate].
-            throw new NotImplementedException();
+            return GetLogs().FindAll(entry => entry.Timestamp >= fromDate && entry.Timestamp <= toDate);
         }
 
         /// <summary>
@@ -381,8 +445,7 @@ namespace FileExplorerApp.Services
         /// <param name="result">Ket qua can loc.</param>
         public List<LogEntryModel> GetLogsByResult(OperationResult result)
         {
-            // TODO: goi GetLogs() roi loc theo Result == result.
-            throw new NotImplementedException();
+            return GetLogs().FindAll(entry => entry.Result == result);
         }
 
         /// <summary>
@@ -391,18 +454,146 @@ namespace FileExplorerApp.Services
         /// <param name="operation">Loai thao tac can loc.</param>
         public List<LogEntryModel> GetLogsByOperation(FileOperationType operation)
         {
-            // TODO: goi GetLogs() roi loc theo Operation == operation.
-            throw new NotImplementedException();
+            return GetLogs().FindAll(entry => entry.Operation == operation);
         }
 
         /// <summary>
-        /// Xoa toan bo lich su log hien co.
+        /// Xoa toan bo lich su log hien co (xoa han file log - lan WriteLog tiep
+        /// theo se tu tao lai file moi kem dong header, xem WriteLog).
         /// </summary>
+        /// <remarks>
+        /// Dung "lock (WriteLock)" giong WriteLog de tranh xoa file dung luc mot
+        /// thao tac khac dang ghi log (VD: nguoi dung bam "Xoa lich su" tren
+        /// LogForm dung luc MainForm dang ghi 1 dong log khac o luong background) -
+        /// neu khong khoa, co the xay ra ghi vao file vua bi xoa giua chung, gay
+        /// loi kho luong hoac mot file log moi voi noi dung khong nhu mong doi.
+        /// </remarks>
         public OperationResult ClearLogs()
         {
-            // TODO: xoa/ghi rong file log. Bat try/catch cho truong hop file dang bi
-            // khoa (VD: dang duoc mo boi trinh xem log khac).
-            throw new NotImplementedException();
+            try
+            {
+                lock (WriteLock)
+                {
+                    string logFilePath = GetLogFilePath();
+                    if (File.Exists(logFilePath))
+                    {
+                        File.Delete(logFilePath);
+                    }
+                }
+                return OperationResult.Success;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // File dang bi khoa (VD: dang duoc mo boi Excel/trinh xem log
+                // khac) hoac mat quyen truy cap - bao that bai de noi goi (LogForm)
+                // hien thong bao loi cu the cho nguoi dung, thay vi nuot am tham
+                // nhu WriteLog (day la thao tac NGUOI DUNG CHU DONG bam, ho can
+                // biet ket qua, khac voi ghi log ngam sau moi thao tac khac).
+                return OperationResult.Failed;
+            }
+        }
+
+        /// <summary>
+        /// Parse MOT dong CSV du lieu (khong phai dong header) thanh LogEntryModel.
+        /// Tra ve null (thay vi nem loi) neu dong khong dung dinh dang - de GetLogs
+        /// co the bo qua dong hong ma khong lam mat toan bo danh sach.
+        /// </summary>
+        private static LogEntryModel TryParseLogLine(string line)
+        {
+            try
+            {
+                string[] fields = ParseCsvLine(line);
+
+                // Phai co dung 9 cot theo LogFileHeader - neu khac (VD: dong bi cat
+                // ngang do ghi do do, hoac file bi sua tay sai) thi coi la khong
+                // hop le, khong co gang doan mo thieu.
+                if (fields.Length != 9)
+                    return null;
+
+                var entry = new LogEntryModel
+                {
+                    Id = Guid.Parse(fields[0]),
+                    Timestamp = DateTime.Parse(fields[1], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    Operation = (FileOperationType)Enum.Parse(typeof(FileOperationType), fields[2]),
+                    Source = fields[3],
+                    Destination = fields[4],
+                    Result = (OperationResult)Enum.Parse(typeof(OperationResult), fields[5]),
+                    Message = fields[6],
+                    ItemCount = int.Parse(fields[7], CultureInfo.InvariantCulture),
+                    Duration = string.IsNullOrEmpty(fields[8])
+                        ? (TimeSpan?)null
+                        : TimeSpan.FromSeconds(double.Parse(fields[8], CultureInfo.InvariantCulture))
+                };
+                return entry;
+            }
+            catch (Exception ex) when (ex is FormatException || ex is ArgumentException || ex is OverflowException)
+            {
+                // Dong khong dung dinh dang mong doi (VD: enum khong ton tai, so
+                // khong parse duoc, thieu/thua cot) - bo qua dong nay, GetLogs se
+                // tiep tuc voi cac dong con lai.
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Tach MOT dong CSV thanh mang cac truong, XU LY dung dau ngoac kep bao
+        /// quanh truong theo RFC 4180 (nguoc lai voi EscapeCsvField) - KHONG the
+        /// dung don gian line.Split(',') vi truong Message co the tu chua dau
+        /// phay/xuong dong da duoc bao trong dau ngoac kep luc ghi (xem
+        /// EscapeCsvField/FormatCsvRow).
+        /// </summary>
+        private static string[] ParseCsvLine(string line)
+        {
+            var fields = new List<string>();
+            var current = new StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+
+                if (inQuotes)
+                {
+                    if (c == '"')
+                    {
+                        // Hai dau ngoac kep lien tiep ben trong vung quote la MOT
+                        // dau ngoac kep thuc su trong du lieu (da duoc nhan doi
+                        // luc ghi - xem EscapeCsvField), khong phai dau dong quote.
+                        if (i + 1 < line.Length && line[i + 1] == '"')
+                        {
+                            current.Append('"');
+                            i++;
+                        }
+                        else
+                        {
+                            inQuotes = false;
+                        }
+                    }
+                    else
+                    {
+                        current.Append(c);
+                    }
+                }
+                else
+                {
+                    if (c == '"')
+                    {
+                        inQuotes = true;
+                    }
+                    else if (c == ',')
+                    {
+                        fields.Add(current.ToString());
+                        current.Clear();
+                    }
+                    else
+                    {
+                        current.Append(c);
+                    }
+                }
+            }
+
+            fields.Add(current.ToString());
+            return fields.ToArray();
         }
 
         /// <summary>
