@@ -33,6 +33,7 @@ namespace FileExplorerApp.Forms
         private readonly FolderService _folderService = new FolderService();
         private readonly FileService _fileService = new FileService();
         private readonly RecycleBinService _recycleBinService = new RecycleBinService();
+        private readonly LogService _logService = new LogService();
 
         // TODO: thay bang duong dan dang duoc chon tren TreeView/ListView khi da co
         // giao dien dieu huong thuc te. Tam thoi mac dinh la Desktop de New Folder/New File
@@ -616,8 +617,16 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.
 
+            string newFolderPath = Path.Combine(_currentPath, name);
             OperationResult result = _folderService.CreateFolder(_currentPath, name);
             ShowOperationResultMessage(result, $"tao thu muc \"{name}\"");
+
+            // Ghi log CA KHI thanh cong lan that bai (VD: trung ten, khong du
+            // quyen) - lich su thao tac nen phan anh nguoi dung DA THU lam gi,
+            // khong chi nhung lan thanh cong, giup tra soat sau nay (VD: "tai sao
+            // thu muc X khong duoc tao luc do") dung mot lan duy nhat qua LogOperation
+            // thay vi phai rai rac goi WriteLog o nhieu nhanh if/else khac nhau.
+            _logService.LogOperation(FileOperationType.CreateFolder, newFolderPath, null, result);
 
             if (result == OperationResult.Success)
             {
@@ -625,7 +634,7 @@ namespace FileExplorerApp.Forms
 
                 // Chon san thu muc vua tao tren lvwFiles, giong hanh vi Windows Explorer
                 // (tao xong la thay ngay va co the doi ten/mo luon khong can tu tim).
-                SelectAndFocusListViewItem(Path.Combine(_currentPath, name));
+                SelectAndFocusListViewItem(newFolderPath);
             }
         }
 
@@ -687,8 +696,13 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.
 
+            string newFilePath = Path.Combine(_currentPath, name);
             OperationResult result = _fileService.CreateFile(_currentPath, name);
             ShowOperationResultMessage(result, $"tao file \"{name}\"");
+
+            // Ghi log ca khi thanh cong lan that bai - xem ghi chu tuong tu tai
+            // mnuFileNewFolder_Click.
+            _logService.LogOperation(FileOperationType.CreateFile, newFilePath, null, result);
 
             if (result == OperationResult.Success)
             {

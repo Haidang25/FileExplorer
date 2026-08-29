@@ -197,6 +197,15 @@ namespace FileExplorerApp.Services
             if (entry == null)
                 return;
 
+            // Ton trong tuy chon "Bat/tat ghi nhat ky thao tac" cua nguoi dung
+            // (Settings.Default.LogEnabled, da co san va duoc SettingsForm cho
+            // sua qua chkEnableLog) - kiem tra O DAY (diem vao duy nhat cua moi
+            // luot ghi log, ca WriteLog truc tiep lan qua LogOperation) de nguoi
+            // goi (VD: MainForm) khong can tu kiem tra setting nay truoc moi lan
+            // goi LogOperation/WriteLog.
+            if (!Settings.Default.LogEnabled)
+                return;
+
             try
             {
                 string logFilePath = GetLogFilePath();
@@ -308,9 +317,8 @@ namespace FileExplorerApp.Services
         /// <param name="duration">Thoi gian thuc hien (tuy chon - xem LogEntryModel.Duration).</param>
         public void LogOperation(FileOperationType operation, string source, string destination, OperationResult result, string message = null, int itemCount = 1, TimeSpan? duration = null)
         {
-            // TODO: tao new LogEntryModel(operation, source, destination, result, message, itemCount, duration)
-            // roi goi WriteLog(entry).
-            throw new NotImplementedException();
+            var entry = new LogEntryModel(operation, source, destination, result, message, itemCount, duration);
+            WriteLog(entry);
         }
 
         /// <summary>
