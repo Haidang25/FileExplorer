@@ -10,13 +10,23 @@ namespace FileExplorerApp.Services
     /// khai bao (signature) + TODO, can trien khai logic thuc te ben trong.
     /// </summary>
     /// <remarks>
+    /// Cau truc LogEntryModel da duoc thiet ke lai de dung chung FileOperationType/
+    /// OperationResult voi phan con lai cua ung dung (xem ghi chu chi tiet tai
+    /// LogEntryModel) - LogService chi con can trien khai phan luu tru/doc lai.
+    ///
     /// Goi y trien khai:
-    /// - Luu log ra file text/CSV trong thu muc rieng (VD: %AppData%\SFileManager\logs\)
-    ///   de khong lam ban thu muc nguoi dung dang duyet.
-    /// - Moi dong ghi bang LogEntryModel.ToString(), hoac serialize sang JSON/CSV
-    ///   neu can doc lai co cau truc (VD: loc theo Operation, Result).
+    /// - Luu log ra file CSV (khong phai text tu do) trong thu muc rieng (VD:
+    ///   %AppData%\SFileManager\logs\log.csv) de khong lam ban thu muc nguoi dung
+    ///   dang duyet, DONG THOI van doc/loc lai duoc theo tung truong (Operation,
+    ///   Result, Timestamp...) thay vi phai parse lai chuoi ToString() tu do -
+    ///   cac cot goi y: Id, Timestamp (ISO 8601 hoac "o"), Operation, Source,
+    ///   Destination, Result, Message (nho escape dau phay/xuong dong trong CSV),
+    ///   ItemCount, Duration (tinh bang giay, dang so - de trong neu null).
     /// - Nen ghi log bat dong bo (append, khong khoa UI) va bat try/catch de
     ///   loi ghi log khong lam gian doan thao tac chinh cua nguoi dung.
+    /// - GetLogs() nen doc va parse toan bo file CSV thanh List&lt;LogEntryModel&gt;
+    ///   (Id parse bang Guid.Parse, Operation/Result bang Enum.Parse, Duration
+    ///   bang double.Parse ->TimeSpan.FromSeconds neu cot khong rong).
     /// </remarks>
     public class LogService
     {
@@ -42,16 +52,21 @@ namespace FileExplorerApp.Services
 
         /// <summary>
         /// Tao va ghi mot dong log moi tu cac thong tin thao tac - cach dung nhanh,
-        /// khong can tu tay tao LogEntryModel truoc.
+        /// khong can tu tay tao LogEntryModel truoc. Nhan thang FileOperationType/
+        /// OperationResult (cung 2 enum FileService/FolderService da tra ve/nhan
+        /// vao) nen co the goi truc tiep tu ket qua mot loi goi Service, khong can
+        /// anh xa qua enum rieng cho log - xem ghi chu thiet ke tai LogEntryModel.
         /// </summary>
         /// <param name="operation">Loai thao tac.</param>
         /// <param name="source">Duong dan nguon.</param>
         /// <param name="destination">Duong dan dich (co the null/rong).</param>
         /// <param name="result">Ket qua thao tac.</param>
         /// <param name="message">Thong tin bo sung (tuy chon).</param>
-        public void LogOperation(LogOperationType operation, string source, string destination, LogResult result, string message = null)
+        /// <param name="itemCount">So luong muc lien quan (mac dinh 1 - xem LogEntryModel.ItemCount).</param>
+        /// <param name="duration">Thoi gian thuc hien (tuy chon - xem LogEntryModel.Duration).</param>
+        public void LogOperation(FileOperationType operation, string source, string destination, OperationResult result, string message = null, int itemCount = 1, TimeSpan? duration = null)
         {
-            // TODO: tao new LogEntryModel(operation, source, destination, result, message)
+            // TODO: tao new LogEntryModel(operation, source, destination, result, message, itemCount, duration)
             // roi goi WriteLog(entry).
             throw new NotImplementedException();
         }
@@ -80,9 +95,19 @@ namespace FileExplorerApp.Services
         /// Lay danh sach log theo ket qua thao tac (VD: chi xem cac thao tac Failed).
         /// </summary>
         /// <param name="result">Ket qua can loc.</param>
-        public List<LogEntryModel> GetLogsByResult(LogResult result)
+        public List<LogEntryModel> GetLogsByResult(OperationResult result)
         {
             // TODO: goi GetLogs() roi loc theo Result == result.
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Lay danh sach log theo loai thao tac (VD: chi xem lich su Delete).
+        /// </summary>
+        /// <param name="operation">Loai thao tac can loc.</param>
+        public List<LogEntryModel> GetLogsByOperation(FileOperationType operation)
+        {
+            // TODO: goi GetLogs() roi loc theo Operation == operation.
             throw new NotImplementedException();
         }
 
