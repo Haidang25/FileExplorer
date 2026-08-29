@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using FileExplorerApp.Models;
+using FileExplorerApp.Properties;
 
 namespace FileExplorerApp.Services
 {
@@ -72,11 +74,52 @@ namespace FileExplorerApp.Services
     ///   (khong phai "0") neu Duration null - phan biet "khong do duoc thoi gian"
     ///   voi "do duoc va bang 0 giay".
     ///
-    /// Vi tri file: %AppData%\SFileManager\logs\log.csv (xem GetLogFilePath) -
-    /// thu muc rieng cua ung dung trong AppData, khong lam ban thu muc nguoi dung
-    /// dang duyet trong ung dung.
+    /// QUYET DINH THIET KE THU HAI: file log dat trong AppData cua nguoi dung
+    /// (%AppData%\SFileManager\logs\log.csv, lay tu Settings.Default.LogPath -
+    /// da co san setting nay, xem Properties/Settings.settings), KHONG dat trong
+    /// thu muc cai dat ung dung (VD thu muc chua FileExplorerApp.exe). Ly do:
     ///
-    /// Cac buoc trien khai con lai (chua lam trong buoc "thiet ke" nay):
+    /// - Quyen ghi: thu muc cai dat mac dinh tren Windows (VD "C:\Program Files\...")
+    ///   YEU CAU quyen Administrator de ghi doi voi nguoi dung thuong (UAC/
+    ///   Windows Resource Protection) - neu dat file log o do, LogService se
+    ///   thuong xuyen gap UnauthorizedAccessException khi ghi tren may that cua
+    ///   nguoi dung cuoi (khac voi may dev dang chay bang quyen cao). AppData
+    ///   (%AppData% = C:\Users\{ten}\AppData\Roaming) LUON ghi duoc boi chinh
+    ///   nguoi dung dang dang nhap, khong can quyen dac biet nao.
+    ///
+    /// - Nhieu nguoi dung cung may: neu nhieu tai khoan Windows cung dung chung
+    ///   mot ban cai dat ung dung (thu muc cai dat dung chung), ghi log vao thu
+    ///   muc cai dat se tron lich su thao tac cua TAT CA nguoi dung vao 1 file,
+    ///   hoac gay xung dot ghi dong thoi. AppData la thu muc RIENG cho tung tai
+    ///   khoan Windows, nen moi nguoi dung tu nhien co lich su log RIENG cua minh
+    ///   ma khong can LogService tu quan ly phan quyen/tach biet gi them.
+    ///
+    /// - Go cai dat/cap nhat phien ban: trinh go cai dat (uninstaller) thuong xoa
+    ///   sach thu muc cai dat - neu log nam trong do, lich su thao tac cua nguoi
+    ///   dung se mat theo khi go cai dat hoac khi cap nhat len phien ban moi ghi
+    ///   de thu muc cai dat. AppData thuong duoc GIU LAI qua cac lan cai
+    ///   dat/go cai dat/cap nhat (tru khi nguoi dung chu dong xoa), phu hop voi
+    ///   ban chat cua log: du lieu NGUOI DUNG tao ra, khong phai mot phan cua
+    ///   ban than ung dung.
+    ///
+    /// - Quy uoc chuan cua Windows: Microsoft khuyen dung AppData (hoac
+    ///   LocalApplicationData) cho du lieu ung dung sinh ra trong luc chay (cau
+    ///   hinh, cache, log...), con thu muc cai dat CHI nen chua file thuc thi/tai
+    ///   nguyen tinh cua ung dung (khong doi sau khi cai) - dat log dung noi giup
+    ///   ung dung "cu xu dung chuan" tren Windows, tranh bi phan mem diet virus/
+    ///   Windows Defender Application Control gan co gang ghi vao thu muc
+    ///   Program Files.
+    ///
+    /// GetLogFilePath() se doc Settings.Default.LogPath (chuoi co the chua bien
+    /// moi truong nhu "%AppData%\SFileManager\logs", giong cach SettingsForm da
+    /// hien thi/cho sua) roi Environment.ExpandEnvironmentVariables de ra duong
+    /// dan tuyet doi, ket hop voi "log" + LogFileExtension lam ten file. Nguoi
+    /// dung van co the tuy chinh vi tri nay qua SettingsForm (txtLogPath) neu
+    /// muon doi khoi mac dinh AppData - KHONG hardcode cung mot duong dan trong
+    /// LogService, tranh lech voi gia tri nguoi dung da cau hinh trong Settings.
+    ///
+    /// Cac buoc trien khai con lai (chua lam trong buoc "thiet ke" nay - vi tri
+    /// file (GetLogFilePath) va dam bao thu muc ton tai (constructor) DA xong):
     /// - WriteLog: neu file chua ton tai, ghi dong header truoc; sau do
     ///   File.AppendAllText mot dong moi (bat try/catch, loi ghi log khong duoc
     ///   lam gian doan thao tac chinh cua nguoi dung).
@@ -107,8 +150,28 @@ namespace FileExplorerApp.Services
 
         public LogService()
         {
-            // TODO: xac dinh duong dan file log mac dinh (VD: GetLogFilePath()),
-            // dam bao thu muc chua file log ton tai (Directory.CreateDirectory).
+            // Dam bao thu muc chua file log (AppData\SFileManager\logs, hoac vi
+            // tri nguoi dung da tuy chinh qua Settings.Default.LogPath) TON TAI
+            // NGAY TU LUC KHOI TAO LogService, thay vi doi den lan WriteLog dau
+            // tien moi kiem tra - tranh truong hop lan ghi log dau tien that bai
+            // vi Directory.CreateDirectory chua duoc goi. Directory.CreateDirectory
+            // tu no da AN TOAN khi thu muc da ton tai san (khong nem loi, chi tra
+            // ve DirectoryInfo hien co) nen khong can kiem tra Directory.Exists truoc.
+            try
+            {
+                string logDirectory = Path.GetDirectoryName(GetLogFilePath());
+                if (!string.IsNullOrEmpty(logDirectory))
+                {
+                    Directory.CreateDirectory(logDirectory);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Khong the tao thu muc log (hiem - VD AppData bi gioi han quyen
+                // bat thuong) - khong nem loi tu constructor de tranh lam sap ca
+                // ung dung chi vi tinh nang log (khong thiet yeu) khong hoat dong
+                // duoc. WriteLog sau nay se tu gap loi tuong tu va tu xu ly rieng.
+            }
         }
 
         /// <summary>
@@ -198,9 +261,26 @@ namespace FileExplorerApp.Services
         /// </summary>
         public string GetLogFilePath()
         {
-            // TODO: tra ve duong dan file log mac dinh (VD: ket hop
-            // Environment.GetFolderPath(SpecialFolder.ApplicationData) + "\\SFileManager\\logs\\log" + LogFileExtension).
-            throw new NotImplementedException();
+            // Settings.Default.LogPath da co san (Properties/Settings.settings),
+            // mac dinh "%AppData%\SFileManager\logs" - xem "QUYET DINH THIET KE
+            // THU HAI" o remarks tren dau lop de biet ly do chon AppData thay vi
+            // thu muc cai dat. Environment.ExpandEnvironmentVariables chuyen
+            // "%AppData%" thanh duong dan tuyet doi thuc te (VD
+            // "C:\Users\ten\AppData\Roaming"), giong dung cach SettingsForm dang
+            // hien thi gia tri nay cho nguoi dung xem (txtLogPath.Text).
+            string configuredPath = Settings.Default.LogPath;
+
+            // Phong truong hop nguoi dung/mot ban cai dat cu de trong LogPath
+            // (VD nang cap tu phien ban truoc chua co setting nay) - dung lai
+            // dung gia tri mac dinh da khai bao trong Settings.settings thay vi
+            // de Path.Combine ben duoi nem ArgumentException voi chuoi rong.
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                configuredPath = @"%AppData%\SFileManager\logs";
+            }
+
+            string expandedDirectory = Environment.ExpandEnvironmentVariables(configuredPath);
+            return Path.Combine(expandedDirectory, "log" + LogFileExtension);
         }
     }
 }
