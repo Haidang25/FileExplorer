@@ -15,19 +15,37 @@ namespace FileExplorerApp.Forms
     /// nut OK/Huy/Ap dung.
     /// </summary>
     /// <remarks>
-    /// Pham vi hien tai: constructor doc va hien THUC TE 4 truong duoc yeu cau
-    /// (Ten, Duong dan, Loai, Kich thuoc) tu FileItemModel.FromPath(path). Cac
-    /// truong con lai tren form (Ngay tao/sua/truy cap, checkbox Chi doc/An) van
-    /// duoc gan gia tri thuc luon tien (FileItemModel co san du du lieu, khong ly
-    /// do de trong/hien placeholder) nhung hanh vi luu lai thay doi thuoc tinh
-    /// (nut Ap dung/OK ghi de FileAttributes that su xuong dia) CHUA duoc noi day -
-    /// se bo sung khi co yeu cau rieng, cung voi noi tren MainForm mo form nay.
+    /// Constructor doc va hien day du cac truong: Ten, Duong dan, Loai, Kich
+    /// thuoc, Ngay tao/sua/truy cap, va 4 checkbox thuoc tinh (Chi doc, An, He
+    /// thong, Luu tru). Trong so do, chi Chi doc (ReadOnly) va An (Hidden) cho
+    /// phep NGUOI DUNG bat/tat va ghi that xuong dia qua nut Ap dung/OK (goi
+    /// File.GetAttributes/SetAttributes, chi doi dung 2 bit nay, giu nguyen cac
+    /// bit con lai gom ca He thong/Luu tru) - He thong va Luu tru hien tai chi de
+    /// XEM (chua co yeu cau cho sua). Con noi tren MainForm de mo form nay van
+    /// chua duoc lam - se bo sung khi co yeu cau rieng.
     /// </remarks>
     public partial class PropertiesForm : Form
     {
+        // Duong dan cua muc dang xem/sua thuoc tinh - luu lai de nut Ap dung/OK
+        // biet ghi FileAttributes xuong dia nao. Null neu form duoc mo bang
+        // constructor khong tham so (khong co muc cu the - khong cho phep Ap dung).
+        private string _targetPath;
+
+        // Gia tri IsDirectory cua muc dang xem - can de goi dung
+        // File.SetAttributes hay chi doc/ghi qua FileInfo/DirectoryInfo tuong ung
+        // (ca hai deu dung chung API File.GetAttributes/SetAttributes voi duong
+        // dan nen khong that su can phan biet, nhung luu lai de ro rang y dinh).
+        private bool _isDirectory;
+
         public PropertiesForm()
         {
             InitializeComponent();
+            btnApply.Enabled = false;
+            btnOK.Click += btnOK_Click;
+            btnCancel.Click += btnCancel_Click;
+            btnApply.Click += btnApply_Click;
+            chkReadOnly.CheckedChanged += AttributeCheckBox_CheckedChanged;
+            chkHidden.CheckedChanged += AttributeCheckBox_CheckedChanged;
         }
 
         /// <summary>
@@ -48,6 +66,9 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void LoadItem(FileItemModel item)
         {
+            _targetPath = item.FullPath;
+            _isDirectory = item.IsDirectory;
+
             this.Text = item.Name;
 
             lblName.Text = item.Name;
@@ -105,6 +126,81 @@ namespace FileExplorerApp.Forms
                     picIcon.Image = null;
                 }
             }
+
+            // LoadItem gan Checked bang code (khong phai nguoi dung tick) nen se
+            // tu kich hoat AttributeCheckBox_CheckedChanged va bat nham btnApply -
+            // tat lai o day de Ap dung chi bat khi NGUOI DUNG thuc su doi thuoc tinh.
+            btnApply.Enabled = false;
+        }
+
+        /// <summary>
+        /// Nguoi dung tick/bo tick chkReadOnly hoac chkHidden - bat nut Ap dung de
+        /// cho phep ghi thay doi xuong dia (chi bat, chua ghi ngay - giong hanh vi
+        /// hop thoai Properties that cua Windows).
+        /// </summary>
+        private void AttributeCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            btnApply.Enabled = true;
+        }
+
+        /// <summary>
+        /// Ghi trang thai chkReadOnly/chkHidden hien tai xuong FileAttributes that
+        /// su cua _targetPath tren dia. Chi doi 2 co ReadOnly/Hidden theo yeu cau -
+        /// giu nguyen moi co khac (System, Archive, ReparsePoint...) dang co san
+        /// bang cach doc lai Attributes hien tai roi chi Set/Clear đung 2 bit can.
+        /// </summary>
+        private void ApplyAttributeChanges()
+        {
+            if (string.IsNullOrEmpty(_targetPath))
+                return;
+
+            try
+            {
+                FileAttributes current = File.GetAttributes(_targetPath);
+
+                current = SetFlag(current, FileAttributes.ReadOnly, chkReadOnly.Checked);
+                current = SetFlag(current, FileAttributes.Hidden, chkHidden.Checked);
+
+                File.SetAttributes(_targetPath, current);
+                btnApply.Enabled = false;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                MessageBox.Show(
+                    this,
+                    $"Không thể áp dụng thay đổi thuộc tính:\n{ex.Message}",
+                    "Lỗi",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>Bat hoac tat mot bit FileAttributes cu the, giu nguyen cac bit con lai.</summary>
+        private static FileAttributes SetFlag(FileAttributes attributes, FileAttributes flag, bool enable)
+        {
+            return enable ? (attributes | flag) : (attributes & ~flag);
+        }
+
+        private void btnApply_Click(object sender, EventArgs e)
+        {
+            ApplyAttributeChanges();
+        }
+
+        private void btnOK_Click(object sender, EventArgs e)
+        {
+            if (btnApply.Enabled)
+            {
+                ApplyAttributeChanges();
+            }
+
+            this.DialogResult = DialogResult.OK;
+            this.Close();
+        }
+
+        private void btnCancel_Click(object sender, EventArgs e)
+        {
+            this.DialogResult = DialogResult.Cancel;
+            this.Close();
         }
     }
 }
