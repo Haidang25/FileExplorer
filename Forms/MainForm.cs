@@ -1966,9 +1966,9 @@ namespace FileExplorerApp.Forms
         private void mnuToolsFindDuplicates_Click(object sender, EventArgs e)
         {
             // TODO: mo form hien thi tien trinh + ket qua, goi
-            // SearchService.FindDuplicateFiles(_currentPath) (nen chay tren luong rieng
-            // hoac async vi co the mat thoi gian voi thu muc lon), sau do hien tung
-            // nhom file trung lap de nguoi dung chon xoa bot ban trung.
+            // DuplicateService.FindDuplicateFiles(_currentPath) (nen chay tren luong
+            // rieng hoac async vi co the mat thoi gian voi thu muc lon), sau do hien
+            // tung nhom file trung lap de nguoi dung chon xoa bot ban trung.
         }
 
         private void mnuToolsRecycleBin_Click(object sender, EventArgs e)

@@ -9,7 +9,7 @@ namespace FileExplorerApp.Helpers
 {
     /// <summary>
     /// Ham tien ich tinh hash noi dung file (MD5) - dung cho
-    /// SearchService.FindDuplicateFiles (so sanh noi dung cac file cung kich
+    /// DuplicateService.FindDuplicateFiles (so sanh noi dung cac file cung kich
     /// thuoc de xac dinh trung lap thuc su) va bat cu noi nao khac can so
     /// sanh nhanh noi dung 2 file.
     /// </summary>
