@@ -1760,7 +1760,7 @@ namespace FileExplorerApp.Forms
             if (selectedCount == 0)
             {
                 tsslStatus.Text = "Sẵn sàng";
-                UpdateImagePreview();
+                UpdatePreview();
                 return;
             }
 
@@ -1785,23 +1785,9 @@ namespace FileExplorerApp.Forms
                 ? $"{selectedCount} mục được chọn ({FormatHelper.FormatSize(selectedSize)})"
                 : $"{selectedCount} mục được chọn";
 
-            UpdateImagePreview();
+            UpdatePreview();
         }
 
-        /// <summary>
-        /// Cap nhat pbxPreview theo muc dang duoc chon trong lvwFiles: chi hien
-        /// preview khi CHINH XAC mot file duoc chon va no la anh (theo
-        /// FileHelper.FileIconCategory.Image, xac dinh qua phan mo rong). Moi
-        /// truong hop khac (khong chon gi, chon nhieu muc, chon thu muc, chon
-        /// file khong phai anh, hoac anh bi loi/khoa) deu xoa preview cu va
-        /// hien thong bao phu hop trong lblPreviewCaption.
-        ///
-        /// Anh duoc doc qua MemoryStream (khong dung Image.FromFile truc tiep)
-        /// vi Image.FromFile giu file khoa (locked) cho den khi Image bi
-        /// Dispose - se xung dot voi cac thao tac doi ten/xoa/di chuyen file
-        /// dang duoc preview. Image cu (neu co) luon duoc Dispose truoc khi
-        /// gan Image moi de tranh ro handle GDI+.
-        /// </summary>
         /// <summary>
         /// Gioi han dung luong toi da (byte) cho mot anh duoc phep preview -
         /// tranh doc nguyen ca anh RAW/PSD/anh do phan giai sieu cao vao RAM
@@ -1810,32 +1796,103 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private const long MaxPreviewImageBytes = 20 * 1024 * 1024; // 20 MB
 
-        private void UpdateImagePreview()
-        {
-            Image oldImage = pbxPreview.Image;
-            pbxPreview.Image = null;
-            oldImage?.Dispose();
+        /// <summary>So dong toi da doc de preview van ban - tranh nap ca file
+        /// log/csv hang trieu dong vao txtPreview lam treo UI.</summary>
+        private const int MaxPreviewTextLines = 200;
 
+        /// <summary>Gioi han tong so ky tu doc duoc khi preview van ban, dung
+        /// song song voi MaxPreviewTextLines de phong khi file khong xuong
+        /// dong (VD file minify .js/.json tren mot dong rat dai).</summary>
+        private const int MaxPreviewTextChars = 100_000;
+
+        /// <summary>
+        /// Cac phan mo rong duoc coi la van ban thuan (plain text) de doc N
+        /// dong dau lam preview trong txtPreview. KHONG dung
+        /// FileHelper.FileIconCategory.Code vi nhom do gom ca file nhi phan
+        /// (.exe/.dll/.msi) khong doc duoc nhu van ban.
+        /// </summary>
+        private static readonly HashSet<string> TextPreviewExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".txt", ".md", ".log", ".ini", ".config", ".csv",
+            ".json", ".xml", ".html", ".htm", ".css", ".js", ".ts",
+            ".cs", ".vb", ".sql", ".bat", ".ps1", ".py", ".java",
+            ".c", ".cpp", ".h", ".yaml", ".yml"
+        };
+
+        /// <summary>
+        /// Dispatcher chinh cho khu vuc preview ben phai lvwFiles: chi hien
+        /// preview khi CHINH XAC mot muc duoc chon (khong phai thu muc) -
+        /// dua vao phan mo rong de chon giua preview anh (pbxPreview) hay
+        /// preview van ban (txtPreview), moi truong hop khac deu goi
+        /// ClearPreview voi thong bao phu hop.
+        /// </summary>
+        private void UpdatePreview()
+        {
             if (lvwFiles.SelectedItems.Count != 1)
             {
-                lblPreviewCaption.Text = lvwFiles.SelectedItems.Count == 0
-                    ? "Không có ảnh để xem trước"
-                    : "Chọn 1 tệp ảnh để xem trước";
+                ClearPreview(lvwFiles.SelectedItems.Count == 0
+                    ? "Không có tệp để xem trước"
+                    : "Chọn 1 tệp để xem trước");
                 return;
             }
 
             string path = lvwFiles.SelectedItems[0].Tag as string;
             if (string.IsNullOrEmpty(path) || Directory.Exists(path) || !File.Exists(path))
             {
-                lblPreviewCaption.Text = "Không có ảnh để xem trước";
+                ClearPreview("Không có tệp để xem trước");
                 return;
             }
 
-            if (FileHelper.GetFileIconCategory(path) != FileIconCategory.Image)
+            if (FileHelper.GetFileIconCategory(path) == FileIconCategory.Image)
             {
-                lblPreviewCaption.Text = "Không có ảnh để xem trước";
-                return;
+                UpdateImagePreview(path);
             }
+            else if (TextPreviewExtensions.Contains(Path.GetExtension(path)))
+            {
+                UpdateTextPreview(path);
+            }
+            else
+            {
+                ClearPreview("Không có bản xem trước cho loại tệp này");
+            }
+        }
+
+        /// <summary>
+        /// Xoa preview hien tai (Dispose Image cu de tranh ro handle GDI+, an
+        /// ca pbxPreview lan txtPreview) va hien thong bao trong
+        /// lblPreviewCaption. Goi truoc moi lan chuyen sang mot loai preview
+        /// khac de dam bao khong con anh/van ban cu sot lai tren giao dien.
+        /// </summary>
+        private void ClearPreview(string message)
+        {
+            Image oldImage = pbxPreview.Image;
+            pbxPreview.Image = null;
+            oldImage?.Dispose();
+            pbxPreview.Visible = false;
+
+            txtPreview.Visible = false;
+            txtPreview.Text = string.Empty;
+
+            lblPreviewCaption.Text = message;
+        }
+
+        /// <summary>
+        /// Cap nhat pbxPreview cho file anh (theo
+        /// FileHelper.FileIconCategory.Image, xac dinh qua phan mo rong).
+        ///
+        /// Anh duoc doc qua MemoryStream (khong dung Image.FromFile truc tiep)
+        /// vi Image.FromFile giu file khoa (locked) cho den khi Image bi
+        /// Dispose - se xung dot voi cac thao tac doi ten/xoa/di chuyen file
+        /// dang duoc preview. Image cu (neu co) luon duoc Dispose truoc khi
+        /// gan Image moi de tranh ro handle GDI+.
+        /// </summary>
+        private void UpdateImagePreview(string path)
+        {
+            Image oldImage = pbxPreview.Image;
+            pbxPreview.Image = null;
+            oldImage?.Dispose();
+            txtPreview.Visible = false;
+            txtPreview.Text = string.Empty;
 
             long fileSize;
             try
@@ -1844,12 +1901,14 @@ namespace FileExplorerApp.Forms
             }
             catch (IOException)
             {
+                pbxPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
                 return;
             }
 
             if (fileSize > MaxPreviewImageBytes)
             {
+                pbxPreview.Visible = false;
                 lblPreviewCaption.Text =
                     $"Ảnh quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewImageBytes)})";
                 return;
@@ -1862,6 +1921,7 @@ namespace FileExplorerApp.Forms
                 {
                     pbxPreview.Image = Image.FromStream(stream);
                 }
+                pbxPreview.Visible = true;
                 lblPreviewCaption.Text = Path.GetFileName(path);
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
@@ -1870,8 +1930,70 @@ namespace FileExplorerApp.Forms
                 // Anh bi hong, dang bi khoa boi tien trinh khac, hoac khong du
                 // bo nho de giai ma - hien thong bao thay vi de crash preview.
                 pbxPreview.Image = null;
+                pbxPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
             }
+        }
+
+        /// <summary>
+        /// Cap nhat txtPreview bang cach doc toi da MaxPreviewTextLines dong
+        /// dau cua file (them gioi han MaxPreviewTextChars phong khi file
+        /// khong xuong dong) - dung StreamReader.ReadLine theo tung dong thay
+        /// vi File.ReadAllText/ReadAllLines de KHONG BAO GIO nap ca file vao
+        /// RAM, du file van ban do lon toi dau. Mo file voi FileShare.ReadWrite
+        /// de van xem duoc preview ngay ca khi file dang duoc ung dung khac
+        /// (VD trinh soan thao) mo va ghi.
+        /// </summary>
+        private void UpdateTextPreview(string path)
+        {
+            pbxPreview.Image?.Dispose();
+            pbxPreview.Image = null;
+            pbxPreview.Visible = false;
+
+            var sb = new StringBuilder();
+            int lineCount = 0;
+            bool truncated = false;
+
+            try
+            {
+                using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(fileStream, Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+                {
+                    string line;
+                    while (lineCount < MaxPreviewTextLines && (line = reader.ReadLine()) != null)
+                    {
+                        if (sb.Length + line.Length > MaxPreviewTextChars)
+                        {
+                            sb.Append(line, 0, Math.Max(0, MaxPreviewTextChars - sb.Length));
+                            truncated = true;
+                            break;
+                        }
+
+                        sb.AppendLine(line);
+                        lineCount++;
+                    }
+
+                    if (!truncated && reader.Peek() != -1)
+                        truncated = true;
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
+                || ex is ArgumentException)
+            {
+                // File dang bi khoa hoan toan boi tien trinh khac, hoac duong
+                // dan khong hop le giua luc dang doc - hien thong bao thay vi
+                // de loi lam vo preview.
+                txtPreview.Visible = false;
+                lblPreviewCaption.Text = "Không thể xem trước tệp này";
+                return;
+            }
+
+            if (truncated)
+                sb.AppendLine("… (đã rút gọn)");
+
+            txtPreview.Text = sb.ToString();
+            txtPreview.Visible = true;
+            lblPreviewCaption.Text = Path.GetFileName(path);
         }
 
         /// <summary>

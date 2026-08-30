@@ -56,6 +56,7 @@
         private System.Windows.Forms.SplitContainer spcFilesPreview;
         private System.Windows.Forms.Panel pnlPreview;
         private System.Windows.Forms.PictureBox pbxPreview;
+        private System.Windows.Forms.TextBox txtPreview;
         private System.Windows.Forms.Label lblPreviewCaption;
 
         private System.Windows.Forms.StatusStrip stsMain;
@@ -209,6 +210,7 @@
             this.spcFilesPreview = new System.Windows.Forms.SplitContainer();
             this.pnlPreview = new System.Windows.Forms.Panel();
             this.pbxPreview = new System.Windows.Forms.PictureBox();
+            this.txtPreview = new System.Windows.Forms.TextBox();
             this.lblPreviewCaption = new System.Windows.Forms.Label();
             this.stsMain = new System.Windows.Forms.StatusStrip();
             this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
@@ -762,6 +764,7 @@
             // pnlPreview
             //
             this.pnlPreview.Controls.Add(this.pbxPreview);
+            this.pnlPreview.Controls.Add(this.txtPreview);
             this.pnlPreview.Controls.Add(this.lblPreviewCaption);
             this.pnlPreview.Dock = System.Windows.Forms.DockStyle.Fill;
             this.pnlPreview.Location = new System.Drawing.Point(0, 0);
@@ -781,6 +784,21 @@
             this.pbxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbxPreview.TabIndex = 0;
             this.pbxPreview.TabStop = false;
+            //
+            // txtPreview
+            //
+            this.txtPreview.BackColor = System.Drawing.Color.White;
+            this.txtPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtPreview.Font = new System.Drawing.Font("Consolas", 9F);
+            this.txtPreview.Location = new System.Drawing.Point(4, 24);
+            this.txtPreview.Multiline = true;
+            this.txtPreview.Name = "txtPreview";
+            this.txtPreview.ReadOnly = true;
+            this.txtPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtPreview.Size = new System.Drawing.Size(238, 527);
+            this.txtPreview.TabIndex = 2;
+            this.txtPreview.Visible = false;
+            this.txtPreview.WordWrap = false;
             //
             // lblPreviewCaption
             //
