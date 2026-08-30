@@ -299,6 +299,7 @@ namespace FileExplorerApp.Forms
             _watcherDebounceTimer.Stop();
             _watcherDebounceTimer.Dispose();
             _fileMonitorService.Dispose();
+            pbxPreview.Image?.Dispose();
         }
 
         /// <summary>
@@ -1759,6 +1760,7 @@ namespace FileExplorerApp.Forms
             if (selectedCount == 0)
             {
                 tsslStatus.Text = "Sẵn sàng";
+                UpdateImagePreview();
                 return;
             }
 
@@ -1782,6 +1784,68 @@ namespace FileExplorerApp.Forms
             tsslStatus.Text = selectedSize > 0
                 ? $"{selectedCount} mục được chọn ({FormatHelper.FormatSize(selectedSize)})"
                 : $"{selectedCount} mục được chọn";
+
+            UpdateImagePreview();
+        }
+
+        /// <summary>
+        /// Cap nhat pbxPreview theo muc dang duoc chon trong lvwFiles: chi hien
+        /// preview khi CHINH XAC mot file duoc chon va no la anh (theo
+        /// FileHelper.FileIconCategory.Image, xac dinh qua phan mo rong). Moi
+        /// truong hop khac (khong chon gi, chon nhieu muc, chon thu muc, chon
+        /// file khong phai anh, hoac anh bi loi/khoa) deu xoa preview cu va
+        /// hien thong bao phu hop trong lblPreviewCaption.
+        ///
+        /// Anh duoc doc qua MemoryStream (khong dung Image.FromFile truc tiep)
+        /// vi Image.FromFile giu file khoa (locked) cho den khi Image bi
+        /// Dispose - se xung dot voi cac thao tac doi ten/xoa/di chuyen file
+        /// dang duoc preview. Image cu (neu co) luon duoc Dispose truoc khi
+        /// gan Image moi de tranh ro handle GDI+.
+        /// </summary>
+        private void UpdateImagePreview()
+        {
+            Image oldImage = pbxPreview.Image;
+            pbxPreview.Image = null;
+            oldImage?.Dispose();
+
+            if (lvwFiles.SelectedItems.Count != 1)
+            {
+                lblPreviewCaption.Text = lvwFiles.SelectedItems.Count == 0
+                    ? "Không có ảnh để xem trước"
+                    : "Chọn 1 tệp ảnh để xem trước";
+                return;
+            }
+
+            string path = lvwFiles.SelectedItems[0].Tag as string;
+            if (string.IsNullOrEmpty(path) || Directory.Exists(path) || !File.Exists(path))
+            {
+                lblPreviewCaption.Text = "Không có ảnh để xem trước";
+                return;
+            }
+
+            if (FileHelper.GetFileIconCategory(path) != FileIconCategory.Image)
+            {
+                lblPreviewCaption.Text = "Không có ảnh để xem trước";
+                return;
+            }
+
+            try
+            {
+                byte[] bytes = File.ReadAllBytes(path);
+                using (var stream = new MemoryStream(bytes))
+                {
+                    pbxPreview.Image = Image.FromStream(stream);
+                }
+                lblPreviewCaption.Text = Path.GetFileName(path);
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
+                || ex is ArgumentException || ex is OutOfMemoryException)
+            {
+                // Anh bi hong, dang bi khoa boi tien trinh khac, hoac khong du
+                // bo nho de giai ma - hien thong bao thay vi de crash preview.
+                pbxPreview.Image = null;
+                lblPreviewCaption.Text = "Không thể xem trước ảnh này";
+            }
         }
 
         /// <summary>

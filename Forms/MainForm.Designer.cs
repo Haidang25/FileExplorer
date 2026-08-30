@@ -53,6 +53,10 @@
         private System.Windows.Forms.ColumnHeader colType;
         private System.Windows.Forms.ColumnHeader colModified;
         private System.Windows.Forms.Label lblEmptyFolder;
+        private System.Windows.Forms.SplitContainer spcFilesPreview;
+        private System.Windows.Forms.Panel pnlPreview;
+        private System.Windows.Forms.PictureBox pbxPreview;
+        private System.Windows.Forms.Label lblPreviewCaption;
 
         private System.Windows.Forms.StatusStrip stsMain;
         private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
@@ -202,6 +206,10 @@
             this.cmsSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.cmsProperties = new System.Windows.Forms.ToolStripMenuItem();
             this.lblEmptyFolder = new System.Windows.Forms.Label();
+            this.spcFilesPreview = new System.Windows.Forms.SplitContainer();
+            this.pnlPreview = new System.Windows.Forms.Panel();
+            this.pbxPreview = new System.Windows.Forms.PictureBox();
+            this.lblPreviewCaption = new System.Windows.Forms.Label();
             this.stsMain = new System.Windows.Forms.StatusStrip();
             this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
             this.tspProgress = new System.Windows.Forms.ToolStripProgressBar();
@@ -214,6 +222,12 @@
             this.spcMain.Panel1.SuspendLayout();
             this.spcMain.Panel2.SuspendLayout();
             this.spcMain.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.spcFilesPreview)).BeginInit();
+            this.spcFilesPreview.Panel1.SuspendLayout();
+            this.spcFilesPreview.Panel2.SuspendLayout();
+            this.spcFilesPreview.SuspendLayout();
+            this.pnlPreview.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pbxPreview)).BeginInit();
             this.cmsListView.SuspendLayout();
             this.stsMain.SuspendLayout();
             this.SuspendLayout();
@@ -294,7 +308,7 @@
             // 
             this.mnuEditCut.Name = "mnuEditCut";
             this.mnuEditCut.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.X)));
-            this.mnuEditCut.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditCut.Size = new System.Drawing.Size(233, 26);
             this.mnuEditCut.Text = "&Cắt";
             this.mnuEditCut.Click += new System.EventHandler(this.mnuEditCut_Click);
             // 
@@ -302,7 +316,7 @@
             // 
             this.mnuEditCopy.Name = "mnuEditCopy";
             this.mnuEditCopy.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.C)));
-            this.mnuEditCopy.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditCopy.Size = new System.Drawing.Size(233, 26);
             this.mnuEditCopy.Text = "&Sao chép";
             this.mnuEditCopy.Click += new System.EventHandler(this.mnuEditCopy_Click);
             // 
@@ -310,20 +324,20 @@
             // 
             this.mnuEditPaste.Name = "mnuEditPaste";
             this.mnuEditPaste.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.V)));
-            this.mnuEditPaste.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditPaste.Size = new System.Drawing.Size(233, 26);
             this.mnuEditPaste.Text = "&Dán";
             this.mnuEditPaste.Click += new System.EventHandler(this.mnuEditPaste_Click);
             // 
             // mnuEditSeparator1
             // 
             this.mnuEditSeparator1.Name = "mnuEditSeparator1";
-            this.mnuEditSeparator1.Size = new System.Drawing.Size(216, 6);
+            this.mnuEditSeparator1.Size = new System.Drawing.Size(230, 6);
             // 
             // mnuEditDelete
             // 
             this.mnuEditDelete.Name = "mnuEditDelete";
             this.mnuEditDelete.ShortcutKeys = System.Windows.Forms.Keys.Delete;
-            this.mnuEditDelete.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditDelete.Size = new System.Drawing.Size(233, 26);
             this.mnuEditDelete.Text = "&Xóa";
             this.mnuEditDelete.Click += new System.EventHandler(this.mnuEditDelete_Click);
             // 
@@ -331,33 +345,33 @@
             // 
             this.mnuEditRename.Name = "mnuEditRename";
             this.mnuEditRename.ShortcutKeys = System.Windows.Forms.Keys.F2;
-            this.mnuEditRename.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditRename.Size = new System.Drawing.Size(233, 26);
             this.mnuEditRename.Text = "Đổi &tên";
             this.mnuEditRename.Click += new System.EventHandler(this.mnuEditRename_Click);
             // 
             // mnuEditSeparator2
             // 
             this.mnuEditSeparator2.Name = "mnuEditSeparator2";
-            this.mnuEditSeparator2.Size = new System.Drawing.Size(216, 6);
+            this.mnuEditSeparator2.Size = new System.Drawing.Size(230, 6);
             // 
             // mnuEditSelectAll
             // 
             this.mnuEditSelectAll.Name = "mnuEditSelectAll";
             this.mnuEditSelectAll.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.A)));
-            this.mnuEditSelectAll.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditSelectAll.Size = new System.Drawing.Size(233, 26);
             this.mnuEditSelectAll.Text = "Chọn tất &cả";
             this.mnuEditSelectAll.Click += new System.EventHandler(this.mnuEditSelectAll_Click);
-            //
+            // 
             // mnuEditSeparator3
-            //
+            // 
             this.mnuEditSeparator3.Name = "mnuEditSeparator3";
-            this.mnuEditSeparator3.Size = new System.Drawing.Size(216, 6);
-            //
+            this.mnuEditSeparator3.Size = new System.Drawing.Size(230, 6);
+            // 
             // mnuEditProperties
-            //
+            // 
             this.mnuEditProperties.Name = "mnuEditProperties";
-            this.mnuEditProperties.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Enter)));
-            this.mnuEditProperties.Size = new System.Drawing.Size(219, 26);
+            this.mnuEditProperties.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Alt | System.Windows.Forms.Keys.Return)));
+            this.mnuEditProperties.Size = new System.Drawing.Size(233, 26);
             this.mnuEditProperties.Text = "Th&uộc tính";
             this.mnuEditProperties.Click += new System.EventHandler(this.mnuEditProperties_Click);
             // 
@@ -716,16 +730,68 @@
             // 
             this.spcMain.Panel1.Controls.Add(this.trvFolders);
             this.spcMain.Panel1MinSize = 120;
-            // 
+            //
             // spcMain.Panel2
-            // 
-            this.spcMain.Panel2.Controls.Add(this.lvwFiles);
-            this.spcMain.Panel2.Controls.Add(this.lblEmptyFolder);
+            //
+            this.spcMain.Panel2.Controls.Add(this.spcFilesPreview);
             this.spcMain.Panel2MinSize = 200;
             this.spcMain.Size = new System.Drawing.Size(1200, 555);
             this.spcMain.SplitterDistance = 300;
             this.spcMain.TabIndex = 3;
-            // 
+            //
+            // spcFilesPreview
+            //
+            this.spcFilesPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.spcFilesPreview.Location = new System.Drawing.Point(0, 0);
+            this.spcFilesPreview.Name = "spcFilesPreview";
+            //
+            // spcFilesPreview.Panel1
+            //
+            this.spcFilesPreview.Panel1.Controls.Add(this.lvwFiles);
+            this.spcFilesPreview.Panel1.Controls.Add(this.lblEmptyFolder);
+            this.spcFilesPreview.Panel1MinSize = 200;
+            //
+            // spcFilesPreview.Panel2
+            //
+            this.spcFilesPreview.Panel2.Controls.Add(this.pnlPreview);
+            this.spcFilesPreview.Panel2MinSize = 150;
+            this.spcFilesPreview.Size = new System.Drawing.Size(896, 555);
+            this.spcFilesPreview.SplitterDistance = 646;
+            this.spcFilesPreview.TabIndex = 0;
+            //
+            // pnlPreview
+            //
+            this.pnlPreview.Controls.Add(this.pbxPreview);
+            this.pnlPreview.Controls.Add(this.lblPreviewCaption);
+            this.pnlPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlPreview.Location = new System.Drawing.Point(0, 0);
+            this.pnlPreview.Name = "pnlPreview";
+            this.pnlPreview.Padding = new System.Windows.Forms.Padding(4);
+            this.pnlPreview.Size = new System.Drawing.Size(246, 555);
+            this.pnlPreview.TabIndex = 0;
+            //
+            // pbxPreview
+            //
+            this.pbxPreview.BackColor = System.Drawing.Color.White;
+            this.pbxPreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pbxPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pbxPreview.Location = new System.Drawing.Point(4, 24);
+            this.pbxPreview.Name = "pbxPreview";
+            this.pbxPreview.Size = new System.Drawing.Size(238, 527);
+            this.pbxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbxPreview.TabIndex = 0;
+            this.pbxPreview.TabStop = false;
+            //
+            // lblPreviewCaption
+            //
+            this.lblPreviewCaption.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblPreviewCaption.Location = new System.Drawing.Point(4, 4);
+            this.lblPreviewCaption.Name = "lblPreviewCaption";
+            this.lblPreviewCaption.Size = new System.Drawing.Size(238, 20);
+            this.lblPreviewCaption.TabIndex = 1;
+            this.lblPreviewCaption.Text = "Không có ảnh để xem trước";
+            this.lblPreviewCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            //
             // trvFolders
             // 
             this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -811,7 +877,7 @@
             this.cmsSeparator4,
             this.cmsProperties});
             this.cmsListView.Name = "cmsListView";
-            this.cmsListView.Size = new System.Drawing.Size(192, 214);
+            this.cmsListView.Size = new System.Drawing.Size(192, 244);
             this.cmsListView.Opening += new System.ComponentModel.CancelEventHandler(this.cmsListView_Opening);
             // 
             // cmsOpen
@@ -884,14 +950,14 @@
             this.cmsRefresh.Size = new System.Drawing.Size(191, 24);
             this.cmsRefresh.Text = "&Làm mới";
             this.cmsRefresh.Click += new System.EventHandler(this.mnuViewRefresh_Click);
-            //
+            // 
             // cmsSeparator4
-            //
+            // 
             this.cmsSeparator4.Name = "cmsSeparator4";
             this.cmsSeparator4.Size = new System.Drawing.Size(188, 6);
-            //
+            // 
             // cmsProperties
-            //
+            // 
             this.cmsProperties.Name = "cmsProperties";
             this.cmsProperties.Size = new System.Drawing.Size(191, 24);
             this.cmsProperties.Text = "Th&uộc tính";
@@ -974,6 +1040,12 @@
             this.spcMain.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.spcMain)).EndInit();
             this.spcMain.ResumeLayout(false);
+            this.spcFilesPreview.Panel1.ResumeLayout(false);
+            this.spcFilesPreview.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.spcFilesPreview)).EndInit();
+            this.spcFilesPreview.ResumeLayout(false);
+            this.pnlPreview.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.pbxPreview)).EndInit();
             this.cmsListView.ResumeLayout(false);
             this.stsMain.ResumeLayout(false);
             this.stsMain.PerformLayout();
