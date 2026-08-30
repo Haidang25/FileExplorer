@@ -65,7 +65,23 @@ namespace FileExplorerApp.Forms
             btnScan.Enabled = false;
             btnCancelScan.Enabled = true;
 
+            // Bat dau o dang Marquee (khong xac dinh %) vi Giai doan 1
+            // (EnumeratingFiles) chua the biet truoc tong so file - xem
+            // DuplicateScanPhase.EnumeratingFiles va UpdateScanProgress ben duoi.
+            pgbScan.Style = ProgressBarStyle.Marquee;
+            pgbScan.Value = 0;
+
             bool recursive = chkRecursive.Checked;
+
+            // Progress<T> PHAI duoc tao O DAY (tren luong UI, TRUOC khi vao
+            // Task.Run) - no tu dong "chup" lai SynchronizationContext hien
+            // tai (chinh la UI thread cua DuplicateForm) ngay luc khoi tao,
+            // nen moi lan DuplicateService.FindDuplicateFiles (chay tren
+            // luong nen ben trong Task.Run) goi progress.Report(...), callback
+            // UpdateScanProgress duoc dam bao chay LAI TREN UI THREAD - an
+            // toan de dung truc tiep cac control WinForms (pgbScan/lblStatus)
+            // ben trong, khong can tu Invoke/BeginInvoke thu cong.
+            var progress = new Progress<DuplicateScanProgress>(UpdateScanProgress);
 
             using (_scanCts = new CancellationTokenSource())
             {
@@ -74,7 +90,7 @@ namespace FileExplorerApp.Forms
                 try
                 {
                     List<List<FileItemModel>> duplicateGroups = await Task.Run(
-                        () => _duplicateService.FindDuplicateFiles(_rootFolder, recursive, token),
+                        () => _duplicateService.FindDuplicateFiles(_rootFolder, recursive, token, progress),
                         token);
 
                     PopulateResults(duplicateGroups);
@@ -92,7 +108,43 @@ namespace FileExplorerApp.Forms
                     btnScan.Enabled = true;
                     btnCancelScan.Enabled = false;
                     _scanCts = null;
+
+                    // Dua ProgressBar ve trang thai "nghi" (khong con Marquee
+                    // chay vo han, khong con Value cu tu lan quet truoc) sau
+                    // khi quet ket thuc (thanh cong, loi, hay bi huy).
+                    pgbScan.Style = ProgressBarStyle.Continuous;
+                    pgbScan.Value = 0;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Callback nhan tu Progress&lt;DuplicateScanProgress&gt; (xem ghi chu
+        /// tai RunScanAsync ve viec no LUON chay tren UI thread) - cap nhat
+        /// pgbScan (kieu Marquee/Continuous tuy Phase, xem
+        /// DuplicateScanPhase) va lblStatus voi con so tien trinh cu the.
+        /// </summary>
+        private void UpdateScanProgress(DuplicateScanProgress progress)
+        {
+            if (progress.Phase == DuplicateScanPhase.EnumeratingFiles)
+            {
+                // TotalCount luon la -1 o Phase nay (chua biet truoc tong so
+                // file) - chi co the hien "da thay bao nhieu", khong co %.
+                pgbScan.Style = ProgressBarStyle.Marquee;
+                lblStatus.Text = $"Đang quét... đã thấy {progress.ProcessedCount} tệp.";
+            }
+            else
+            {
+                // HashingCandidates: TotalCount da biet truoc (co the la 0
+                // neu khong co ung vien trung lap nao ca - Maximum phai >= 1
+                // de gan Value, nen dung Math.Max(TotalCount, 1) lam Maximum).
+                pgbScan.Style = ProgressBarStyle.Continuous;
+                pgbScan.Maximum = Math.Max(progress.TotalCount, 1);
+                pgbScan.Value = Math.Min(progress.ProcessedCount, pgbScan.Maximum);
+
+                lblStatus.Text = progress.TotalCount == 0
+                    ? "Đang quét... không có tệp nào cần so sánh nội dung."
+                    : $"Đang so sánh nội dung... {progress.ProcessedCount}/{progress.TotalCount} tệp.";
             }
         }
 

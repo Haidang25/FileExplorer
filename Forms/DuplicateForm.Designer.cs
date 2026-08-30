@@ -13,6 +13,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.Button btnScan;
         private System.Windows.Forms.Button btnCancelScan;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.ProgressBar pgbScan;
         private System.Windows.Forms.ListView lvwDuplicates;
         private System.Windows.Forms.ColumnHeader colDupName;
         private System.Windows.Forms.ColumnHeader colDupLocation;
@@ -48,6 +49,7 @@ namespace FileExplorerApp.Forms
             this.btnScan = new System.Windows.Forms.Button();
             this.btnCancelScan = new System.Windows.Forms.Button();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.pgbScan = new System.Windows.Forms.ProgressBar();
             this.lvwDuplicates = new System.Windows.Forms.ListView();
             this.colDupName = new System.Windows.Forms.ColumnHeader();
             this.colDupLocation = new System.Windows.Forms.ColumnHeader();
@@ -118,6 +120,15 @@ namespace FileExplorerApp.Forms
             this.lblStatus.TabIndex = 5;
             this.lblStatus.Text = "Sẵn sàng.";
             //
+            // pgbScan
+            //
+            this.pgbScan.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
+            this.pgbScan.Location = new System.Drawing.Point(16, 98);
+            this.pgbScan.Name = "pgbScan";
+            this.pgbScan.Size = new System.Drawing.Size(668, 16);
+            this.pgbScan.Style = System.Windows.Forms.ProgressBarStyle.Marquee;
+            this.pgbScan.TabIndex = 9;
+            //
             // lvwDuplicates
             //
             this.lvwDuplicates.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
@@ -130,9 +141,9 @@ namespace FileExplorerApp.Forms
             this.lvwDuplicates.FullRowSelect = true;
             this.lvwDuplicates.GridLines = true;
             this.lvwDuplicates.HideSelection = false;
-            this.lvwDuplicates.Location = new System.Drawing.Point(16, 102);
+            this.lvwDuplicates.Location = new System.Drawing.Point(16, 124);
             this.lvwDuplicates.Name = "lvwDuplicates";
-            this.lvwDuplicates.Size = new System.Drawing.Size(668, 400);
+            this.lvwDuplicates.Size = new System.Drawing.Size(668, 378);
             this.lvwDuplicates.TabIndex = 6;
             this.lvwDuplicates.UseCompatibleStateImageBehavior = false;
             this.lvwDuplicates.View = System.Windows.Forms.View.Details;
@@ -191,6 +202,7 @@ namespace FileExplorerApp.Forms
             this.Controls.Add(this.btnScan);
             this.Controls.Add(this.btnCancelScan);
             this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.pgbScan);
             this.Controls.Add(this.lvwDuplicates);
             this.Controls.Add(this.btnDeleteSelected);
             this.Controls.Add(this.btnClose);

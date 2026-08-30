@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using FileExplorerApp.Helpers;
@@ -7,6 +8,49 @@ using FileExplorerApp.Models;
 
 namespace FileExplorerApp.Services
 {
+    /// <summary>Giai doan hien tai cua qua trinh tim file trung lap - xem DuplicateScanProgress.</summary>
+    public enum DuplicateScanPhase
+    {
+        /// <summary>
+        /// Giai doan 1: dang liet ke toan bo file trong rootPath va nhom theo
+        /// Size. TONG SO file CHUA THE BIET TRUOC (phai duyet het moi biet co
+        /// bao nhieu file) - xem DuplicateScanProgress.TotalCount = -1 trong
+        /// giai doan nay.
+        /// </summary>
+        EnumeratingFiles,
+
+        /// <summary>
+        /// Giai doan 2: dang tinh hash MD5 cho cac file "ung vien" (cung Size
+        /// voi it nhat 1 file khac). TONG SO file can hash DA BIET TRUOC (tinh
+        /// xong Giai doan 1 moi biet duoc, nhung la mot con so co dinh trong
+        /// suot Giai doan 2) - xem DuplicateScanProgress.TotalCount.
+        /// </summary>
+        HashingCandidates
+    }
+
+    /// <summary>
+    /// Tien trinh bao cao qua IProgress&lt;DuplicateScanProgress&gt; trong luc
+    /// DuplicateService.FindDuplicateFiles dang chay - xem tham so progress
+    /// cua FindDuplicateFiles.
+    /// </summary>
+    public struct DuplicateScanProgress
+    {
+        /// <summary>Giai doan hien tai (EnumeratingFiles hoac HashingCandidates).</summary>
+        public DuplicateScanPhase Phase { get; set; }
+
+        /// <summary>So file da xu ly xong trong giai doan hien tai.</summary>
+        public int ProcessedCount { get; set; }
+
+        /// <summary>
+        /// Tong so file can xu ly trong giai doan hien tai, hoac -1 neu chua
+        /// biet truoc (chi xay ra trong Phase.EnumeratingFiles - xem ghi chu
+        /// tai DuplicateScanPhase.EnumeratingFiles). Noi nhan (VD: DuplicateForm)
+        /// nen hien ProgressBar dang Marquee (khong xac dinh) khi TotalCount
+        /// &lt; 0, va dang Continuous (co Value/Maximum cu the) khi TotalCount &gt;= 0.
+        /// </summary>
+        public int TotalCount { get; set; }
+    }
+
     /// <summary>
     /// Tim cac file trung noi dung (khong chi trung ten) trong mot thu muc,
     /// dung cho MainForm.mnuToolsFindDuplicates_Click ("Tìm file trùng lặp").
@@ -16,6 +60,15 @@ namespace FileExplorerApp.Services
     /// </summary>
     public class DuplicateService
     {
+        /// <summary>
+        /// Khoang cach toi thieu (thoi gian) giua 2 lan goi progress.Report -
+        /// giong FolderService.FolderScanProgressInterval (150ms), tranh goi
+        /// Report qua day dac (VD: hang nghin lan/giay voi thu muc nhieu file
+        /// nho) lam ngop luong UI nhan progress (Progress&lt;T&gt; tu dong post moi
+        /// lan Report len UI thread qua SynchronizationContext).
+        /// </summary>
+        private static readonly TimeSpan ProgressReportInterval = TimeSpan.FromMilliseconds(150);
+
         // Composition (khong ke thua) voi SearchService - tai su dung phuong
         // thuc Search() CONG KHAI da co san (duyet thu muc, bo qua loi
         // quyen/IO tren tung nhanh rieng le, wildcard keyword) de liet ke toan
@@ -53,6 +106,15 @@ namespace FileExplorerApp.Services
         /// hash), vi giai doan hash co the ton nhieu thoi gian hon giai doan
         /// liet ke voi thu muc chua nhieu file lon.
         /// </param>
+        /// <param name="progress">
+        /// Nhan bao cao tien trinh (tuy chon, mac dinh null = khong bao cao)
+        /// qua ca 2 giai doan - xem DuplicateScanProgress/DuplicateScanPhase.
+        /// Thuong la Progress&lt;DuplicateScanProgress&gt; duoc tao TREN LUONG UI
+        /// (VD: DuplicateForm) TRUOC KHI goi FindDuplicateFiles tu mot luong
+        /// nen (Task.Run) - IProgress&lt;T&gt;.Report tu dong marshal ve dung
+        /// SynchronizationContext luc Progress&lt;T&gt; duoc tao, nen noi goi
+        /// KHONG CAN tu Invoke/BeginInvoke ben trong callback cua progress.
+        /// </param>
         /// <remarks>
         /// TOI UU 2 GIAI DOAN de tranh phai hash TOAN BO file trong rootPath
         /// (rat cham voi thu muc lon/nhieu file dung luong cao - hash la thao
@@ -82,18 +144,27 @@ namespace FileExplorerApp.Services
         /// trung lap) - giong nguyen tac "loi tren tung nhanh khong lam dung
         /// ca qua trinh" da ap dung xuyen suot cac Service khac trong du an.
         /// </remarks>
-        public List<List<FileItemModel>> FindDuplicateFiles(string rootPath, bool recursive = true, CancellationToken cancellationToken = default)
+        public List<List<FileItemModel>> FindDuplicateFiles(
+            string rootPath, bool recursive = true, CancellationToken cancellationToken = default,
+            IProgress<DuplicateScanProgress> progress = null)
         {
             var result = new List<List<FileItemModel>>();
 
             if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath))
                 return result;
 
+            // Chi tao Stopwatch khi thuc su co progress de theo doi - giong
+            // FolderService.GetFolderStatisticsCore, tranh chi phi Stopwatch
+            // khong can thiet khi noi goi khong quan tam tien trinh (progress
+            // == null, VD: goi FindDuplicateFiles tu code/test don gian).
+            Stopwatch progressStopwatch = progress != null ? Stopwatch.StartNew() : null;
+
             // Giai doan 1: liet ke TOAN BO file (khong lay thu muc) va nhom
             // theo Size, dung LAI SearchService.Search voi keyword "*" (khop
             // moi ten qua co che wildcard cua no) thay vi tu viet vong lap
             // duyet thu muc rieng.
             var groupsBySize = new Dictionary<long, List<FileItemModel>>();
+            int scannedCount = 0;
 
             foreach (FileItemModel item in _searchService.Search(rootPath, "*", recursive, includeHidden: true, cancellationToken: cancellationToken))
             {
@@ -108,7 +179,38 @@ namespace FileExplorerApp.Services
                     groupsBySize[item.Size] = sameSize;
                 }
                 sameSize.Add(item);
+                scannedCount++;
+
+                // TotalCount = -1 vi Giai doan 1 CHUA THE BIET TRUOC tong so
+                // file trong rootPath (phai duyet het moi biet) - xem
+                // DuplicateScanPhase.EnumeratingFiles.
+                if (progressStopwatch != null && progressStopwatch.Elapsed >= ProgressReportInterval)
+                {
+                    progress.Report(new DuplicateScanProgress { Phase = DuplicateScanPhase.EnumeratingFiles, ProcessedCount = scannedCount, TotalCount = -1 });
+                    progressStopwatch.Restart();
+                }
             }
+
+            // Bao cao MOC HOAN TAT Giai doan 1 (khong throttle - chi 1 lan duy
+            // nhat khi chuyen giai doan) de noi nhan chac chan thay duoc con
+            // so cuoi cung cua Giai doan 1, tranh truong hop lan Report gan
+            // nhat (do throttle) dung lai o mot con so cu hon so thuc te.
+            progress?.Report(new DuplicateScanProgress { Phase = DuplicateScanPhase.EnumeratingFiles, ProcessedCount = scannedCount, TotalCount = -1 });
+
+            // Tinh TRUOC tong so file "ung vien" (thuoc nhom Size co >= 2 file)
+            // se can hash trong Giai doan 2 - biet duoc con so nay ngay tu dau
+            // Giai doan 2 (khac Giai doan 1) nen co the bao cao TotalCount cu
+            // the ngay tu dau, cho phep noi nhan hien ProgressBar dang
+            // Continuous (co % hoan thanh ro rang) thay vi Marquee.
+            int totalCandidates = 0;
+            foreach (List<FileItemModel> sameSizeGroup in groupsBySize.Values)
+            {
+                if (sameSizeGroup.Count >= 2)
+                    totalCandidates += sameSizeGroup.Count;
+            }
+
+            int hashedCount = 0;
+            progressStopwatch?.Restart();
 
             // Giai doan 2: voi moi nhom Size co >= 2 file (ung vien trung lap),
             // hash tung file roi nhom tiep theo theo hash - chi nhom con lai
@@ -136,6 +238,21 @@ namespace FileExplorerApp.Services
                     catch (UnauthorizedAccessException) { continue; } // Mat quyen doc file nay - bo qua rieng, khong lam hong ca nhom.
                     catch (FileNotFoundException) { continue; } // File vua bi xoa giua luc quet - phai dat TRUOC IOException vi la lop con cua no.
                     catch (IOException) { continue; } // VD: file dang bi khoa boi chuong trinh khac.
+                    finally
+                    {
+                        // Tang hashedCount VA bao cao KE CA khi file bi loi/bo
+                        // qua o tren - file do van da duoc "xu ly xong" (du
+                        // khong dong gop vao ket qua), nen van tinh vao tien
+                        // do de thanh %/ProgressBar khong bi dung lai/khong
+                        // bao gio cham 100% neu co file loi trong qua trinh.
+                        hashedCount++;
+
+                        if (progressStopwatch != null && progressStopwatch.Elapsed >= ProgressReportInterval)
+                        {
+                            progress.Report(new DuplicateScanProgress { Phase = DuplicateScanPhase.HashingCandidates, ProcessedCount = hashedCount, TotalCount = totalCandidates });
+                            progressStopwatch.Restart();
+                        }
+                    }
 
                     if (!groupsByHash.TryGetValue(hash, out List<FileItemModel> sameHash))
                     {
@@ -153,6 +270,11 @@ namespace FileExplorerApp.Services
                     }
                 }
             }
+
+            // Bao cao MOC HOAN TAT Giai doan 2 (khong throttle) - dam bao
+            // ProgressBar/lblStatus luon ket thuc dung o 100% (hashedCount ==
+            // totalCandidates), khong dung lai o mot con so throttle cu hon.
+            progress?.Report(new DuplicateScanProgress { Phase = DuplicateScanPhase.HashingCandidates, ProcessedCount = hashedCount, TotalCount = totalCandidates });
 
             return result;
         }
