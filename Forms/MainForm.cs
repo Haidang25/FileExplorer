@@ -1855,9 +1855,129 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void trvFolders_DragEnter(object sender, DragEventArgs e)
         {
-            e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
-                ? DragDropEffects.Copy
-                : DragDropEffects.None;
+            if (e.Data.GetDataPresent(typeof(List<string>)))
+            {
+                // Keo-tha NOI BO tu lvwFiles (xem lvwFiles_ItemDrag) - luon la
+                // Move (chuyen file sang thu muc khac), khac voi keo tu ben
+                // ngoai vao (Copy, xem nhanh DataFormats.FileDrop ben duoi).
+                e.Effect = DragDropEffects.Move;
+            }
+            else
+            {
+                e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
+                    ? DragDropEffects.Copy
+                    : DragDropEffects.None;
+            }
+        }
+
+        /// <summary>
+        /// Bat dau mot phien keo-tha NOI BO tu lvwFiles (nguoi dung nhan chuot
+        /// va reo (drag) tren MOT muc dang duoc chon) - dong goi danh sach
+        /// duong dan day du cua TAT CA muc dang duoc chon (khong chi muc bat
+        /// dau keo) thanh mot List&lt;string&gt; roi giao cho DoDragDrop().
+        ///
+        /// DoDragDrop() tu boc List&lt;string&gt; nay vao mot DataObject noi bo
+        /// voi TEN DINH DANG la ten kieu day du (typeof(List&lt;string&gt;)) -
+        /// khac voi DataFormats.FileDrop (dinh dang chuan cua Windows Explorer
+        /// dung khi keo file THAT tu he thong vao) - nho vay trvFolders (noi
+        /// nhan) co the phan biet RO RANG giua "keo tu chinh ListView cua ung
+        /// dung nay" (Move) va "keo tu ben ngoai vao" (Copy, xem
+        /// trvFolders_DragEnter/DragDrop) ma khong can them co (flag) rieng.
+        /// </summary>
+        private void lvwFiles_ItemDrag(object sender, ItemDragEventArgs e)
+        {
+            var draggedPaths = new List<string>();
+            foreach (ListViewItem item in lvwFiles.SelectedItems)
+            {
+                string path = item.Tag as string;
+                if (!string.IsNullOrEmpty(path))
+                    draggedPaths.Add(path);
+            }
+
+            if (draggedPaths.Count > 0)
+                lvwFiles.DoDragDrop(draggedPaths, DragDropEffects.Move);
+        }
+
+        /// <summary>
+        /// Nhan mot phien keo-tha NOI BO tu lvwFiles (xem lvwFiles_ItemDrag) va
+        /// THA vao mot node cu the tren trvFolders - di chuyen (Move) tung
+        /// FILE trong danh sach da keo sang thu muc ung voi node do, qua
+        /// FileService.MoveFile.
+        ///
+        /// PHAM VI HIEN TAI: chi xu ly FILE (goi dung FileService.MoveFile),
+        /// giong pham vi da chon cho lvwFiles_DragDrop (keo tu ben ngoai vao).
+        /// Thu muc duoc keo se bi BO QUA (co bao rieng trong tong ket) - di
+        /// chuyen ca thu muc can FolderService.MoveFolder VA kiem tra khong
+        /// duoc di chuyen thu muc vao chinh no/thu muc con cua no, se lam o
+        /// mot yeu cau khac. Muc dang nam SAN trong thu muc dich (keo vao
+        /// dung thu muc dang chua no) duoc bo qua am tham (khong tinh la loi).
+        /// </summary>
+        private void trvFolders_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(typeof(List<string>)))
+                return;
+
+            var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
+            if (draggedPaths == null || draggedPaths.Count == 0)
+                return;
+
+            Point clientPoint = trvFolders.PointToClient(new Point(e.X, e.Y));
+            TreeNode targetNode = trvFolders.GetNodeAt(clientPoint);
+            string targetFolderPath = targetNode?.Tag as string;
+            if (string.IsNullOrEmpty(targetFolderPath) || !Directory.Exists(targetFolderPath))
+                return; // Tha ra ngoai moi node, hoac vao node "chua san sang" (VD o dia chua san sang) - khong lam gi ca.
+
+            int successCount = 0;
+            var skippedFolderNames = new List<string>();
+            var problemLines = new List<string>();
+
+            foreach (string sourcePath in draggedPaths)
+            {
+                if (string.IsNullOrWhiteSpace(sourcePath))
+                    continue;
+
+                if (Directory.Exists(sourcePath))
+                {
+                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <summary>.
+                    skippedFolderNames.Add(Path.GetFileName(sourcePath));
+                    continue;
+                }
+
+                if (!File.Exists(sourcePath))
+                    continue; // Duong dan khong con hop le giua luc keo-tha (VD: vua bi xoa) - bo qua.
+
+                string name = Path.GetFileName(sourcePath);
+                string destinationPath = Path.Combine(targetFolderPath, name);
+
+                if (string.Equals(Path.GetDirectoryName(sourcePath), targetFolderPath, StringComparison.OrdinalIgnoreCase))
+                    continue; // Da nam san trong dung thu muc dich - khong can lam gi, khong tinh la loi.
+
+                OperationResult result = _fileService.MoveFile(sourcePath, destinationPath);
+                LogOperationResult(FileOperationType.Move, sourcePath, destinationPath, result,
+                    $"kéo-thả \"{name}\" sang \"{targetNode.Text}\"");
+
+                if (result == OperationResult.Success)
+                    successCount++;
+                else
+                    problemLines.Add(BuildOperationResultMessage(result, $"di chuyển \"{name}\""));
+            }
+
+            var summaryParts = new List<string>();
+            if (skippedFolderNames.Count > 0)
+                summaryParts.Add($"Đã bỏ qua {skippedFolderNames.Count} thư mục (chưa hỗ trợ kéo-thả thư mục vào đây): " +
+                    string.Join(", ", skippedFolderNames));
+            if (problemLines.Count > 0)
+                summaryParts.Add(string.Join("\n", problemLines));
+
+            if (summaryParts.Count > 0)
+            {
+                MessageBox.Show(this,
+                    $"Đã chuyển thành công {successCount} tệp sang \"{targetNode.Text}\".\n\n" + string.Join("\n\n", summaryParts),
+                    "Kéo-thả tệp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            if (successCount > 0)
+                mnuViewRefresh_Click(sender, e);
         }
 
         /// <summary>

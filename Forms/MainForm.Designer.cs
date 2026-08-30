@@ -826,6 +826,7 @@
             this.trvFolders.AllowDrop = true;
             this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
             this.trvFolders.DragEnter += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragEnter);
+            this.trvFolders.DragDrop += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragDrop);
             this.trvFolders.HideSelection = false;
             this.trvFolders.ImageKey = "folder";
             this.trvFolders.ImageList = this.imlIcons;
@@ -868,6 +869,7 @@
             this.lvwFiles.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lvwFiles_ColumnClick);
             this.lvwFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragDrop);
             this.lvwFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragEnter);
+            this.lvwFiles.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.lvwFiles_ItemDrag);
             this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
             this.lvwFiles.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lvwFiles_KeyDown);
