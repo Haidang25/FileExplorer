@@ -2261,6 +2261,38 @@ namespace FileExplorerApp.Forms
             }
         }
 
+        /// <summary>
+        /// Thu thap duong dan cua cac muc dang duoc chon trong lvwFiles (ca
+        /// file va thu muc), GIU NGUYEN thu tu hien thi trong danh sach (khong
+        /// theo thu tu click chon) vi thu tu nay se quyet dinh gia tri token
+        /// {n} trong BatchRenameForm, roi mo BatchRenameForm voi danh sach do.
+        /// </summary>
+        private void mnuToolsBatchRename_Click(object sender, EventArgs e)
+        {
+            var selectedPaths = new List<string>();
+            foreach (ListViewItem item in lvwFiles.Items)
+            {
+                if (!item.Selected)
+                    continue;
+
+                string path = item.Tag as string;
+                if (!string.IsNullOrEmpty(path) && (File.Exists(path) || Directory.Exists(path)))
+                    selectedPaths.Add(path);
+            }
+
+            if (selectedPaths.Count == 0)
+            {
+                MessageBox.Show("Vui lòng chọn ít nhất một mục để đổi tên hàng loạt.", "Thông báo",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var batchRenameForm = new BatchRenameForm(selectedPaths))
+            {
+                batchRenameForm.ShowDialog(this);
+            }
+        }
+
         private void mnuToolsRecycleBin_Click(object sender, EventArgs e)
         {
             // TODO: mo man hinh xem noi dung Thung rac, dung RecycleBinService.GetRecycleBinItems.

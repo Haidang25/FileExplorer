@@ -113,6 +113,7 @@
         private System.Windows.Forms.ToolStripMenuItem mnuTools;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsSearch;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsFindDuplicates;
+        private System.Windows.Forms.ToolStripMenuItem mnuToolsBatchRename;
         private System.Windows.Forms.ToolStripSeparator mnuToolsSeparator1;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsRecycleBin;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsLogs;
@@ -158,6 +159,7 @@
             this.mnuTools = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsSearch = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsFindDuplicates = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuToolsBatchRename = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.mnuToolsRecycleBin = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsLogs = new System.Windows.Forms.ToolStripMenuItem();
@@ -455,6 +457,7 @@
             this.mnuTools.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.mnuToolsSearch,
             this.mnuToolsFindDuplicates,
+            this.mnuToolsBatchRename,
             this.mnuToolsSeparator1,
             this.mnuToolsRecycleBin,
             this.mnuToolsLogs,
@@ -478,9 +481,16 @@
             this.mnuToolsFindDuplicates.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsFindDuplicates.Text = "Tìm file &trùng lặp...";
             this.mnuToolsFindDuplicates.Click += new System.EventHandler(this.mnuToolsFindDuplicates_Click);
-            // 
+            //
+            // mnuToolsBatchRename
+            //
+            this.mnuToolsBatchRename.Name = "mnuToolsBatchRename";
+            this.mnuToolsBatchRename.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsBatchRename.Text = "Đổi tên hàng &loạt...";
+            this.mnuToolsBatchRename.Click += new System.EventHandler(this.mnuToolsBatchRename_Click);
+            //
             // mnuToolsSeparator1
-            // 
+            //
             this.mnuToolsSeparator1.Name = "mnuToolsSeparator1";
             this.mnuToolsSeparator1.Size = new System.Drawing.Size(243, 6);
             // 
