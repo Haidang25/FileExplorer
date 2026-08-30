@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using FileExplorerApp.Helpers;
@@ -252,6 +253,149 @@ namespace FileExplorerApp.Services
             {
                 return OperationResult.Failed;
             }
+        }
+
+        /// <summary>
+        /// Nhan dien token dang "{ten_token}" hoac "{ten_token:dinh_dang}" trong
+        /// mot mau ten (pattern) doi ten hang loat, VD: "{name}", "{n:000}".
+        /// Dung chung cho GenerateBatchRenameName - tach rieng thanh field static
+        /// (thay vi tao moi Regex mot lan cho moi file) vi Regex duoc bien dich
+        /// (compile) mot lan roi dung lai nhieu lan se nhanh hon dang ke khi
+        /// doi ten hang tram/nghin file.
+        /// </summary>
+        private static readonly Regex BatchRenameTokenRegex = new Regex(@"\{(name|ext|n|date)(?::([^}]+))?\}", RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Sinh ten file/thu muc moi cho MOT duong dan theo mau ten (pattern),
+        /// dung chung boi FileService.BatchRename (thuc su doi ten tren dia) va
+        /// BatchRenameForm (xem truoc) - DAM BAO ca hai LUON tra ve CUNG MOT
+        /// ket qua cho cung dau vao, tranh truong hop nguoi dung thay preview
+        /// mot dang nhung ap dung lai ra ten khac.
+        ///
+        /// Token ho tro trong pattern:
+        /// - {name}: ten goc, KHONG gom phan mo rong (Path.GetFileNameWithoutExtension).
+        /// - {ext}: phan mo rong goc, KEM dau cham (VD ".jpg"); thu muc thuong
+        ///   khong co phan mo rong nen se la chuoi rong.
+        /// - {n} hoac {n:000}: so thu tu (bat dau tu 1, theo <paramref name="index"/>
+        ///   nguoi goi truyen vao - phan sau dau ":" quyet dinh do rong dem so 0
+        ///   dau, VD {n:000} -> "001", "002"...).
+        /// - {date} hoac {date:yyyyMMdd}: ngay gio hien tai, phan sau dau ":" la
+        ///   chuoi dinh dang DateTime tuy chinh.
+        ///
+        /// Neu pattern KHONG chua token {ext}, phan mo rong goc se duoc TU DONG
+        /// noi vao cuoi ten moi - tranh nguoi dung vo tinh lam mat phan mo rong
+        /// (VD go "{name}_backup" van ra "abc_backup.jpg" chu khong mat ".jpg").
+        /// Cac ky tu khong hop le trong ten file (Path.GetInvalidFileNameChars)
+        /// duoc thay bang "_" de ten moi luon la mot ten file hop le.
+        /// </summary>
+        /// <param name="originalPath">Duong dan day du hien tai (file hoac thu muc).</param>
+        /// <param name="pattern">Mau ten, xem cac token ho tro o tren.</param>
+        /// <param name="index">Vi tri (bat dau tu 0) cua muc nay trong danh sach dang doi ten hang loat - quyet dinh gia tri token {n}.</param>
+        /// <returns>Ten moi (khong bao gom duong dan). Tra ve ten goc neu pattern rong hoac ket qua thay the ra chuoi rong.</returns>
+        public static string GenerateBatchRenameName(string originalPath, string pattern, int index)
+        {
+            string originalName = Path.GetFileName(originalPath);
+            if (string.IsNullOrWhiteSpace(pattern))
+                return originalName;
+
+            string extension = Path.GetExtension(originalPath) ?? string.Empty;
+
+            string result = BatchRenameTokenRegex.Replace(pattern, match =>
+            {
+                string token = match.Groups[1].Value.ToLowerInvariant();
+                string format = match.Groups[2].Success ? match.Groups[2].Value : null;
+
+                switch (token)
+                {
+                    case "name":
+                        return Path.GetFileNameWithoutExtension(originalPath);
+                    case "ext":
+                        return extension;
+                    case "n":
+                        {
+                            int width = string.IsNullOrEmpty(format) ? 1 : format.Length;
+                            return (index + 1).ToString().PadLeft(width, '0');
+                        }
+                    case "date":
+                        return DateTime.Now.ToString(string.IsNullOrEmpty(format) ? "yyyyMMdd" : format);
+                    default:
+                        return match.Value;
+                }
+            });
+
+            bool patternHasExtensionToken = pattern.IndexOf("{ext}", StringComparison.OrdinalIgnoreCase) >= 0
+                || Regex.IsMatch(pattern, @"\{ext:", RegexOptions.IgnoreCase);
+            if (!patternHasExtensionToken && !string.IsNullOrEmpty(extension))
+                result += extension;
+
+            foreach (char invalidChar in Path.GetInvalidFileNameChars())
+                result = result.Replace(invalidChar, '_');
+
+            return string.IsNullOrEmpty(result) ? originalName : result;
+        }
+
+        /// <summary>
+        /// Doi ten hang loat danh sach file/thu muc theo MOT mau ten (pattern)
+        /// dung chung - xem GenerateBatchRenameName de biet cac token ho tro
+        /// ({name}, {ext}, {n}/{n:000}, {date}).
+        ///
+        /// Xu ly TUNG MUC THEO DUNG THU TU trong <paramref name="paths"/> (khong
+        /// song song), vi ket qua cua muc truoc anh huong toi muc sau: moi muc
+        /// duoc doi ten qua Rename() (ham da co san, dung chung voi doi ten tu
+        /// F2 tren MainForm) - Rename() tu nhan biet file/thu muc va da lam san
+        /// toan bo kiem tra an toan (ten khong hop le, trung ten voi muc DA CO
+        /// TREN DIA luc do, khong co quyen ghi, file dang bi khoa...), nho vay
+        /// BatchRename KHONG can tu goi File.Move/Directory.Move rieng va luon
+        /// cho ket qua giong het nhu doi ten tung muc mot bang tay.
+        ///
+        /// He qua cua cach xu ly tuan tu nay: neu hai muc trong danh sach vo
+        /// tinh (hoac do pattern) cho ra CUNG mot ten moi, muc xu ly TRUOC se
+        /// doi ten thanh cong, cac muc sau bi Skipped (vi ten do "da bi chiem"
+        /// ngay sau khi muc dau tien doi xong) - dung y voi canh bao to do o
+        /// BatchRenameForm khi phat hien ten moi trung nhau trong xem truoc.
+        ///
+        /// Han che da biet (hoan doi ten - swap): neu ten moi cua muc A trung
+        /// voi ten HIEN TAI (chua doi) cua muc B dung sau trong danh sach, va B
+        /// se duoc doi sang mot ten khac trong CUNG lan goi nay, thi A van se bi
+        /// Skipped (vi luc xu ly A, B chua kip doi ten nen van con "chiem" ten
+        /// do) - truong hop nay hiem gap va khong duoc ho tro; can chay lai
+        /// BatchRename lan hai cho cac muc bi Skipped do nguyen nhan nay.
+        /// </summary>
+        /// <param name="paths">Danh sach duong dan (file hoac thu muc) can doi ten, THEO DUNG THU TU muon dung de danh so token {n}.</param>
+        /// <param name="pattern">Mau ten, xem GenerateBatchRenameName.</param>
+        /// <returns>
+        /// Danh sach ket qua CUNG DO DAI VA CUNG THU TU voi <paramref name="paths"/>
+        /// - moi phan tu gom duong dan goc, duong dan moi DU KIEN (du thanh
+        /// cong hay khong), va OperationResult thuc te cua rieng muc do.
+        /// </returns>
+        public List<BatchRenameItemResult> BatchRename(List<string> paths, string pattern)
+        {
+            var results = new List<BatchRenameItemResult>();
+            if (paths == null)
+                return results;
+
+            for (int i = 0; i < paths.Count; i++)
+            {
+                string originalPath = paths[i];
+                var itemResult = new BatchRenameItemResult { OriginalPath = originalPath };
+
+                if (string.IsNullOrWhiteSpace(originalPath) || (!File.Exists(originalPath) && !Directory.Exists(originalPath)))
+                {
+                    itemResult.NewPath = originalPath;
+                    itemResult.Result = OperationResult.NotFound;
+                    results.Add(itemResult);
+                    continue;
+                }
+
+                string newName = GenerateBatchRenameName(originalPath, pattern, i);
+                string directory = Path.GetDirectoryName(originalPath);
+                itemResult.NewPath = Path.Combine(directory ?? string.Empty, newName);
+                itemResult.Result = Rename(originalPath, newName);
+
+                results.Add(itemResult);
+            }
+
+            return results;
         }
 
         /// <summary>

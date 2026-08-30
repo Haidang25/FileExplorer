@@ -132,6 +132,7 @@
     <Compile Include="Helpers\HashHelper.cs" />
     <Compile Include="Helpers\ListViewItemComparer.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
+    <Compile Include="Models\BatchRenameItemResult.cs" />
     <Compile Include="Models\ConflictAction.cs" />
     <Compile Include="Models\FileItemModel.cs" />
     <Compile Include="Models\FileOperationProgress.cs" />
