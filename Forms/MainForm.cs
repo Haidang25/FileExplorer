@@ -1802,6 +1802,14 @@ namespace FileExplorerApp.Forms
         /// dang duoc preview. Image cu (neu co) luon duoc Dispose truoc khi
         /// gan Image moi de tranh ro handle GDI+.
         /// </summary>
+        /// <summary>
+        /// Gioi han dung luong toi da (byte) cho mot anh duoc phep preview -
+        /// tranh doc nguyen ca anh RAW/PSD/anh do phan giai sieu cao vao RAM
+        /// chi de hien thumbnail, vua ton bo nho vua co the treo UI khi
+        /// Image.FromStream giai ma anh qua lon.
+        /// </summary>
+        private const long MaxPreviewImageBytes = 20 * 1024 * 1024; // 20 MB
+
         private void UpdateImagePreview()
         {
             Image oldImage = pbxPreview.Image;
@@ -1826,6 +1834,24 @@ namespace FileExplorerApp.Forms
             if (FileHelper.GetFileIconCategory(path) != FileIconCategory.Image)
             {
                 lblPreviewCaption.Text = "Không có ảnh để xem trước";
+                return;
+            }
+
+            long fileSize;
+            try
+            {
+                fileSize = new FileInfo(path).Length;
+            }
+            catch (IOException)
+            {
+                lblPreviewCaption.Text = "Không thể xem trước ảnh này";
+                return;
+            }
+
+            if (fileSize > MaxPreviewImageBytes)
+            {
+                lblPreviewCaption.Text =
+                    $"Ảnh quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewImageBytes)})";
                 return;
             }
 
