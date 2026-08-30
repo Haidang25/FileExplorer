@@ -822,7 +822,8 @@
             this.lblPreviewCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             //
             // trvFolders
-            // 
+            //
+            this.trvFolders.AllowDrop = true;
             this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
             this.trvFolders.HideSelection = false;
             this.trvFolders.ImageKey = "folder";
@@ -842,7 +843,8 @@
             this.imlIcons.TransparentColor = System.Drawing.Color.Transparent;
             // 
             // lvwFiles
-            // 
+            //
+            this.lvwFiles.AllowDrop = true;
             this.lvwFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.colName,
             this.colSize,
