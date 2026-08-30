@@ -335,31 +335,74 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Sinh MOT ten tam (khong bao gio trung voi bat ky file/thu muc nao
+        /// dang co, ke ca cac muc KHAC dang duoc doi ten trong CUNG mot lan
+        /// goi BatchRename) - dua tren Guid nen xac suat trung la khong dang
+        /// ke; van thu lai vai lan (kiem tra File.Exists/Directory.Exists)
+        /// truoc khi danh cuoc vao Guid, giong tinh than "kiem tra truoc khi
+        /// tin tuong" da dung o cac noi khac trong ung dung.
+        /// </summary>
+        private static string GenerateUniqueTempName(string originalPath)
+        {
+            string directory = Path.GetDirectoryName(originalPath) ?? string.Empty;
+            string extension = Path.GetExtension(originalPath) ?? string.Empty;
+
+            for (int attempt = 0; attempt < 5; attempt++)
+            {
+                string candidateName = "~batchrename_" + Guid.NewGuid().ToString("N") + extension;
+                string candidatePath = Path.Combine(directory, candidateName);
+                if (!File.Exists(candidatePath) && !Directory.Exists(candidatePath))
+                    return candidateName;
+            }
+
+            // Cuc ky khong the xay ra (5 Guid lien tiep deu trung mot muc co
+            // san) - noi them Ticks de chac chan khac voi 5 lan thu tren.
+            return "~batchrename_" + Guid.NewGuid().ToString("N") + "_" + DateTime.Now.Ticks + extension;
+        }
+
+        /// <summary>
         /// Doi ten hang loat danh sach file/thu muc theo MOT mau ten (pattern)
         /// dung chung - xem GenerateBatchRenameName de biet cac token ho tro
         /// ({name}, {ext}, {n}/{n:000}, {date}).
         ///
-        /// Xu ly TUNG MUC THEO DUNG THU TU trong <paramref name="paths"/> (khong
-        /// song song), vi ket qua cua muc truoc anh huong toi muc sau: moi muc
-        /// duoc doi ten qua Rename() (ham da co san, dung chung voi doi ten tu
-        /// F2 tren MainForm) - Rename() tu nhan biet file/thu muc va da lam san
-        /// toan bo kiem tra an toan (ten khong hop le, trung ten voi muc DA CO
-        /// TREN DIA luc do, khong co quyen ghi, file dang bi khoa...), nho vay
-        /// BatchRename KHONG can tu goi File.Move/Directory.Move rieng va luon
-        /// cho ket qua giong het nhu doi ten tung muc mot bang tay.
+        /// XU LY QUA 2 GIAI DOAN de xu ly DUNG cac truong hop trung ten PHAT
+        /// SINH GIUA CAC MUC TRONG CUNG LO (VD: muc A duoc doi thanh ten ma
+        /// muc B dang giu, roi B moi duoc doi sang ten khac trong CUNG lan
+        /// goi nay - hoan doi ten cho nhau, hoac dai hon: A->ten cua B, B->ten
+        /// cua C, C->ten cua A):
         ///
-        /// He qua cua cach xu ly tuan tu nay: neu hai muc trong danh sach vo
-        /// tinh (hoac do pattern) cho ra CUNG mot ten moi, muc xu ly TRUOC se
-        /// doi ten thanh cong, cac muc sau bi Skipped (vi ten do "da bi chiem"
-        /// ngay sau khi muc dau tien doi xong) - dung y voi canh bao to do o
-        /// BatchRenameForm khi phat hien ten moi trung nhau trong xem truoc.
+        /// - Giai doan 1 (doi tam): TOAN BO muc hop le duoc doi sang MOT TEN
+        ///   TAM rieng (xem GenerateUniqueTempName) NGAY TRONG CHINH thu muc
+        ///   cua no. Vi ten tam la Guid nen KHONG BAO GIO trung voi ten cua
+        ///   bat ky muc nao khac (ca file/thu muc co san tren dia lan ten GOC
+        ///   cua CAC MUC KHAC trong lo nay) - sau giai doan nay, TOAN BO cac
+        ///   muc trong lo deu da "nhuong lai" ten goc cua minh, nen khong con
+        ///   muc nao trong lo co the lam "vuong" ten dich cua mot muc khac
+        ///   nua, du khong can biet truoc thu tu xu ly phu thuoc nhau nhu the
+        ///   nao.
+        /// - Giai doan 2 (doi vao ten dich): tu ten tam, doi tiep sang ten
+        ///   dich THAT (tinh tu pattern) THEO DUNG THU TU trong
+        ///   <paramref name="paths"/> - luc nay neu hai muc vo tinh (hoac do
+        ///   pattern) cho ra CUNG mot ten dich, muc xu ly TRUOC se chiem duoc
+        ///   ten do, muc SAU se tu dong bi Skipped (dung y voi canh bao to do
+        ///   o BatchRenameForm khi phat hien ten moi trung nhau trong xem
+        ///   truoc) - day la xung dot THAT (chi mot file co the mang mot ten),
+        ///   khong con lien quan gi den viec sap xep thu tu xu ly nua.
         ///
-        /// Han che da biet (hoan doi ten - swap): neu ten moi cua muc A trung
-        /// voi ten HIEN TAI (chua doi) cua muc B dung sau trong danh sach, va B
-        /// se duoc doi sang mot ten khac trong CUNG lan goi nay, thi A van se bi
-        /// Skipped (vi luc xu ly A, B chua kip doi ten nen van con "chiem" ten
-        /// do) - truong hop nay hiem gap va khong duoc ho tro; can chay lai
-        /// BatchRename lan hai cho cac muc bi Skipped do nguyen nhan nay.
+        /// Ca hai giai doan deu goi lai Rename() (ham da co san, dung chung
+        /// voi doi ten tu F2 tren MainForm) de tai su dung toan bo kiem tra an
+        /// toan (ten khong hop le, khong co quyen ghi, file dang bi khoa...),
+        /// thay vi tu goi File.Move/Directory.Move rieng.
+        ///
+        /// Neu giai doan 2 khong thanh cong cho mot muc (VD: trung ten voi
+        /// mot file/thu muc KHONG thuoc lo nay, hoac vua bi khoa giua luc dang
+        /// xu ly), ham se CO GANG doi muc do TRA LAI ten goc (best-effort, bo
+        /// qua ket qua cua lan doi lai nay) de nguoi dung khong bi "mat dau"
+        /// file duoi mot ten tam ky la - truong hop cuc hiem ca lan doi lai
+        /// nay cung khong thanh cong (VD: mat quyen ghi dung luc do), muc do
+        /// se tam thoi con mang ten dang "~batchrename_..." tren dia; chi bao
+        /// OperationResult loi thuc te, khong co dau hieu rieng cho tinh huong
+        /// nay vi qua hiem va nguoi dung van co the tim/doi ten lai thu cong.
         /// </summary>
         /// <param name="paths">Danh sach duong dan (file hoac thu muc) can doi ten, THEO DUNG THU TU muon dung de danh so token {n}.</param>
         /// <param name="pattern">Mau ten, xem GenerateBatchRenameName.</param>
@@ -370,32 +413,80 @@ namespace FileExplorerApp.Services
         /// </returns>
         public List<BatchRenameItemResult> BatchRename(List<string> paths, string pattern)
         {
-            var results = new List<BatchRenameItemResult>();
+            var itemResults = new List<BatchRenameItemResult>();
             if (paths == null)
-                return results;
+                return itemResults;
 
+            var targetNames = new string[paths.Count];
+            var tempPaths = new string[paths.Count];
+
+            // Buoc 1: tinh ten dich cho TUNG muc TRUOC KHI dong vao dia gi ca
+            // - dam bao gia tri token {n} luon theo DUNG vi tri trong danh
+            // sach goc nguoi dung da chon, khong bi anh huong boi thu tu xu
+            // ly thuc te o cac giai doan sau.
             for (int i = 0; i < paths.Count; i++)
             {
                 string originalPath = paths[i];
                 var itemResult = new BatchRenameItemResult { OriginalPath = originalPath };
+                itemResults.Add(itemResult);
 
                 if (string.IsNullOrWhiteSpace(originalPath) || (!File.Exists(originalPath) && !Directory.Exists(originalPath)))
                 {
                     itemResult.NewPath = originalPath;
                     itemResult.Result = OperationResult.NotFound;
-                    results.Add(itemResult);
                     continue;
                 }
 
-                string newName = GenerateBatchRenameName(originalPath, pattern, i);
+                targetNames[i] = GenerateBatchRenameName(originalPath, pattern, i);
                 string directory = Path.GetDirectoryName(originalPath);
-                itemResult.NewPath = Path.Combine(directory ?? string.Empty, newName);
-                itemResult.Result = Rename(originalPath, newName);
-
-                results.Add(itemResult);
+                itemResult.NewPath = Path.Combine(directory ?? string.Empty, targetNames[i]);
             }
 
-            return results;
+            // Giai doan 1: doi tam TOAN BO muc hop le - xem giai thich chi
+            // tiet o phan <summary> cua ham.
+            for (int i = 0; i < paths.Count; i++)
+            {
+                if (itemResults[i].Result == OperationResult.NotFound)
+                    continue;
+
+                string tempName = GenerateUniqueTempName(paths[i]);
+                OperationResult tempResult = Rename(paths[i], tempName);
+                if (tempResult != OperationResult.Success)
+                {
+                    // Khong doi tam duoc (VD: dang bi khoa, khong co quyen) -
+                    // muc nay van con NGUYEN o ten GOC, bao dung ket qua thuc
+                    // te va KHONG dua sang giai doan 2.
+                    itemResults[i].Result = tempResult;
+                    continue;
+                }
+
+                string directory = Path.GetDirectoryName(paths[i]);
+                tempPaths[i] = Path.Combine(directory ?? string.Empty, tempName);
+            }
+
+            // Giai doan 2: doi tu ten tam sang ten dich THAT, THEO DUNG THU TU
+            // trong paths - xem giai thich chi tiet o phan <summary> cua ham.
+            for (int i = 0; i < paths.Count; i++)
+            {
+                if (tempPaths[i] == null)
+                    continue; // Da bi NotFound hoac loi ngay o Giai doan 1.
+
+                OperationResult finalResult = Rename(tempPaths[i], targetNames[i]);
+                if (finalResult == OperationResult.Success)
+                {
+                    itemResults[i].Result = OperationResult.Success;
+                }
+                else
+                {
+                    // Co gang tra lai TEN GOC (best-effort - xem giai thich o
+                    // phan <summary> cua ham) roi bao dung ket qua loi thuc te.
+                    string originalName = Path.GetFileName(paths[i]);
+                    Rename(tempPaths[i], originalName);
+                    itemResults[i].Result = finalResult;
+                }
+            }
+
+            return itemResults;
         }
 
         /// <summary>
