@@ -1762,6 +1762,20 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void lvwFiles_DragEnter(object sender, DragEventArgs e)
         {
+            if (e.Data.GetDataPresent(typeof(List<string>)))
+            {
+                // Day la phien keo-tha NOI BO cua chinh ung dung nay, bat dau
+                // tu lvwFiles_ItemDrag (nay cung dinh kem DataFormats.FileDrop
+                // de ho tro keo RA NGOAI ung dung - xem doc o do) - neu con
+                // chuot lai di NGANG QUA/quay lai chinh lvwFiles trong luc keo
+                // (VD: keo long vong) thi khong co dich nao khac de sao chep/
+                // di chuyen toi ca, nen luon None, KHONG doc DataFormats.FileDrop
+                // (se hieu lam thanh keo tu ben ngoai vao va tu "sao chep" file
+                // de len chinh no).
+                e.Effect = DragDropEffects.None;
+                return;
+            }
+
             e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
                 ? DragDropEffects.Copy
                 : DragDropEffects.None;
@@ -1786,6 +1800,9 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void lvwFiles_DragDrop(object sender, DragEventArgs e)
         {
+            if (e.Data.GetDataPresent(typeof(List<string>)))
+                return; // Phien keo-tha NOI BO cua chinh ung dung nay - xem lvwFiles_DragEnter.
+
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
                 return;
 
@@ -1947,25 +1964,37 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Bat dau mot phien keo-tha NOI BO tu lvwFiles (nguoi dung nhan chuot
-        /// va reo (drag) tren MOT muc dang duoc chon) - dong goi danh sach
-        /// duong dan day du cua TAT CA muc dang duoc chon (khong chi muc bat
-        /// dau keo) thanh mot List&lt;string&gt; roi giao cho DoDragDrop().
+        /// Bat dau mot phien keo-tha tu lvwFiles (nguoi dung nhan chuot va
+        /// reo (drag) tren MOT muc dang duoc chon) - dong goi danh sach duong
+        /// dan day du cua TAT CA muc dang duoc chon (khong chi muc bat dau
+        /// keo) thanh MOT DataObject mang CA HAI dinh dang du lieu, de phien
+        /// keo nay dung duoc VOI CA HAI loai noi nhan:
         ///
-        /// DoDragDrop() tu boc List&lt;string&gt; nay vao mot DataObject noi bo
-        /// voi TEN DINH DANG la ten kieu day du (typeof(List&lt;string&gt;)) -
-        /// khac voi DataFormats.FileDrop (dinh dang chuan cua Windows Explorer
-        /// dung khi keo file THAT tu he thong vao) - nho vay trvFolders (noi
-        /// nhan) co the phan biet RO RANG giua "keo tu chinh ListView cua ung
-        /// dung nay" (Move) va "keo tu ben ngoai vao" (Copy, xem
-        /// trvFolders_DragEnter/DragDrop) ma khong can them co (flag) rieng.
+        /// - typeof(List&lt;string&gt;): dinh dang RIENG cua ung dung nay - noi
+        ///   nhan la trvFolders (xem trvFolders_DragEnter/DragOver/DragDrop)
+        ///   doc dinh dang nay de biet day la keo-tha NOI BO (mac dinh Move,
+        ///   giu Ctrl de Copy), phan biet ro voi keo-tha tu ben ngoai vao
+        ///   (DataFormats.FileDrop, luon la Copy).
+        /// - DataFormats.FileDrop (CF_HDROP): dinh dang CHUAN cua Windows
+        ///   Shell - BAT BUOC phai co de keo tep RA NGOAI ung dung nay (tha
+        ///   vao Desktop, mot cua so File Explorer khac, hoac bat ky ung dung
+        ///   Windows nao khac chap nhan FileDrop) hoat dong duoc, vi cac noi
+        ///   nhan do KHONG BIET gi ve dinh dang List&lt;string&gt; rieng cua ung
+        ///   dung nay - chung CHI hieu FileDrop. Voi noi nhan la File Explorer/
+        ///   Desktop, CHINH NO (khong phai ung dung nay) se doc cac duong dan
+        ///   trong FileDrop va tu quyet dinh Move hay Copy dua theo phim Ctrl/
+        ///   Shift nguoi dung giu VA hai o dia nguon/dich co giong nhau hay
+        ///   khong (dung hanh vi mac dinh cua Windows Explorer) - ung dung nay
+        ///   khong can (va khong the) can thiep vao buoc thuc thi do.
         ///
         /// allowedEffects truyen ca Move VA Copy (khong chi Move) - day la
         /// "danh sach hieu ung noi nhan DUOC PHEP chon", neu chi cho Move thi
         /// du trvFolders_DragEnter/DragOver co ep e.Effect = Copy khi giu Ctrl
         /// cung se bi WinForms bo qua (khong hien con tro Copy, tha ra van bi
         /// tinh nhu Move) - xem UpdateTrvFoldersDragEffect va
-        /// trvFolders_DragDrop de biet noi Ctrl thuc su duoc doc lai.
+        /// trvFolders_DragDrop de biet noi Ctrl thuc su duoc doc lai cho
+        /// truong hop NOI BO; voi truong hop keo RA NGOAI, File Explorer tu
+        /// doc lai phim Ctrl/Shift theo cach rieng cua no nhu da noi tren.
         /// </summary>
         private void lvwFiles_ItemDrag(object sender, ItemDragEventArgs e)
         {
@@ -1977,8 +2006,14 @@ namespace FileExplorerApp.Forms
                     draggedPaths.Add(path);
             }
 
-            if (draggedPaths.Count > 0)
-                lvwFiles.DoDragDrop(draggedPaths, DragDropEffects.Move | DragDropEffects.Copy);
+            if (draggedPaths.Count == 0)
+                return;
+
+            var dataObject = new DataObject();
+            dataObject.SetData(typeof(List<string>), draggedPaths);
+            dataObject.SetData(DataFormats.FileDrop, draggedPaths.ToArray());
+
+            lvwFiles.DoDragDrop(dataObject, DragDropEffects.Move | DragDropEffects.Copy);
         }
 
         /// <summary>
