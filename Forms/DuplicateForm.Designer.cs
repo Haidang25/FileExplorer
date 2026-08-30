@@ -18,6 +18,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.ColumnHeader colDupLocation;
         private System.Windows.Forms.ColumnHeader colDupSize;
         private System.Windows.Forms.ColumnHeader colDupModified;
+        private System.Windows.Forms.Button btnDeleteSelected;
         private System.Windows.Forms.Button btnClose;
 
         /// <summary>
@@ -52,6 +53,7 @@ namespace FileExplorerApp.Forms
             this.colDupLocation = new System.Windows.Forms.ColumnHeader();
             this.colDupSize = new System.Windows.Forms.ColumnHeader();
             this.colDupModified = new System.Windows.Forms.ColumnHeader();
+            this.btnDeleteSelected = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
             this.components = new System.ComponentModel.Container();
             this.SuspendLayout();
@@ -119,6 +121,7 @@ namespace FileExplorerApp.Forms
             // lvwDuplicates
             //
             this.lvwDuplicates.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
+            this.lvwDuplicates.CheckBoxes = true;
             this.lvwDuplicates.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.colDupName,
             this.colDupLocation,
@@ -156,6 +159,16 @@ namespace FileExplorerApp.Forms
             this.colDupModified.Text = "Ngày sửa";
             this.colDupModified.Width = 96;
             //
+            // btnDeleteSelected
+            //
+            this.btnDeleteSelected.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnDeleteSelected.Location = new System.Drawing.Point(16, 510);
+            this.btnDeleteSelected.Name = "btnDeleteSelected";
+            this.btnDeleteSelected.Size = new System.Drawing.Size(180, 32);
+            this.btnDeleteSelected.TabIndex = 8;
+            this.btnDeleteSelected.Text = "Xóa tệp đã chọn";
+            this.btnDeleteSelected.Click += new System.EventHandler(this.btnDeleteSelected_Click);
+            //
             // btnClose
             //
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -179,6 +192,7 @@ namespace FileExplorerApp.Forms
             this.Controls.Add(this.btnCancelScan);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.lvwDuplicates);
+            this.Controls.Add(this.btnDeleteSelected);
             this.Controls.Add(this.btnClose);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
