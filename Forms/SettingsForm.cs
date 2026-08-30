@@ -16,9 +16,14 @@ namespace FileExplorerApp.Forms
     /// dong bo lai UI sau khi dong hop thoai nay voi DialogResult.OK.
     ///
     /// Nhom "Giam sat thu muc" (FileMonitorService) va "Nhat ky" (LogService)
-    /// hien chi luu gia tri cho hop thoai nay — ban than 2 Service do trong du
-    /// an van con la khung (TODO/NotImplementedException), nen luu y cac tuy
-    /// chon nay CHUA co tac dung thuc te cho toi khi 2 Service duoc trien khai.
+    /// deu da co tac dung THUC TE:
+    /// - chkAutoRefresh/numWatcherDelay: MainForm doc lai 2 gia tri nay ngay
+    ///   sau khi dong hop thoai voi DialogResult.OK (mnuToolsSettings_Click) de
+    ///   bat/tat FileMonitorService va cap nhat Interval cua timer debounce,
+    ///   khong can khoi dong lai ung dung - xem MainForm.RestartFolderMonitoring/
+    ///   InitializeFolderMonitoring.
+    /// - chkEnableLog: LogService.WriteLog doc truc tiep Settings.Default.
+    ///   LogEnabled moi lan ghi (khong can MainForm chuyen tiep gia tri).
     /// </summary>
     public partial class SettingsForm : Form
     {
