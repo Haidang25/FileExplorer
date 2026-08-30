@@ -826,6 +826,7 @@
             this.trvFolders.AllowDrop = true;
             this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
             this.trvFolders.DragEnter += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragEnter);
+            this.trvFolders.DragOver += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragOver);
             this.trvFolders.DragDrop += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragDrop);
             this.trvFolders.HideSelection = false;
             this.trvFolders.ImageKey = "folder";
