@@ -1751,6 +1751,36 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Kiem tra du lieu dang duoc keo vao lvwFiles (tu Windows Explorer
+        /// hoac ung dung khac ben ngoai - KHONG phai keo-tha noi bo giua
+        /// lvwFiles/trvFolders, se xu ly rieng o mot yeu cau khac) co dung la
+        /// mot hoac nhieu file/thu muc (DataFormats.FileDrop) hay khong.
+        /// e.Effect = Copy neu hop le (con tro chuot doi thanh dau "+", cho
+        /// phep tha) - None neu khong (VD: keo van ban/anh truc tiep tu trinh
+        /// duyet, khong phai duong dan file thuc te tren dia), WinForms se tu
+        /// hien con tro "cam" phu hop, khong can tu ve.
+        /// </summary>
+        private void lvwFiles_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+        }
+
+        /// <summary>
+        /// Giong lvwFiles_DragEnter - kiem tra du lieu keo vao trvFolders co
+        /// phai DataFormats.FileDrop hay khong, dung cho tinh nang (se lam o
+        /// yeu cau khac) tha file/thu muc truc tiep vao MOT NHANH cu the tren
+        /// cay thu muc de sao chep/di chuyen toi do.
+        /// </summary>
+        private void trvFolders_DragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
+                ? DragDropEffects.Copy
+                : DragDropEffects.None;
+        }
+
+        /// <summary>
         /// Cap nhat nhan trang thai (tsslStatus) theo so muc/kich thuoc dang duoc chon
         /// tren lvwFiles, giong thanh trang thai cua Windows Explorer.
         /// </summary>
