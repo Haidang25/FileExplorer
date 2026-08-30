@@ -104,12 +104,12 @@ namespace FileExplorerApp.Forms
             // btnApply
             //
             this.btnApply.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnApply.Enabled = false;
             this.btnApply.Location = new System.Drawing.Point(16, 454);
             this.btnApply.Name = "btnApply";
             this.btnApply.Size = new System.Drawing.Size(160, 30);
             this.btnApply.TabIndex = 4;
-            this.btnApply.Text = "Đổi tên (sắp có)";
+            this.btnApply.Text = "Đổi tên";
+            this.btnApply.Click += new System.EventHandler(this.btnApply_Click);
             //
             // btnClose
             //
