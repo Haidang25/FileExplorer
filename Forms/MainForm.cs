@@ -1877,28 +1877,73 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Xac dinh DragDropEffects dung chung cho ca DragEnter va DragOver
-        /// cua trvFolders. Voi keo-tha NOI BO (List&lt;string&gt;, xem
-        /// lvwFiles_ItemDrag): mac dinh la Move, nhung neu nguoi dung dang
+        /// cua trvFolders - Windows tu doi HINH CON TRO CHUOT theo dung
+        /// DragDropEffects nay (Move/Copy/None co bieu tuong rieng, None la
+        /// hinh "cam" bao khong the tha o day), nen chi can gan dung e.Effect
+        /// la con tro se tu cap nhat, KHONG can tu ve icon thu cong.
+        ///
+        /// Hai buoc kiem tra, THEO THU TU:
+        /// - Dinh dang du lieu dang keo co duoc ho tro khong (List&lt;string&gt;
+        ///    tu lvwFiles_ItemDrag = keo NOI BO, hoac DataFormats.FileDrop =
+        ///    keo tu ben ngoai vao) - neu khong thi luon None.
+        /// - VI TRI con chuot dang o tren co la mot node THU MUC HOP LE de
+        ///    tha khong (khong o giua cac node, khong o node "chua san sang"
+        ///    nhu o dia chua duoc nhan dang) - neu khong thi cung luon None,
+        ///    BAT KE dinh dang du lieu o buoc 1 co hop le hay khong, dung
+        ///    hanh vi Windows Explorer (chi doi con tro thanh Move/Copy khi
+        ///    dang o TREN mot vi tri thuc su co the tha duoc).
+        ///
+        /// Voi keo-tha NOI BO: mac dinh la Move, nhung neu nguoi dung dang
         /// GIU PHIM CTRL (kiem tra qua bit DragKeyStateCtrl trong e.KeyState)
-        /// thi EP thanh Copy - dung chuan hanh vi keo-tha cua Windows Explorer
-        /// (giu Ctrl trong luc keo-tha de sao chep thay vi di chuyen). Voi keo
-        /// tu ben ngoai vao (DataFormats.FileDrop) van giu nguyen la Copy nhu
-        /// truoc, khong doi theo Ctrl (giong lvwFiles_DragEnter).
+        /// thi EP thanh Copy - dung chuan hanh vi keo-tha cua Windows Explorer.
+        /// Rieng voi Move: neu TAT CA muc dang keo da nam san trong dung thu
+        /// muc dang tro toi (tha vao se khong lam gi ca, xem trvFolders_DragDrop)
+        /// thi cung hien None thay vi Move, de nguoi dung biet truoc se khong
+        /// co gi xay ra ma khong can cho den luc tha.
+        ///
+        /// Voi keo tu ben ngoai vao (DataFormats.FileDrop): van giu nguyen la
+        /// Copy nhu truoc, khong doi theo Ctrl (giong lvwFiles_DragEnter).
         /// </summary>
         private void UpdateTrvFoldersDragEffect(DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(List<string>)))
+            bool hasInternalData = e.Data.GetDataPresent(typeof(List<string>));
+            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop);
+            if (!hasInternalData && !hasExternalData)
             {
-                e.Effect = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl
-                    ? DragDropEffects.Copy
-                    : DragDropEffects.Move;
+                e.Effect = DragDropEffects.None;
+                return;
             }
-            else
+
+            Point clientPoint = trvFolders.PointToClient(new Point(e.X, e.Y));
+            TreeNode targetNode = trvFolders.GetNodeAt(clientPoint);
+            string targetFolderPath = targetNode?.Tag as string;
+            bool isValidTarget = !string.IsNullOrEmpty(targetFolderPath) && Directory.Exists(targetFolderPath);
+            if (!isValidTarget)
             {
-                e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
-                    ? DragDropEffects.Copy
-                    : DragDropEffects.None;
+                e.Effect = DragDropEffects.None;
+                return;
             }
+
+            if (!hasInternalData)
+            {
+                e.Effect = DragDropEffects.Copy; // Keo FileDrop tu ben ngoai vao node hop le.
+                return;
+            }
+
+            bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
+            if (!isCopy)
+            {
+                var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
+                bool allAlreadyInTarget = draggedPaths != null && draggedPaths.Count > 0 &&
+                    draggedPaths.All(p => string.Equals(Path.GetDirectoryName(p), targetFolderPath, StringComparison.OrdinalIgnoreCase));
+                if (allAlreadyInTarget)
+                {
+                    e.Effect = DragDropEffects.None; // Tha vao se khong lam gi (da nam san o day) - bao truoc bang con tro "cam".
+                    return;
+                }
+            }
+
+            e.Effect = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
         }
 
         /// <summary>
