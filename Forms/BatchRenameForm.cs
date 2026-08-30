@@ -126,9 +126,18 @@ namespace FileExplorerApp.Forms
                 BatchRenameItemResult item = results[i];
 
                 // Ghi log TUNG muc rieng le (khong gop 1 dong) vi moi muc co
-                // the co OperationResult khac nhau.
+                // the co OperationResult khac nhau (VD: muc nay Success, muc
+                // khac Skipped do trung ten) - gop chung se mat thong tin nay.
+                // Source/Destination la duong dan CU/MOI (dung quy uoc da
+                // dung khi doi ten tu F2 tren MainForm, xem
+                // MainForm.lvwFiles_AfterLabelEdit), Message nhac lai ten cu/
+                // moi (khong gom duong dan, de ngan gon) va ghi ro day la
+                // thao tac hang loat, giup phan biet voi doi ten tung tep
+                // rieng le khi xem lai lich su trong LogForm.
+                string oldName = Path.GetFileName(item.OriginalPath);
+                string newName = Path.GetFileName(item.NewPath);
                 _logService.LogOperation(FileOperationType.Rename, item.OriginalPath, item.NewPath,
-                    item.Result, "Đổi tên hàng loạt (BatchRenameForm)");
+                    item.Result, $"đổi tên \"{oldName}\" thành \"{newName}\" (đổi tên hàng loạt)");
 
                 if (item.Result == OperationResult.Success)
                 {

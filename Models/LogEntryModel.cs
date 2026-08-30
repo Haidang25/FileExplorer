@@ -55,7 +55,12 @@ namespace FileExplorerApp.Models
 
         /// <summary>
         /// Duong dan dich. Null/rong voi cac thao tac khong co dich nhu Delete,
-        /// Rename (dung Message de ghi ten moi thay vi Destination), Open, Search.
+        /// Open, Search. VOI RENAME: day chinh la duong dan MOI (sau khi doi
+        /// ten) - xem MainForm.lvwFiles_AfterLabelEdit va
+        /// BatchRenameForm.btnApply_Click, ca hai deu ghi Source = duong dan
+        /// CU, Destination = duong dan MOI, giup GetLogs() sau nay hien duoc
+        /// ca ten cu lan ten moi tren cung mot dong ma khong can parse
+        /// Message.
         /// </summary>
         public string Destination { get; set; }
 
