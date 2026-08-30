@@ -1768,6 +1768,86 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Xu ly khi nguoi dung THA (drop) file duoc keo TU BEN NGOAI (Windows
+        /// Explorer hoac ung dung khac - KHONG phai keo-tha noi bo giua
+        /// lvwFiles/trvFolders, se lam o mot yeu cau khac) vao lvwFiles - sao
+        /// chep TUNG file vao _currentPath (thu muc dang mo) qua
+        /// FileService.CopyFile (ban dong bo don gian, danh cho thao tac tuc
+        /// thi nhu the nay; nang cap len CopyFileAsync + CopyProgressForm
+        /// giong mnuEditPaste_Click se lam o mot yeu cau rieng neu can theo
+        /// doi tien do/huy giua chung khi keo nhieu file lon).
+        ///
+        /// PHAM VI HIEN TAI: chi xu ly FILE. Thu muc duoc keo vao se bi BO QUA
+        /// (co bao rieng trong tong ket, khong am tham lam ngo) - sao chep ca
+        /// thu muc (de quy) can FolderService.CopyFolderAsync, se lam o mot
+        /// yeu cau khac. File trung ten voi mot muc DA CO trong thu muc dich
+        /// se bi Skipped (CHUA hoi Ghi de/Doi ten/Bo qua nhu
+        /// ConflictResolutionForm da lam cho Paste - co the bo sung sau).
+        /// </summary>
+        private void lvwFiles_DragDrop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+                return;
+
+            string[] droppedPaths = (string[])e.Data.GetData(DataFormats.FileDrop);
+            if (droppedPaths == null || droppedPaths.Length == 0)
+                return;
+
+            int successCount = 0;
+            var skippedFolderNames = new List<string>();
+            var problemLines = new List<string>();
+
+            foreach (string sourcePath in droppedPaths)
+            {
+                if (string.IsNullOrWhiteSpace(sourcePath))
+                    continue;
+
+                if (Directory.Exists(sourcePath))
+                {
+                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <summary>.
+                    skippedFolderNames.Add(Path.GetFileName(sourcePath));
+                    continue;
+                }
+
+                if (!File.Exists(sourcePath))
+                    continue; // Duong dan khong con hop le giua luc keo-tha (VD: vua bi xoa) - bo qua.
+
+                string name = Path.GetFileName(sourcePath);
+                string destinationPath = Path.Combine(_currentPath, name);
+
+                OperationResult result = _fileService.CopyFile(sourcePath, destinationPath);
+                LogOperationResult(FileOperationType.Copy, sourcePath, destinationPath, result, $"kéo-thả \"{name}\" vào thư mục này");
+
+                if (result == OperationResult.Success)
+                    successCount++;
+                else
+                    problemLines.Add(BuildOperationResultMessage(result, $"sao chép \"{name}\""));
+            }
+
+            // MOT hop thoai tong ket duy nhat (khong phai 1 hop thoai/file) - giong
+            // nguyen tac da dung o DuplicateForm/BatchRenameForm, tranh lam gian
+            // doan nguoi dung bang nhieu hop thoai lien tiep khi keo nhieu file
+            // cung luc. Khong hien gi ca neu MOI file deu thanh cong va khong co
+            // thu muc nao bi bo qua (tuong tu Windows Explorer, sao chep thanh
+            // cong khong can bao rieng).
+            var summaryParts = new List<string>();
+            if (skippedFolderNames.Count > 0)
+                summaryParts.Add($"Đã bỏ qua {skippedFolderNames.Count} thư mục (chưa hỗ trợ kéo-thả thư mục vào đây): " +
+                    string.Join(", ", skippedFolderNames));
+            if (problemLines.Count > 0)
+                summaryParts.Add(string.Join("\n", problemLines));
+
+            if (summaryParts.Count > 0)
+            {
+                MessageBox.Show(this,
+                    $"Đã sao chép thành công {successCount} tệp.\n\n" + string.Join("\n\n", summaryParts),
+                    "Kéo-thả tệp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            mnuViewRefresh_Click(sender, e);
+        }
+
+        /// <summary>
         /// Giong lvwFiles_DragEnter - kiem tra du lieu keo vao trvFolders co
         /// phai DataFormats.FileDrop hay khong, dung cho tinh nang (se lam o
         /// yeu cau khac) tha file/thu muc truc tiep vao MOT NHANH cu the tren

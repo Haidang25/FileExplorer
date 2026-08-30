@@ -866,6 +866,7 @@
             this.lvwFiles.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_AfterLabelEdit);
             this.lvwFiles.BeforeLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_BeforeLabelEdit);
             this.lvwFiles.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lvwFiles_ColumnClick);
+            this.lvwFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragDrop);
             this.lvwFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragEnter);
             this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
