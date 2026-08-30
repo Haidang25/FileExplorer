@@ -1859,9 +1859,13 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Xoa preview hien tai (Dispose Image cu de tranh ro handle GDI+, an
-        /// ca pbxPreview lan txtPreview) va hien thong bao trong
-        /// lblPreviewCaption. Goi truoc moi lan chuyen sang mot loai preview
-        /// khac de dam bao khong con anh/van ban cu sot lai tren giao dien.
+        /// ca pbxPreview lan txtPreview) va AN LUON ca panel preview
+        /// (spcFilesPreview.Panel2Collapsed = true) de tra lai toan bo chieu
+        /// rong cho lvwFiles khi khong co gi de xem truoc - VD khong chon gi,
+        /// chon nhieu muc, chon thu muc, hoac chon mot file khong ho tro
+        /// preview (khong phai anh/van ban). lblPreviewCaption.Text van duoc
+        /// gan (du dang bi an) de neu sau nay panel duoc mo lai bang tay thi
+        /// van co noi dung hop ly thay vi de trong.
         /// </summary>
         private void ClearPreview(string message)
         {
@@ -1874,6 +1878,7 @@ namespace FileExplorerApp.Forms
             txtPreview.Text = string.Empty;
 
             lblPreviewCaption.Text = message;
+            spcFilesPreview.Panel2Collapsed = true;
         }
 
         /// <summary>
@@ -1903,6 +1908,7 @@ namespace FileExplorerApp.Forms
             {
                 pbxPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
+                spcFilesPreview.Panel2Collapsed = true;
                 return;
             }
 
@@ -1911,6 +1917,7 @@ namespace FileExplorerApp.Forms
                 pbxPreview.Visible = false;
                 lblPreviewCaption.Text =
                     $"Ảnh quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewImageBytes)})";
+                spcFilesPreview.Panel2Collapsed = true;
                 return;
             }
 
@@ -1923,6 +1930,7 @@ namespace FileExplorerApp.Forms
                 }
                 pbxPreview.Visible = true;
                 lblPreviewCaption.Text = Path.GetFileName(path);
+                spcFilesPreview.Panel2Collapsed = false;
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
                 || ex is ArgumentException || ex is OutOfMemoryException)
@@ -1932,6 +1940,7 @@ namespace FileExplorerApp.Forms
                 pbxPreview.Image = null;
                 pbxPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
+                spcFilesPreview.Panel2Collapsed = true;
             }
         }
 
@@ -2052,6 +2061,7 @@ namespace FileExplorerApp.Forms
                 // de loi lam vo preview.
                 txtPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước tệp này";
+                spcFilesPreview.Panel2Collapsed = true;
                 return;
             }
 
@@ -2061,6 +2071,7 @@ namespace FileExplorerApp.Forms
             txtPreview.Text = sb.ToString();
             txtPreview.Visible = true;
             lblPreviewCaption.Text = Path.GetFileName(path);
+            spcFilesPreview.Panel2Collapsed = false;
         }
 
         /// <summary>

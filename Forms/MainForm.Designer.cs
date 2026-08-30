@@ -756,6 +756,7 @@
             // spcFilesPreview.Panel2
             //
             this.spcFilesPreview.Panel2.Controls.Add(this.pnlPreview);
+            this.spcFilesPreview.Panel2Collapsed = true;
             this.spcFilesPreview.Panel2MinSize = 150;
             this.spcFilesPreview.Size = new System.Drawing.Size(896, 555);
             this.spcFilesPreview.SplitterDistance = 646;
