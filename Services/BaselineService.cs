@@ -415,6 +415,28 @@ namespace FileExplorerApp.Services
         /// </summary>
         /// <exception cref="ArgumentNullException">baseline la null.</exception>
         /// <exception cref="ArgumentException">baseline.FolderPath rong/null.</exception>
+        /// <exception cref="IOException">
+        /// Khong ghi duoc file baseline (dia day, thu muc dang bi khoa, duong
+        /// dan khong hop le...) - xem <remarks>.
+        /// </exception>
+        /// <exception cref="UnauthorizedAccessException">Khong du quyen ghi vao thu muc baseline.</exception>
+        /// <remarks>
+        /// RA SOAT try-catch: TRUOC DAY ham nay HOAN TOAN KHONG co try-catch -
+        /// Directory.CreateDirectory/new FileStream co the nem IOException/
+        /// UnauthorizedAccessException - 2 loai nay VAN se duoc bat dung boi
+        /// nhanh catch (IOException || UnauthorizedAccessException) da co san
+        /// tai MainForm.mnuToolsIntegrityMonitor_Click - noi GOI DUY NHAT toi
+        /// StartIntegrityMonitoringAsync/SaveBaseline hien tai - nhung day la
+        /// TRUNG HOP, KHONG phai thiet ke: GetBaselineFilePath ben trong con
+        /// goi Path.GetFullPath, co the nem ArgumentException (duong dan chua
+        /// ky tu khong hop le)/NotSupportedException (duong dan sai dinh dang,
+        /// VD chua ':' o vi tri khong hop le)/SecurityException - CA 3 loai
+        /// nay KHONG phai IOException/UnauthorizedAccessException nen se
+        /// KHONG bi bat boi handler tren, lam CRASH CA UNG DUNG chi vi mot
+        /// duong dan thu muc bat thuong. Bat rieng 3 loai do va boc lai
+        /// (rethrow) thanh IOException de VAN di qua dung nhanh catch da co
+        /// san tai MainForm ma KHONG can sua noi goi.
+        /// </remarks>
         public void SaveBaseline(FolderBaselineModel baseline)
         {
             if (baseline == null)
@@ -423,25 +445,33 @@ namespace FileExplorerApp.Services
             if (string.IsNullOrWhiteSpace(baseline.FolderPath))
                 throw new ArgumentException("FolderBaselineModel.FolderPath không được để trống.", nameof(baseline));
 
-            string filePath = GetBaselineFilePath(baseline.FolderPath);
-            string directory = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrEmpty(directory))
+            try
             {
-                Directory.CreateDirectory(directory);
-            }
-
-            // FileMode.Create (khong phai Append nhu LogService.WriteLog) - CO
-            // CHU DICH ghi de toan bo file cu, xem ly do o remarks dau lop.
-            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
-            using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
-            {
-                writer.WriteLine(FormatMetadataRow(baseline));
-                writer.WriteLine(BaselineFileHeader);
-
-                foreach (FileBaselineEntry entry in baseline.Entries)
+                string filePath = GetBaselineFilePath(baseline.FolderPath);
+                string directory = Path.GetDirectoryName(filePath);
+                if (!string.IsNullOrEmpty(directory))
                 {
-                    writer.WriteLine(FormatEntryRow(entry));
+                    Directory.CreateDirectory(directory);
                 }
+
+                // FileMode.Create (khong phai Append nhu LogService.WriteLog) - CO
+                // CHU DICH ghi de toan bo file cu, xem ly do o remarks dau lop.
+                using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.Read))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+                {
+                    writer.WriteLine(FormatMetadataRow(baseline));
+                    writer.WriteLine(BaselineFileHeader);
+
+                    foreach (FileBaselineEntry entry in baseline.Entries)
+                    {
+                        writer.WriteLine(FormatEntryRow(entry));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is ArgumentException || ex is NotSupportedException || ex is System.Security.SecurityException)
+            {
+                // Boc lai thanh IOException - xem <remarks> dau ham ve ly do.
+                throw new IOException($"Không thể lưu baseline cho thư mục \"{baseline.FolderPath}\": {ex.Message}", ex);
             }
         }
 
@@ -458,12 +488,19 @@ namespace FileExplorerApp.Services
         /// </returns>
         public FolderBaselineModel LoadBaseline(string folderPath)
         {
-            string filePath = GetBaselineFilePath(folderPath);
-            if (!File.Exists(filePath))
-                return null;
-
             try
             {
+                // RA SOAT try-catch: chuyen GetBaselineFilePath/File.Exists VAO
+                // TRONG try (truoc day nam NGOAI try, phia duoi) - GetBaselineFilePath
+                // goi Path.GetFullPath, co the nem ArgumentException/NotSupportedException/
+                // SecurityException voi mot duong dan bat thuong, nhung phia goi
+                // ham nay (VD LoadBaseline duoc goi khi mo lai mot thu muc) chi
+                // mong doi null khi khong doc duoc baseline - de ngoai try se lam
+                // loi nay thoat ra ngoai <returns> da mo ta va co the crash noi goi.
+                string filePath = GetBaselineFilePath(folderPath);
+                if (!File.Exists(filePath))
+                    return null;
+
                 string[] lines = File.ReadAllLines(filePath, Encoding.UTF8);
                 if (lines.Length < 2)
                     return null; // Thieu it nhat dong metadata + dong header - file hong/rong bat thuong.
@@ -502,8 +539,13 @@ namespace FileExplorerApp.Services
                 return baseline;
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
-                || ex is FormatException || ex is OverflowException)
+                || ex is FormatException || ex is OverflowException
+                || ex is ArgumentException || ex is NotSupportedException || ex is System.Security.SecurityException)
             {
+                // RA SOAT try-catch: them ArgumentException/NotSupportedException/
+                // SecurityException (co the tu GetBaselineFilePath ben trong,
+                // xem ghi chu dau ham) vao cung nhanh catch nay - cung mot ket
+                // qua "coi nhu chua co baseline" nhu cac loi doc file khac.
                 return null; // File baseline hong/khong doc duoc - xem <returns>.
             }
         }
@@ -526,8 +568,12 @@ namespace FileExplorerApp.Services
                 }
                 return true;
             }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException
+                || ex is ArgumentException || ex is NotSupportedException)
             {
+                // RA SOAT try-catch: them ArgumentException/NotSupportedException
+                // (co the tu GetBaselineFilePath, xem ghi chu tai SaveBaseline)
+                // vao cung nhanh catch nay - cung ket qua "xoa khong thanh cong".
                 return false;
             }
         }

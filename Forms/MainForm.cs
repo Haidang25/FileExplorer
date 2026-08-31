@@ -2326,6 +2326,14 @@ namespace FileExplorerApp.Forms
                     {
                         // Bo qua neu file vua bi xoa/khoa giua luc dang tinh tong.
                     }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Bo qua neu khong du quyen doc thuoc tinh file (VD file
+                        // he thong/duoc bao ve) - RA SOAT try-catch: FileInfo.Length
+                        // cung co the nem UnauthorizedAccessException, khong chi
+                        // IOException, nen phai bat ca 2 de khong crash ca vong lap
+                        // chi vi mot file trong danh sach dang chon.
+                    }
                 }
             }
 
@@ -2484,6 +2492,17 @@ namespace FileExplorerApp.Forms
             }
             catch (IOException)
             {
+                pbxPreview.Visible = false;
+                lblPreviewCaption.Text = "Không thể xem trước ảnh này";
+                spcFilesPreview.Panel2Collapsed = true;
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // RA SOAT try-catch: FileInfo.Length cung co the nem
+                // UnauthorizedAccessException (VD file duoc bao ve/khong du
+                // quyen), khong chi IOException - truoc day thieu nhanh nay se
+                // lam crash ca ung dung khi bam chon mot anh khong du quyen doc.
                 pbxPreview.Visible = false;
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
                 spcFilesPreview.Panel2Collapsed = true;
@@ -2708,6 +2727,15 @@ namespace FileExplorerApp.Forms
             }
             catch (IOException)
             {
+                ShowDocumentPreviewUnavailable("Không thể xem trước tệp này");
+                return;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                // RA SOAT try-catch: FileInfo.Length cung co the nem
+                // UnauthorizedAccessException (VD file .docx/.pdf duoc bao ve/
+                // khong du quyen doc), khong chi IOException - thieu nhanh nay
+                // se lam crash ca ung dung khi chon mot tep khong du quyen.
                 ShowDocumentPreviewUnavailable("Không thể xem trước tệp này");
                 return;
             }

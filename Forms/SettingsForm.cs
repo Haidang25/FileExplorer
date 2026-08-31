@@ -1,4 +1,5 @@
 using System;
+using System.Configuration;
 using System.Diagnostics;
 using System.IO;
 using System.Windows.Forms;
@@ -120,7 +121,24 @@ namespace FileExplorerApp.Forms
             Settings.Default.WatcherDelayMs = (int)numWatcherDelay.Value;
             Settings.Default.LogEnabled = chkEnableLog.Checked;
 
-            Settings.Default.Save();
+            try
+            {
+                Settings.Default.Save();
+            }
+            catch (Exception ex) when (ex is ConfigurationErrorsException || ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // RA SOAT try-catch: Settings.Default.Save() ghi file user.config
+                // ra dia (thuong trong AppData) - TRUOC DAY khong co try-catch
+                // nao ca, nen mot file user.config chi doc (read-only)/bi khoa/
+                // mat quyen ghi se lam CRASH CA UNG DUNG chi vi bam nut Luu trong
+                // hop thoai Cai dat. Bao loi ro rang va KHONG dong hop thoai (giu
+                // DialogResult mac dinh la None) de nguoi dung biet cai dat CHUA
+                // duoc luu va co the thu lai, giong cach btnOpenLogFolder_Click
+                // ben duoi da bao loi cho nguoi dung.
+                MessageBox.Show(this, "Không thể lưu cài đặt: " + ex.Message, "Cài đặt",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             // Cap nhat ngay AppTheme trong bo nho de MainForm/cac Form mo sau do
             // dung dung mau vua chon, khong can khoi dong lai ung dung.

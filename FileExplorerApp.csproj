@@ -58,6 +58,9 @@
     <Reference Include="Microsoft.VisualBasic" />
     <Reference Include="System.Data" />
     <Reference Include="System.Deployment" />
+    <!-- Them cho ConfigurationErrorsException (bat loi khi Settings.Default.Save()
+         that bai trong SettingsForm.btnSave_Click - RA SOAT try-catch bo sung) -->
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
