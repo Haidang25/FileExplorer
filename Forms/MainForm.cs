@@ -266,6 +266,28 @@ namespace FileExplorerApp.Forms
         /// Muc "Giải nén tại đây" tren cmsListView (menu chuot phai) - chi hien/bat
         /// khi dang chon DUY NHAT 1 file .zip (xem cmsListView_Opening).
         /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE - xu ly trung ten tai dich: CompressionService.
+        /// ExtractZip TU NO chi tra ve Skipped (thu muc dich da co, khong rong)
+        /// hoac InvalidDestination (dich trung ten voi 1 file) MA KHONG hoi lai
+        /// nguoi dung - phu hop cho lop Service (khong biet gi ve UI), nhung
+        /// khong du dung cho trai nghiem nguoi dung. O Form nay, TRUOC KHI goi
+        /// ExtractZip, tu kiem tra dung dieu kien xung dot y het ExtractZip
+        /// (Directory.Exists+khong rong, hoac File.Exists) - neu co xung dot,
+        /// hien LAI ConflictResolutionForm (dung CHUNG dialog voi luong Paste o
+        /// mnuEditPaste_Click, coi "thu muc se duoc tao ra tu file .zip" nhu mot
+        /// muc dang duoc dat vao _currentPath/parentDir) de nguoi dung chon Ghi
+        /// đè / Đổi tên / Bỏ qua, giu dung 3 lua chon va hanh vi da quen thuoc
+        /// voi Dan (Paste) thay vi tu tao mot co che rieng.
+        /// - Ghi đè: xoa truoc muc dich cu VAO THUNG RAC (RecycleBinService.
+        ///   DeleteToRecycleBin - an toan hon xoa vinh vien, giong huong da dung
+        ///   o Paste), roi moi ExtractZip vao dung ten cu.
+        /// - Đổi tên: ExtractZip ra thu muc VOI TEN MOI nguoi dung nhap (chac
+        ///   chan khong con trung, da duoc ConflictResolutionForm.btnRename_Click
+        ///   tu kiem tra truoc khi cho phep dong dialog).
+        /// - Bỏ qua: dung luon, khong lam gi them (khong ExtractZip).
+        /// - Dong dialog (Cancel): tuong tu Bo qua.
+        /// </remarks>
         private void cmsExtractHere_Click(object sender, EventArgs e)
         {
             if (lvwFiles.SelectedItems.Count != 1)
@@ -276,14 +298,50 @@ namespace FileExplorerApp.Forms
                 return;
 
             string zipFileName = Path.GetFileName(path);
-            string parentDir = Path.GetDirectoryName(path);
+            string parentDir = Path.GetDirectoryName(path) ?? _currentPath;
             // Giai nen ra MOT thu muc con moi, trung ten voi file .zip (bo phan mo
             // rong .zip) NGAY CANH file .zip nguon - giong hanh vi "Extract Here"
             // quen thuoc cua Windows Explorer/7-Zip/WinRAR, tranh tron lan truc
             // tiep noi dung ben trong .zip voi cac file/thu muc khac dang co san
-            // trong thu muc hien tai. Neu thu muc dich nay da ton tai va khong
-            // rong, ExtractZip tu tra ve Skipped (xem CompressionService.ExtractZip).
-            string destPath = Path.Combine(parentDir ?? _currentPath, Path.GetFileNameWithoutExtension(path));
+            // trong thu muc hien tai.
+            string destFolderName = Path.GetFileNameWithoutExtension(path);
+            string destPath = Path.Combine(parentDir, destFolderName);
+
+            // Dieu kien xung dot GIONG HET ExtractZip (xem <remarks>): thu muc
+            // dich da ton tai VA khong rong, HOAC dich trung ten voi 1 file.
+            bool hasConflict = (Directory.Exists(destPath) && Directory.EnumerateFileSystemEntries(destPath).Any())
+                || File.Exists(destPath);
+
+            if (hasConflict)
+            {
+                ConflictAction action;
+                string newName = null;
+
+                using (var dialog = new ConflictResolutionForm(destPath, parentDir))
+                {
+                    DialogResult dialogResult = dialog.ShowDialog(this);
+                    action = dialogResult == DialogResult.OK ? dialog.SelectedAction : ConflictAction.Cancel;
+                    newName = dialog.NewName;
+                }
+
+                if (action == ConflictAction.Cancel || action == ConflictAction.Skip)
+                    return; // Nguoi dung huy hoac bo qua - khong giai nen gi ca.
+
+                if (action == ConflictAction.Rename)
+                {
+                    destFolderName = newName;
+                    destPath = Path.Combine(parentDir, newName);
+                }
+                else if (action == ConflictAction.Overwrite)
+                {
+                    OperationResult deleteResult = _recycleBinService.DeleteToRecycleBin(destPath);
+                    if (deleteResult != OperationResult.Success)
+                    {
+                        ShowOperationResultMessage(deleteResult, $"ghi đè \"{destFolderName}\" để giải nén");
+                        return;
+                    }
+                }
+            }
 
             OperationResult result = _compressionService.ExtractZip(path, destPath);
             string actionDescription = $"giải nén \"{zipFileName}\"";
