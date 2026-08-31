@@ -42,6 +42,26 @@ namespace FileExplorerApp.Forms
         private readonly FileService _fileService = new FileService();
         private readonly RecycleBinService _recycleBinService = new RecycleBinService();
         private readonly LogService _logService = new LogService();
+        private readonly CompressionService _compressionService = new CompressionService();
+
+        /// <summary>
+        /// 3 muc "Nén thành ZIP"/"Giải nén tại đây" (kem 1 separator rieng) tren
+        /// cmsListView (menu chuot phai cua lvwFiles) - xem InitializeCompressionContextMenuItems.
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE: KHONG khai bao 3 muc nay trong MainForm.Designer.cs
+        /// (noi cmsListView va cac muc con khac - cmsOpen/cmsCut/... - dang duoc
+        /// khai bao) vi Designer.cs HIEN TAI dang co mot khoi luong lon thay doi
+        /// CHUA COMMIT cua nguoi dung (VD: do mo lai bang Visual Studio Designer)
+        /// - sua file do co nguy co xung dot/mat du lieu WIP cua nguoi dung. Thay
+        /// vao do, tao 3 ToolStripItem nay HOAN TOAN BANG CODE luc runtime (xem
+        /// InitializeCompressionContextMenuItems, goi tu constructor) roi chen
+        /// vao cmsListView.Items - giong huong da dung cho ApplyTheme() (theme
+        /// cac control co san bang code thay vi sua thuoc tinh trong Designer.cs).
+        /// </remarks>
+        private ToolStripMenuItem cmsCompressToZip;
+        private ToolStripMenuItem cmsExtractHere;
+        private ToolStripSeparator cmsCompressionSeparator;
 
         /// <summary>
         /// Trich xuat noi dung van ban tu file Word (.docx)/PDF (.pdf) de
@@ -154,6 +174,7 @@ namespace FileExplorerApp.Forms
             // khong phu thuoc duong dan tuong doi luc chay.
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
+            InitializeCompressionContextMenuItems();
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
@@ -171,6 +192,109 @@ namespace FileExplorerApp.Forms
             // MainForm.Designer.cs (file do Designer tu sinh lai, sua tay o do
             // de bi mat khi mo lai bang Visual Studio Designer).
             this.FormClosed += MainForm_FormClosed;
+        }
+
+        /// <summary>
+        /// Tao 3 ToolStripItem (cmsCompressToZip/cmsExtractHere/cmsCompressionSeparator)
+        /// bang code va chen vao cmsListView.Items, ngay TRUOC cmsProperties (muc
+        /// cuoi cung) - xem <see cref="cmsCompressToZip"/> ve ly do KHONG khai bao
+        /// truc tiep trong MainForm.Designer.cs. Goi mot lan duy nhat tu constructor.
+        /// </summary>
+        private void InitializeCompressionContextMenuItems()
+        {
+            cmsCompressToZip = new ToolStripMenuItem("Nén thành ZIP");
+            cmsCompressToZip.Click += cmsCompressToZip_Click;
+
+            cmsExtractHere = new ToolStripMenuItem("Giải nén tại đây");
+            cmsExtractHere.Click += cmsExtractHere_Click;
+
+            cmsCompressionSeparator = new ToolStripSeparator();
+
+            // Chen truoc cmsProperties (muc cuoi cung tren menu) thay vi hardcode
+            // mot chi so co dinh - tranh sai vi tri neu Designer.cs sau nay them/
+            // bot muc khac truoc cmsProperties. Neu vi ly do nao do khong tim thay
+            // cmsProperties (khong nen xay ra), chen vao cuoi danh sach.
+            int insertIndex = cmsListView.Items.IndexOf(cmsProperties);
+            if (insertIndex < 0)
+                insertIndex = cmsListView.Items.Count;
+
+            cmsListView.Items.Insert(insertIndex, cmsCompressToZip);
+            cmsListView.Items.Insert(insertIndex + 1, cmsExtractHere);
+            cmsListView.Items.Insert(insertIndex + 2, cmsCompressionSeparator);
+        }
+
+        /// <summary>
+        /// Muc "Nén thành ZIP" tren cmsListView (menu chuot phai) - chi hien/bat
+        /// khi dang chon DUY NHAT 1 thu muc (xem cmsListView_Opening), vi
+        /// CompressionService.CompressFolder hien chi ho tro nen MOT thu muc,
+        /// chua ho tro nen nhieu muc chon/1 file don le vao chung mot .zip.
+        /// </summary>
+        private void cmsCompressToZip_Click(object sender, EventArgs e)
+        {
+            if (lvwFiles.SelectedItems.Count != 1)
+                return;
+
+            string path = lvwFiles.SelectedItems[0].Tag as string;
+            if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+                return;
+
+            string folderName = Path.GetFileName(path);
+            string parentDir = Path.GetDirectoryName(path);
+            // Dat file .zip ket qua NGAY CANH thu muc nguon (cung thu muc cha),
+            // trung ten voi thu muc nguon (VD thu muc "Anh" -> "Anh.zip") - giong
+            // hanh vi "Nén thành ZIP"/"Compress to ZIP file" quen thuoc cua Windows
+            // Explorer. Neu da co san file .zip trung ten, CompressFolder tu tra ve
+            // Skipped (xem CompressionService.CompressFolder) - khong tu ghi de.
+            string zipPath = Path.Combine(parentDir ?? _currentPath, folderName + ".zip");
+
+            OperationResult result = _compressionService.CompressFolder(path, zipPath);
+            string actionDescription = $"nén thư mục \"{folderName}\" thành ZIP";
+            ShowOperationResultMessage(result, actionDescription);
+            LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription);
+
+            if (result == OperationResult.Success)
+            {
+                // _currentPath khong doi (file .zip nam CUNG thu muc dang mo) - chi
+                // can lam moi danh sach de thay file .zip vua tao, giong huong da
+                // dung o mnuFileNewFolder_Click/mnuFileNewFile_Click.
+                mnuViewRefresh_Click(sender, e);
+                SelectAndFocusListViewItem(zipPath);
+            }
+        }
+
+        /// <summary>
+        /// Muc "Giải nén tại đây" tren cmsListView (menu chuot phai) - chi hien/bat
+        /// khi dang chon DUY NHAT 1 file .zip (xem cmsListView_Opening).
+        /// </summary>
+        private void cmsExtractHere_Click(object sender, EventArgs e)
+        {
+            if (lvwFiles.SelectedItems.Count != 1)
+                return;
+
+            string path = lvwFiles.SelectedItems[0].Tag as string;
+            if (string.IsNullOrEmpty(path) || !File.Exists(path))
+                return;
+
+            string zipFileName = Path.GetFileName(path);
+            string parentDir = Path.GetDirectoryName(path);
+            // Giai nen ra MOT thu muc con moi, trung ten voi file .zip (bo phan mo
+            // rong .zip) NGAY CANH file .zip nguon - giong hanh vi "Extract Here"
+            // quen thuoc cua Windows Explorer/7-Zip/WinRAR, tranh tron lan truc
+            // tiep noi dung ben trong .zip voi cac file/thu muc khac dang co san
+            // trong thu muc hien tai. Neu thu muc dich nay da ton tai va khong
+            // rong, ExtractZip tu tra ve Skipped (xem CompressionService.ExtractZip).
+            string destPath = Path.Combine(parentDir ?? _currentPath, Path.GetFileNameWithoutExtension(path));
+
+            OperationResult result = _compressionService.ExtractZip(path, destPath);
+            string actionDescription = $"giải nén \"{zipFileName}\"";
+            ShowOperationResultMessage(result, actionDescription);
+            LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription);
+
+            if (result == OperationResult.Success)
+            {
+                mnuViewRefresh_Click(sender, e);
+                SelectAndFocusListViewItem(destPath);
+            }
         }
 
         /// <summary>
@@ -2997,6 +3121,20 @@ namespace FileExplorerApp.Forms
             cmsDelete.Enabled = hasSelection;
             cmsRename.Enabled = hasSingleSelection;
             cmsProperties.Enabled = hasSingleSelection;
+
+            // "Nén thành ZIP" chi hien khi chon DUY NHAT 1 thu muc; "Giải nén tại
+            // đây" chi hien khi chon DUY NHAT 1 file .zip - AN HAN (khong chi vo
+            // hieu hoa) muc khong ap dung duoc, giong cach Windows Explorer chi
+            // hien "Extract Here" khi bam chuot phai vao dung mot file luu tru,
+            // tranh gay nham lan neu de nguoi dung thay muc nhung khong bam duoc.
+            string singleSelectedPath = hasSingleSelection ? lvwFiles.SelectedItems[0].Tag as string : null;
+            bool isSingleFolder = hasSingleSelection && Directory.Exists(singleSelectedPath);
+            bool isSingleZipFile = hasSingleSelection && !isSingleFolder
+                && string.Equals(Path.GetExtension(singleSelectedPath), ".zip", StringComparison.OrdinalIgnoreCase);
+
+            cmsCompressToZip.Visible = isSingleFolder;
+            cmsExtractHere.Visible = isSingleZipFile;
+            cmsCompressionSeparator.Visible = isSingleFolder || isSingleZipFile;
         }
 
         private void mnuViewShowHidden_Click(object sender, EventArgs e)
