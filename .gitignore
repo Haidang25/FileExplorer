@@ -427,3 +427,6 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Du lieu test tu tao (VD: file lon de test nen/giai nen) - khong commit vao repo.
+TestData/
