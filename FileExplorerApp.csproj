@@ -230,6 +230,7 @@
     <Compile Include="Models\OperationResult.cs" />
     <Compile Include="Models\RecycleBinItemModel.cs" />
     <Compile Include="Services\BaselineService.cs" />
+    <Compile Include="Services\CompressionService.cs" />
     <Compile Include="Services\DocumentPasswordProtectedException.cs" />
     <Compile Include="Services\DocumentPreviewService.cs" />
     <Compile Include="Services\DuplicateService.cs" />
