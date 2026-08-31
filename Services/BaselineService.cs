@@ -17,10 +17,10 @@ namespace FileExplorerApp.Services
     /// muc - buoc dau tien cua tinh nang giam sat toan ven thu muc: KHI BAT
     /// DAU GIAM SAT mot thu muc, ung dung goi CreateBaselineAsync roi
     /// SaveBaseline MOT LAN de ghi lai hash SHA-256 cua tat ca file hien co,
-    /// dung lam moc so sanh cho CAC LAN KIEM TRA SAU (chua trien khai trong
-    /// buoc "thiet ke" nay - se so sanh hien trang thu muc voi baseline da
-    /// luu qua LoadBaseline de phat hien file bi sua/xoa/them moi, lam o mot
-    /// yeu cau khac).
+    /// dung lam moc so sanh cho CAC LAN KIEM TRA SAU qua CompareWithBaselineAsync
+    /// (nhan mot baseline vua tao hoac vua doc lai qua LoadBaseline, tra ve
+    /// phan loai Unchanged/ContentModified/Deleted/NewFile cho tung file -
+    /// xem <see cref="FileIntegrityStatus"/>).
     /// </summary>
     /// <remarks>
     /// TACH RIENG khoi FileMonitorService CO CHU DICH: FileMonitorService chi
@@ -84,6 +84,46 @@ namespace FileExplorerApp.Services
     /// thuong la CUNG mot thu muc nhung lai ra 2 file baseline khac nhau) deu
     /// ra ten file RIENG BIET, khong the trung.
     /// </remarks>
+    public enum FileIntegrityStatus
+    {
+        /// <summary>Hash SHA-256 hien tai KHOP voi baseline - file khong doi.</summary>
+        Unchanged,
+
+        /// <summary>File CO trong baseline VA van con tren dia, nhung hash SHA-256 hien tai KHAC baseline - noi dung DA BI SUA.</summary>
+        ContentModified,
+
+        /// <summary>File CO trong baseline nhung khong con tim thay tren dia - da bi XOA (hoac o dia/thu muc chua no khong con truy cap duoc).</summary>
+        Deleted,
+
+        /// <summary>File dang co tren dia nhung KHONG CO trong baseline - MOI XUAT HIEN sau thoi diem baseline duoc chup.</summary>
+        NewFile
+    }
+
+    /// <summary>
+    /// Ket qua phan loai MOT file sau khi so sanh voi baseline - xem
+    /// <see cref="BaselineService.CompareWithBaselineAsync"/>.
+    /// </summary>
+    public class FileIntegrityCheckResult
+    {
+        /// <summary>Duong dan file duoc phan loai.</summary>
+        public string FilePath { get; set; }
+
+        /// <summary>Phan loai ket qua - xem <see cref="FileIntegrityStatus"/>.</summary>
+        public FileIntegrityStatus Status { get; set; }
+
+        /// <summary>
+        /// Hash SHA-256 theo baseline (GOC) - null voi <see cref="FileIntegrityStatus.NewFile"/>
+        /// (file nay chua tung co trong baseline nen khong co gia tri "mong doi" nao ca).
+        /// </summary>
+        public string ExpectedHash { get; set; }
+
+        /// <summary>
+        /// Hash SHA-256 tinh duoc TAI THOI DIEM so sanh - null voi
+        /// <see cref="FileIntegrityStatus.Deleted"/> (file khong con de hash).
+        /// </summary>
+        public string ActualHash { get; set; }
+    }
+
     public class BaselineService
     {
         /// <summary>Phan mo rong file baseline - xem "QUYET DINH THIET KE - DINH DANG LUU" o remarks tren dau lop.</summary>
@@ -201,6 +241,169 @@ namespace FileExplorerApp.Services
             progress?.Report(processedCount);
 
             return baseline;
+        }
+
+        /// <summary>
+        /// So sanh HIEN TRANG THUC TE cua thu muc (baseline.FolderPath) VOI
+        /// mot baseline da co (vua tao boi CreateBaselineAsync, hoac doc lai
+        /// tu dia boi LoadBaseline) - day la buoc "KIEM TRA SAU" ma phan
+        /// <summary> dau lop da nhac se lam o mot yeu cau khac; gio da co.
+        /// Tra ve MOT FileIntegrityCheckResult CHO MOI file lien quan (ca
+        /// file trong baseline LAN file moi phat sinh), phan loai theo dung
+        /// 4 nhom <see cref="FileIntegrityStatus"/>: Unchanged/ContentModified/
+        /// Deleted/NewFile.
+        /// </summary>
+        /// <param name="baseline">Baseline can so sanh (baseline.FolderPath xac dinh thu muc can quet lai, baseline.IncludeSubdirectories xac dinh pham vi - PHAI khop voi luc tao baseline).</param>
+        /// <param name="cancellationToken">Cho phep huy giua chung (VD: nguoi dung dong man hinh "Dang kiem tra..." truoc khi quet xong thu muc rat lon).</param>
+        /// <param name="progress">Bao cao so file DA XU LY XONG (ca file trong baseline LAN file moi phat hien) - tuy chon.</param>
+        /// <exception cref="ArgumentNullException">baseline la null.</exception>
+        /// <remarks>
+        /// THUAT TOAN (2 buoc, tuong tu cach CreateBaselineAsync liet ke file):
+        ///
+        /// - Buoc 1: liet ke TOAN BO file HIEN TAI trong baseline.FolderPath
+        ///   (dung SearchService, cung pham vi IncludeSubdirectories nhu luc
+        ///   tao baseline) vao mot HashSet de tra cuu nhanh "file nay CO CON
+        ///   TON TAI khong" o Buoc 2, VA de biet file nao la MOI (khong co
+        ///   trong baseline) cho Buoc 3.
+        ///
+        /// - Buoc 2: VOI TUNG entry trong baseline.Entries - neu file khong
+        ///   con tren dia (File.Exists false) => Deleted (ActualHash = null).
+        ///   Neu con, hash lai (HashHelper.ComputeSha256Async) va so sanh voi
+        ///   entry.Hash => Unchanged (khop) hoac ContentModified (khac).
+        ///
+        /// - Buoc 3: VOI TUNG file HIEN TAI o Buoc 1 nhung KHONG co trong
+        ///   baseline.Entries => NewFile. KHONG can hash file nay (khong co
+        ///   gi de so sanh - ExpectedHash/ActualHash deu null), tranh chi phi
+        ///   hash khong can thiet cho file von da chac chan la "moi".
+        ///
+        /// Loi hash MOT file rieng le o Buoc 2 (mat quyen doc, file bi khoa)
+        /// khien file do bi BO QUA HOAN TOAN (KHONG them vao ket qua voi mot
+        /// trang thai "doan mo" nao ca) thay vi doan sai thanh Unchanged hay
+        /// ContentModified - giong nguyen tac loi tren tung nhanh khong lam
+        /// dung ca qua trinh, ap dung xuyen suot du an (xem
+        /// DuplicateService.FindDuplicateFiles, CreateBaselineAsync o tren).
+        /// Neu ca thu muc goc (baseline.FolderPath) khong con ton tai, TOAN
+        /// BO entry trong baseline duoc bao Deleted NGAY (khong can quet gi
+        /// them - thu muc da mat thi moi file trong do chac chan cung mat).
+        /// </remarks>
+        public async Task<List<FileIntegrityCheckResult>> CompareWithBaselineAsync(
+            FolderBaselineModel baseline, CancellationToken cancellationToken = default, IProgress<int> progress = null)
+        {
+            if (baseline == null)
+                throw new ArgumentNullException(nameof(baseline));
+
+            var results = new List<FileIntegrityCheckResult>();
+
+            if (string.IsNullOrWhiteSpace(baseline.FolderPath) || !Directory.Exists(baseline.FolderPath))
+            {
+                // Ca thu muc goc da mat - TOAN BO file trong baseline chac chan cung mat, xem <remarks>.
+                foreach (FileBaselineEntry missingEntry in baseline.Entries)
+                {
+                    results.Add(new FileIntegrityCheckResult
+                    {
+                        FilePath = missingEntry.FilePath,
+                        Status = FileIntegrityStatus.Deleted,
+                        ExpectedHash = missingEntry.Hash,
+                        ActualHash = null
+                    });
+                }
+                return results;
+            }
+
+            // Buoc 1: liet ke TOAN BO file HIEN TAI - xem <remarks>.
+            var currentFilePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (FileItemModel item in _searchService.Search(
+                baseline.FolderPath, "*", baseline.IncludeSubdirectories, includeHidden: true, cancellationToken: cancellationToken))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!item.IsDirectory)
+                {
+                    currentFilePaths.Add(item.FullPath);
+                }
+            }
+
+            var baselinePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (FileBaselineEntry entry in baseline.Entries)
+            {
+                baselinePaths.Add(entry.FilePath);
+            }
+
+            int processedCount = 0;
+            Stopwatch progressStopwatch = progress != null ? Stopwatch.StartNew() : null;
+
+            // Buoc 2: kiem tra tung file DA CO trong baseline - Deleted/Unchanged/ContentModified.
+            foreach (FileBaselineEntry entry in baseline.Entries)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    if (!currentFilePaths.Contains(entry.FilePath))
+                    {
+                        results.Add(new FileIntegrityCheckResult
+                        {
+                            FilePath = entry.FilePath,
+                            Status = FileIntegrityStatus.Deleted,
+                            ExpectedHash = entry.Hash,
+                            ActualHash = null
+                        });
+                        continue;
+                    }
+
+                    string actualHash = await HashHelper.ComputeSha256Async(entry.FilePath, cancellationToken).ConfigureAwait(false);
+                    bool isUnchanged = string.Equals(actualHash, entry.Hash, StringComparison.OrdinalIgnoreCase);
+
+                    results.Add(new FileIntegrityCheckResult
+                    {
+                        FilePath = entry.FilePath,
+                        Status = isUnchanged ? FileIntegrityStatus.Unchanged : FileIntegrityStatus.ContentModified,
+                        ExpectedHash = entry.Hash,
+                        ActualHash = actualHash
+                    });
+                }
+                catch (UnauthorizedAccessException) { } // Mat quyen doc file nay - bo qua RIENG file nay, xem <remarks>.
+                catch (FileNotFoundException) { } // File vua bi xoa giua luc so sanh (sau khi da qua kiem tra currentFilePaths.Contains o tren) - phai dat TRUOC IOException vi la lop con cua no.
+                catch (IOException) { } // VD: file dang bi khoa boi chuong trinh khac dung luc hash.
+                finally
+                {
+                    processedCount++;
+
+                    if (progressStopwatch != null && progressStopwatch.Elapsed >= ProgressReportInterval)
+                    {
+                        progress.Report(processedCount);
+                        progressStopwatch.Restart();
+                    }
+                }
+            }
+
+            // Buoc 3: file HIEN TAI nhung KHONG co trong baseline - NewFile, xem <remarks>.
+            foreach (string currentPath in currentFilePaths)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (baselinePaths.Contains(currentPath))
+                    continue;
+
+                results.Add(new FileIntegrityCheckResult
+                {
+                    FilePath = currentPath,
+                    Status = FileIntegrityStatus.NewFile,
+                    ExpectedHash = null,
+                    ActualHash = null
+                });
+
+                processedCount++;
+
+                if (progressStopwatch != null && progressStopwatch.Elapsed >= ProgressReportInterval)
+                {
+                    progress.Report(processedCount);
+                    progressStopwatch.Restart();
+                }
+            }
+
+            progress?.Report(processedCount);
+
+            return results;
         }
 
         /// <summary>
