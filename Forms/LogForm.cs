@@ -313,6 +313,76 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Xuat BAO CAO DIEU TRA TOAN VEN (integrity investigation report) -
+        /// KHAC HAN voi btnExportCsv_Click ben tren (xuat nguyen ven NHAT KY
+        /// THAO TAC dang loc tren lvwLogs). Day la NUT DUY NHAT trong toan bo
+        /// ung dung goi toi LogService.ExportInvestigationReport - truoc khi
+        /// them nut nay, tinh nang xuat bao cao dieu tra (dinh dang tieng
+        /// Viet + hash SHA-256 kem theo, xem LogService.cs) DA CO SAN trong
+        /// LogService nhung KHONG CO CACH NAO nguoi dung kich hoat duoc tu
+        /// giao dien - bam "Xuất CSV" chi xuat NHAT KY THAO TAC thong thuong
+        /// (dinh dang cu, header tieng Anh) chu KHONG PHAI bao cao dieu tra,
+        /// day chinh la ly do bao cao xuat ra "chua dung dinh dang da noi".
+        /// </summary>
+        /// <remarks>
+        /// KHONG dung _currentFilteredLogs/lvwLogs o day - bao cao dieu tra
+        /// la mot NGUON DU LIEU HOAN TOAN KHAC (LogService.GetInvestigationEntries,
+        /// ghi nhan tu IntegrityService qua MainForm.IntegrityService_IntegrityViolationDetected),
+        /// khong lien quan gi den danh sach dang hien tren LogForm (nhat ky
+        /// thao tac Copy/Move/Delete...) - vi vay kiem tra "co du lieu de
+        /// xuat khong" phai goi GetInvestigationEntries() RIENG, khong the
+        /// tai su dung _currentFilteredLogs.Count.
+        /// </remarks>
+        private void btnExportInvestigationReport_Click(object sender, EventArgs e)
+        {
+            if (_logService.GetInvestigationEntries().Count == 0)
+            {
+                MessageBox.Show(
+                    this,
+                    "Chưa ghi nhận vi phạm toàn vẹn nào để xuất báo cáo (cần bật giám sát toàn vẹn một thư mục trước - menu Công cụ > Giám sát toàn vẹn thư mục này).",
+                    "Xuất báo cáo điều tra",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var saveDialog = new SaveFileDialog())
+            {
+                saveDialog.Filter = "Tệp CSV (*.csv)|*.csv|Tất cả tệp (*.*)|*.*";
+                saveDialog.DefaultExt = "csv";
+                saveDialog.AddExtension = true;
+                saveDialog.FileName = $"bao_cao_dieu_tra_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+
+                if (saveDialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                OperationResult result = _logService.ExportInvestigationReport(saveDialog.FileName);
+                if (result == OperationResult.Success)
+                {
+                    // Bao ro CA hai file (bao cao + hash .sha256 di kem tu
+                    // dong) de nguoi dung biet ho nhan duoc 2 file, khong chi
+                    // 1 - xem LogService.WriteReportHashFile/GetReportHashFilePath.
+                    string hashFilePath = LogService.GetReportHashFilePath(saveDialog.FileName);
+                    MessageBox.Show(
+                        this,
+                        $"Đã xuất báo cáo điều tra ra:\n{saveDialog.FileName}\n\nHash SHA-256 của báo cáo (để đối chiếu sau này) đã lưu kèm tại:\n{hashFilePath}",
+                        "Xuất báo cáo điều tra",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+                else
+                {
+                    MessageBox.Show(
+                        this,
+                        "Không thể xuất báo cáo điều tra (có thể tệp đích đang được mở bởi chương trình khác, đường dẫn không hợp lệ, hoặc không đủ quyền ghi vào vị trí đã chọn).",
+                        "Lỗi",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        /// <summary>
         /// Ghi danh sach LogEntryModel ra file CSV tai duong dan chi dinh, dung
         /// LAI dung dinh dang cot va cach escape RFC 4180 voi LogService (xem
         /// LogService.FormatCsvRow/EscapeCsvField) de file xuat ra tuong thich
