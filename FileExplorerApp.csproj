@@ -106,6 +106,13 @@
          PdfPig giai ma cac luong du lieu nen (compressed stream) ben trong
          PDF. -->
     <Reference Include="System.IO.Compression" />
+    <!-- System.IO.Compression.FileSystem: assembly co san trong .NET Framework
+         (KHONG phai NuGet, giong System.IO.Compression o tren) - cung cap
+         ZipFile.CreateFromDirectory/ExtractToDirectory (namespace
+         System.IO.Compression, lop ZipFile) de nen/giai nen CA MOT THU MUC
+         truc tiep bang API tinh gian, KHAC voi System.IO.Compression (chi co
+         ZipArchive/DeflateStream muc thap hon, tu duyet tung entry). -->
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="UglyToad.PdfPig">
       <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.dll</HintPath>
     </Reference>
