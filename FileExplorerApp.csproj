@@ -148,6 +148,7 @@
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\FileMonitorService.cs" />
     <Compile Include="Services\FolderService.cs" />
+    <Compile Include="Services\IntegrityService.cs" />
     <Compile Include="Services\LogService.cs" />
     <Compile Include="Services\RecycleBinService.cs" />
     <Compile Include="Services\SearchService.cs" />
