@@ -25,5 +25,8 @@
     <Setting Name="LogPath" Type="System.String" Scope="User">
       <Value Profile="(Default)">%AppData%\SFileManager\logs</Value>
     </Setting>
+    <Setting Name="BaselinePath" Type="System.String" Scope="User">
+      <Value Profile="(Default)">%AppData%\SFileManager\baselines</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

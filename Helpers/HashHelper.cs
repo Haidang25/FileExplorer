@@ -161,6 +161,96 @@ namespace FileExplorerApp.Helpers
         }
 
         /// <summary>
+        /// Tinh hash SHA-256 cua noi dung mot file, dang chuoi hex chu thuong -
+        /// xem ComputeMd5 de biet chi tiet cach doc file THEO STREAM (khong
+        /// nap toan bo vao RAM), logic hoan toan giong het, chi khac thuat
+        /// toan hash ben trong (SHA256 thay vi MD5).
+        /// </summary>
+        /// <remarks>
+        /// Chon SHA-256 (khong phai MD5) cho MUC DICH KHAC voi ComputeMd5 o
+        /// tren: day la ham dung cho BaselineService (giam sat toan ven thu
+        /// muc - phat hien thay doi noi dung file, ke ca thay doi CO CHU Y/AC
+        /// Y do nguoi khac gay ra), khong phai chi so sanh 2 file ngau nhien
+        /// co trung noi dung hay khong (FindDuplicateFiles). MD5 (va ca SHA-1)
+        /// da duoc chung minh CO THE bi tao va cham (collision) CO CHU DICH -
+        /// ve ly thuyet, mot ben xau co the sua noi dung file MA VAN GIU
+        /// NGUYEN hash MD5, khien co che giam sat "tuong" file khong doi trong
+        /// khi thuc te da bi thay doi - danh bai chinh muc dich cua tinh nang
+        /// giam sat. SHA-256 CHUA co cach nao biet de tao va cham co chu dich
+        /// trong thuc te, phu hop hon nhieu cho muc dich phat hien gia mao/
+        /// thay doi trai phep. Danh doi duy nhat la SHA-256 tinh cham hon MD5
+        /// mot chut (chap nhan duoc, vi baseline chi tinh MOT LAN khi bat dau
+        /// giam sat, khong lap lai lien tuc nhu FindDuplicateFiles).
+        /// </remarks>
+        /// <param name="filePath">Duong dan file can tinh hash.</param>
+        /// <param name="cancellationToken">Xem ComputeMd5(string, CancellationToken).</param>
+        public static string ComputeSha256(string filePath, CancellationToken cancellationToken = default)
+        {
+            using (var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                BufferSize,
+                FileOptions.SequentialScan))
+            {
+                return ComputeSha256(stream, cancellationToken);
+            }
+        }
+
+        /// <summary>Ban tu Stream bat ky cua ComputeSha256(string, CancellationToken) - xem ComputeMd5(Stream, CancellationToken).</summary>
+        public static string ComputeSha256(Stream stream, CancellationToken cancellationToken)
+        {
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream));
+
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] buffer = new byte[BufferSize];
+                int bytesRead;
+
+                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    sha256.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+                }
+
+                sha256.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+                return ToHexString(sha256.Hash);
+            }
+        }
+
+        /// <summary>Ban khong dong bo cua ComputeSha256(string, CancellationToken) - xem ComputeMd5Async.</summary>
+        public static async Task<string> ComputeSha256Async(string filePath, CancellationToken cancellationToken = default)
+        {
+            using (var stream = new FileStream(
+                filePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                BufferSize,
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                using (SHA256 sha256 = SHA256.Create())
+                {
+                    byte[] buffer = new byte[BufferSize];
+                    int bytesRead;
+
+                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false)) > 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        sha256.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+                    }
+
+                    sha256.TransformFinalBlock(Array.Empty<byte>(), 0, 0);
+
+                    return ToHexString(sha256.Hash);
+                }
+            }
+        }
+
+        /// <summary>
         /// Chuyen mang byte hash thanh chuoi hex chu thuong (VD: {0x0F, 0xA1}
         /// -> "0fa1") - dung StringBuilder + "x2" (2 chu so hex, co dem 0 o
         /// dau neu can) thay vi BitConverter.ToString(...).Replace("-", "")

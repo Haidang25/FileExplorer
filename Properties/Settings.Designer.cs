@@ -144,5 +144,21 @@ namespace FileExplorerApp.Properties
                 this["LogPath"] = value;
             }
         }
+
+        /// <summary>Thu muc luu file baseline hash cua cac thu muc dang/da tung duoc giam sat (BaselineService).</summary>
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("%AppData%\\SFileManager\\baselines")]
+        public string BaselinePath
+        {
+            get
+            {
+                return ((string)(this["BaselinePath"]));
+            }
+            set
+            {
+                this["BaselinePath"] = value;
+            }
+        }
     }
 }
