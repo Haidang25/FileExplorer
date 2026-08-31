@@ -226,10 +226,23 @@ namespace FileExplorerApp.Forms
         /// <summary>
         /// Muc "Nén thành ZIP" tren cmsListView (menu chuot phai) - chi hien/bat
         /// khi dang chon DUY NHAT 1 thu muc (xem cmsListView_Opening), vi
-        /// CompressionService.CompressFolder hien chi ho tro nen MOT thu muc,
-        /// chua ho tro nen nhieu muc chon/1 file don le vao chung mot .zip.
+        /// CompressionService.CompressFolder/CompressFolderAsync hien chi ho tro
+        /// nen MOT thu muc, chua ho tro nen nhieu muc chon/1 file don le vao chung
+        /// mot .zip.
         /// </summary>
-        private void cmsCompressToZip_Click(object sender, EventArgs e)
+        /// <remarks>
+        /// QUYET DINH THIET KE: dung CompressFolderAsync (KHONG phai CompressFolder
+        /// dong bo) va LUON hien CopyProgressForm + tspProgress - ke ca voi thu muc
+        /// nho - thay vi chi bat dau doi kich thuoc/so file TRUOC roi moi quyet dinh
+        /// dung ban dong bo hay bat dong bo: ban than viec dem truoc (CountFiles) da
+        /// phai duyet toan bo cay thu muc mot lan (co the CUNG CHAM nhu nen luon voi
+        /// thu muc lon), nen "biet truoc la lon hay nho" khong re hon nhieu so voi cu
+        /// LUON dung duong bat dong bo - giong huong FolderService.CopyFolderAsync
+        /// da dung CHO MOI lan Dan (Paste) du thu muc to hay nho, KHONG phan biet.
+        /// Voi thu muc nho, CopyProgressForm chi thoang qua roi tu dong Close() (xem
+        /// finally ben duoi) - khong gay kho chiu dang ke.
+        /// </remarks>
+        private async void cmsCompressToZip_Click(object sender, EventArgs e)
         {
             if (lvwFiles.SelectedItems.Count != 1)
                 return;
@@ -243,12 +256,58 @@ namespace FileExplorerApp.Forms
             // Dat file .zip ket qua NGAY CANH thu muc nguon (cung thu muc cha),
             // trung ten voi thu muc nguon (VD thu muc "Anh" -> "Anh.zip") - giong
             // hanh vi "Nén thành ZIP"/"Compress to ZIP file" quen thuoc cua Windows
-            // Explorer. Neu da co san file .zip trung ten, CompressFolder tu tra ve
-            // Skipped (xem CompressionService.CompressFolder) - khong tu ghi de.
+            // Explorer. Neu da co san file .zip trung ten, CompressFolderAsync tu
+            // tra ve Skipped (xem CompressionService.CompressFolderAsync) - khong
+            // tu ghi de.
             string zipPath = Path.Combine(parentDir ?? _currentPath, folderName + ".zip");
-
-            OperationResult result = _compressionService.CompressFolder(path, zipPath);
             string actionDescription = $"nén thư mục \"{folderName}\" thành ZIP";
+
+            OperationResult result;
+
+            // cts + copyProgressForm: dung CHUNG co che voi mnuEditPaste_Click (xem
+            // chu thich chi tiet o do) - cts.Cancel() duoc goi khi nguoi dung bam nut
+            // Huy tren copyProgressForm, CompressFolderAsync tu kiem tra token nay
+            // giua tung file dang nen.
+            using (var cts = new CancellationTokenSource())
+            using (var copyProgressForm = new CopyProgressForm())
+            {
+                copyProgressForm.CancelRequested += (s, args) => cts.Cancel();
+                copyProgressForm.Show(this);
+
+                IProgress<FileOperationProgress> compressProgress = new Progress<FileOperationProgress>(p =>
+                {
+                    tspProgress.Value = p.PercentComplete;
+                    tsslStatus.Text = $"Đang nén \"{p.CurrentFileName}\"... ({p.PercentComplete}%)";
+                    copyProgressForm.UpdateProgress(p);
+                });
+
+                tspProgress.Value = 0;
+                tspProgress.Visible = true;
+
+                try
+                {
+                    result = await _compressionService.CompressFolderAsync(path, zipPath, compressProgress, cts.Token);
+                }
+                finally
+                {
+                    // Luon dong hop thoai + an lai thanh tien do, ke ca khi bi Huy hoac
+                    // loi khong luong truoc - giong het finally cua mnuEditPaste_Click.
+                    copyProgressForm.Close();
+                    tspProgress.Visible = false;
+                    tspProgress.Value = 0;
+                    tsslStatus.Text = "Sẵn sàng";
+                }
+            }
+
+            if (result == OperationResult.Cancelled)
+            {
+                // Nguoi dung tu bam Huy - khong can hien MessageBox ket qua (da ro
+                // rang la do chinh nguoi dung yeu cau), giong huong xu ly Cancelled
+                // trong vong lap Dan cua mnuEditPaste_Click.
+                LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription);
+                return;
+            }
+
             ShowOperationResultMessage(result, actionDescription);
             LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription);
 
@@ -287,8 +346,14 @@ namespace FileExplorerApp.Forms
         ///   tu kiem tra truoc khi cho phep dong dialog).
         /// - Bỏ qua: dung luon, khong lam gi them (khong ExtractZip).
         /// - Dong dialog (Cancel): tuong tu Bo qua.
+        ///
+        /// Sau khi het xung dot (hoac khong co xung dot tu dau), dung ExtractZipAsync
+        /// (KHONG phai ExtractZip dong bo) + CopyProgressForm/tspProgress/cts, dung
+        /// het co che voi cmsCompressToZip_Click/mnuEditPaste_Click - xem chu thich
+        /// <remarks> cua cmsCompressToZip_Click ve ly do LUON dung duong bat dong bo
+        /// thay vi phan biet thu muc to/nho truoc.
         /// </remarks>
-        private void cmsExtractHere_Click(object sender, EventArgs e)
+        private async void cmsExtractHere_Click(object sender, EventArgs e)
         {
             if (lvwFiles.SelectedItems.Count != 1)
                 return;
@@ -343,8 +408,44 @@ namespace FileExplorerApp.Forms
                 }
             }
 
-            OperationResult result = _compressionService.ExtractZip(path, destPath);
             string actionDescription = $"giải nén \"{zipFileName}\"";
+            OperationResult result;
+
+            using (var cts = new CancellationTokenSource())
+            using (var copyProgressForm = new CopyProgressForm())
+            {
+                copyProgressForm.CancelRequested += (s, args) => cts.Cancel();
+                copyProgressForm.Show(this);
+
+                IProgress<FileOperationProgress> extractProgress = new Progress<FileOperationProgress>(p =>
+                {
+                    tspProgress.Value = p.PercentComplete;
+                    tsslStatus.Text = $"Đang giải nén \"{p.CurrentFileName}\"... ({p.PercentComplete}%)";
+                    copyProgressForm.UpdateProgress(p);
+                });
+
+                tspProgress.Value = 0;
+                tspProgress.Visible = true;
+
+                try
+                {
+                    result = await _compressionService.ExtractZipAsync(path, destPath, extractProgress, cts.Token);
+                }
+                finally
+                {
+                    copyProgressForm.Close();
+                    tspProgress.Visible = false;
+                    tspProgress.Value = 0;
+                    tsslStatus.Text = "Sẵn sàng";
+                }
+            }
+
+            if (result == OperationResult.Cancelled)
+            {
+                LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription);
+                return;
+            }
+
             ShowOperationResultMessage(result, actionDescription);
             LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription);
 
