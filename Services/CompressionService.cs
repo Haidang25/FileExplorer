@@ -384,8 +384,9 @@ namespace FileExplorerApp.Services
         /// <returns>
         /// OperationResult.Success neu giai nen thanh cong; NotFound neu zipPath
         /// khong phai file hop le; Skipped neu destPath da ton tai va khong rong;
-        /// InvalidDestination neu destPath trung ten voi mot file; AccessDenied/
-        /// FileInUse/Failed cho cac loi con lai - xem <remarks>.
+        /// InvalidDestination neu destPath trung ten voi mot file; CorruptedArchive
+        /// neu file .zip bi hong/sai dinh dang; AccessDenied/FileInUse/Failed cho
+        /// cac loi con lai - xem <remarks>.
         /// </returns>
         public OperationResult ExtractZip(string zipPath, string destPath)
         {
@@ -424,10 +425,27 @@ namespace FileExplorerApp.Services
             }
             catch (InvalidDataException)
             {
-                // File .zip bi hong hoac khong dung dinh dang zip - tach rieng voi
-                // Failed de nguoi dung biet ro nguyen nhan la o CHINH file .zip nguon,
-                // khong phai loi ghi vao thu muc dich.
-                return OperationResult.Failed;
+                // File .zip bi hong (du lieu khong toan ven) hoac khong dung dinh
+                // dang Zip - tach rieng voi Failed (OperationResult.CorruptedArchive)
+                // de nguoi dung biet ro nguyen nhan la o CHINH file .zip nguon, khong
+                // phai loi ghi vao thu muc dich. ZipFile.ExtractToDirectory co the da
+                // giai nen DUOC MOT PHAN truoc khi gap entry hong roi moi nem loi nay
+                // (giai nen theo thu tu entry, khong phai atomic) - don dep destPath
+                // do dang giong huong da dung o ExtractZipAsync khi bi Huy, CHI KHI
+                // chinh lan goi nay la nguoi TAO RA destPath (destPathExists == false
+                // tu dau, xem kiem tra o tren).
+                if (!destPathExists)
+                {
+                    try
+                    {
+                        if (Directory.Exists(normalizedDestPath))
+                            Directory.Delete(normalizedDestPath, recursive: true);
+                    }
+                    catch (UnauthorizedAccessException) { /* Khong xoa duoc thu muc rac - bo qua. */ }
+                    catch (IOException) { /* Tuong tu. */ }
+                }
+
+                return OperationResult.CorruptedArchive;
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
@@ -573,26 +591,9 @@ namespace FileExplorerApp.Services
             }
             catch (OperationCanceledException)
             {
-                // Nguoi dung bam Huy giua chung - CHI xoa destPath neu chinh lan
-                // giai nen nay la nguoi TAO RA no (destPathExistedBefore == false).
-                // Neu destPath da ton tai TU TRUOC (VD: mot thu muc rong co san cua
-                // nguoi dung, da qua kiem tra Skipped o tren vi rong), KHONG xoa -
-                // chi de lai phan noi dung do dang (an toan hon xoa nham thu muc
-                // khong phai do thao tac nay tao ra) - giong tinh than thu vi cua
-                // FolderService.CopyFolderAsync (luon xoa destinationPath khi huy)
-                // NHUNG can them dieu kien nay vi ExtractZipAsync (khac CopyFolderAsync)
-                // CHO PHEP destPath da ton tai san (rong) tu truoc khi bat dau.
-                if (!destPathExistedBefore)
-                {
-                    try
-                    {
-                        if (Directory.Exists(normalizedDestPath))
-                            Directory.Delete(normalizedDestPath, recursive: true);
-                    }
-                    catch (UnauthorizedAccessException) { /* Khong xoa duoc thu muc rac - bo qua. */ }
-                    catch (IOException) { /* Tuong tu. */ }
-                }
-
+                // Nguoi dung bam Huy giua chung - xem CleanupPartialDestPath ve dieu
+                // kien CHI xoa destPath khi chinh lan giai nen nay tao ra no.
+                CleanupPartialDestPath(normalizedDestPath, destPathExistedBefore);
                 return new CompressionOperationResult(OperationResult.Cancelled);
             }
             catch (UnauthorizedAccessException)
@@ -601,7 +602,14 @@ namespace FileExplorerApp.Services
             }
             catch (InvalidDataException)
             {
-                return new CompressionOperationResult(OperationResult.Failed);
+                // File .zip bi hong (du lieu khong toan ven) hoac khong dung dinh
+                // dang Zip - tach rieng voi Failed (OperationResult.CorruptedArchive)
+                // de nguoi dung biet ro nguyen nhan la o CHINH file .zip nguon. Co the
+                // da giai nen DUOC MOT PHAN cac entry truoc do (doc tuan tu tung
+                // entry, khong phai atomic) truoc khi gap entry hong/mot Local File
+                // Header sai - don dep phan do dang giong het truong hop bi Huy.
+                CleanupPartialDestPath(normalizedDestPath, destPathExistedBefore);
+                return new CompressionOperationResult(OperationResult.CorruptedArchive);
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
@@ -611,6 +619,32 @@ namespace FileExplorerApp.Services
             {
                 return new CompressionOperationResult(OperationResult.Failed);
             }
+        }
+
+        /// <summary>
+        /// Xoa normalizedDestPath (de quy, toan bo noi dung) SAU KHI ExtractZipAsync
+        /// bi Huy hoac gap file .zip hong giua chung - CHI xoa khi chinh lan goi nay
+        /// la nguoi TAO RA destPath (destPathExistedBefore == false, xem kiem tra dau
+        /// ExtractZipAsync). Neu destPath da ton tai TU TRUOC (VD: mot thu muc rong
+        /// co san cua nguoi dung, da qua kiem tra Skipped vi rong), KHONG xoa - chi
+        /// de lai phan noi dung do dang (an toan hon xoa nham thu muc khong phai do
+        /// thao tac nay tao ra) - giong tinh than cua FolderService.CopyFolderAsync
+        /// (luon xoa destinationPath khi huy) NHUNG can them dieu kien nay vi
+        /// ExtractZipAsync (khac CopyFolderAsync) CHO PHEP destPath da ton tai san
+        /// (rong) tu truoc khi bat dau.
+        /// </summary>
+        private static void CleanupPartialDestPath(string normalizedDestPath, bool destPathExistedBefore)
+        {
+            if (destPathExistedBefore)
+                return;
+
+            try
+            {
+                if (Directory.Exists(normalizedDestPath))
+                    Directory.Delete(normalizedDestPath, recursive: true);
+            }
+            catch (UnauthorizedAccessException) { /* Khong xoa duoc thu muc rac - bo qua. */ }
+            catch (IOException) { /* Tuong tu. */ }
         }
     }
 }

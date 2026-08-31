@@ -1435,6 +1435,11 @@ namespace FileExplorerApp.Forms
                     icon = MessageBoxIcon.Warning;
                     break;
 
+                case OperationResult.CorruptedArchive:
+                    caption = "Tệp ZIP bị hỏng";
+                    icon = MessageBoxIcon.Error;
+                    break;
+
                 case OperationResult.PartialSuccess:
                     caption = "Hoàn tất một phần";
                     icon = MessageBoxIcon.Warning;
@@ -1497,6 +1502,10 @@ namespace FileExplorerApp.Forms
                 case OperationResult.InvalidDestination:
                     return $"Không thể {actionDescription}: không thể di chuyển/sao chép một thư mục " +
                         "vào chính nó hoặc vào một thư mục con của chính nó.";
+
+                case OperationResult.CorruptedArchive:
+                    return $"Không thể {actionDescription}: tệp .zip bị hỏng hoặc không đúng định dạng " +
+                        "Zip. Vui lòng kiểm tra lại tệp nguồn (VD: tải lại từ nơi khác) rồi thử lại.";
 
                 case OperationResult.PartialSuccess:
                     return $"Đã {actionDescription} sang vị trí mới, nhưng không xóa được bản gốc " +

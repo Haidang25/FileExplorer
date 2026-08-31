@@ -43,6 +43,18 @@ namespace FileExplorerApp.Models
         /// thong kho hieu neu khong chan truoc. Tach rieng voi Skipped/Failed de bao
         /// thong bao cu the, giup nguoi dung hieu dung ly do bi chan.
         /// </summary>
-        InvalidDestination
+        InvalidDestination,
+
+        /// <summary>
+        /// File .zip bi hong (du lieu ben trong khong toan ven, VD tai xuong do
+        /// dang/dia loi) hoac khong dung dinh dang Zip (VD doi ten mot file khac
+        /// thanh .zip) - CompressionService.ExtractZip/ExtractZipAsync tra ve gia
+        /// tri nay khi mo file .zip nem InvalidDataException. Tach rieng voi Failed
+        /// de bao thong bao cu the ("tệp .zip bị hỏng/sai định dạng") thay vi loi
+        /// chung chung, giup nguoi dung hieu NGAY nguyen nhan nam o CHINH file .zip
+        /// nguon (VD: tai lai tu nguon khac) chu khong phai o thu muc dich/quyen
+        /// truy cap.
+        /// </summary>
+        CorruptedArchive
     }
 }
