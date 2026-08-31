@@ -135,8 +135,12 @@ namespace FileExplorerApp.Forms
                 // DialogResult mac dinh la None) de nguoi dung biet cai dat CHUA
                 // duoc luu va co the thu lai, giong cach btnOpenLogFolder_Click
                 // ben duoi da bao loi cho nguoi dung.
-                MessageBox.Show(this, "Không thể lưu cài đặt: " + ex.Message, "Cài đặt",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                //
+                // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                // thay MessageBox.Show rai rac - NHAN TIEN doi dinh dang noi
+                // ex.Message tu ": " (cung dong) sang ":\n" (xuong dong) de
+                // dong nhat voi da so noi con lai trong ung dung.
+                ErrorHandler.Show(this, "Không thể lưu cài đặt:", ex, "Cài đặt");
                 return;
             }
 
@@ -161,8 +165,10 @@ namespace FileExplorerApp.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Không thể mở thư mục nhật ký: " + ex.Message, "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Ap dung ErrorHandler tap trung - NHAN TIEN sua luon loi
+                // THIEU OWNER (truoc day khong truyen "this") va doi dinh dang
+                // noi ex.Message tu ": " sang ":\n" cho dong nhat.
+                ErrorHandler.Show(this, "Không thể mở thư mục nhật ký:", ex);
             }
         }
     }

@@ -333,8 +333,12 @@ namespace FileExplorerApp.Forms
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
             {
-                MessageBox.Show(this, $"Không thể bắt đầu giám sát: {ex.Message}",
-                    "Giám sát toàn vẹn", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                // thay MessageBox.Show rai rac - dinh dang thong diep chuyen tu
+                // "Không thể bắt đầu giám sát: {ex.Message}" (cung dong) sang
+                // "Không thể bắt đầu giám sát:\n{ex.Message}" (xuong dong) de
+                // dong nhat voi da so noi con lai trong ung dung.
+                ErrorHandler.Show(this, "Không thể bắt đầu giám sát:", ex, "Giám sát toàn vẹn");
                 tsslStatus.Text = "Sẵn sàng";
             }
             finally
@@ -1126,7 +1130,20 @@ namespace FileExplorerApp.Forms
                     break;
             }
 
-            MessageBox.Show(message, caption, MessageBoxButtons.OK, icon);
+            // Ap dung ErrorHandler tap trung CHO RIENG nhanh Loi (icon Error) -
+            // cac muc con lai (Information/Warning) KHONG thuoc pham vi "hien
+            // thi loi" cua ErrorHandler (xem remarks dau lop ErrorHandler),
+            // van dung MessageBox.Show truc tiep nhu truoc, chi THEM "this"
+            // lam owner o CA 2 nhanh (loi thieu owner phat hien khi ra soat -
+            // truoc day KHONG truyen owner cho bat ky muc nao trong ham nay).
+            if (icon == MessageBoxIcon.Error)
+            {
+                ErrorHandler.Show(this, message, caption);
+            }
+            else
+            {
+                MessageBox.Show(this, message, caption, MessageBoxButtons.OK, icon);
+            }
         }
 
         /// <summary>
@@ -2945,8 +2962,12 @@ namespace FileExplorerApp.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Không thể mở file:\n{ex.Message}", "Lỗi",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Ap dung ErrorHandler tap trung - NHAN TIEN sua luon loi
+                    // THIEU OWNER phat hien khi ra soat (MessageBox.Show truoc
+                    // day KHONG truyen "this", nen hop thoai loi hien GIUA MAN
+                    // HINH thay vi tren dung MainForm va khong bi MainForm chan
+                    // tuong tac cung luc).
+                    ErrorHandler.Show(this, "Không thể mở file:", ex);
                 }
             }
         }
@@ -3262,8 +3283,11 @@ namespace FileExplorerApp.Forms
 
             if (!Directory.Exists(path))
             {
-                MessageBox.Show($"Không tìm thấy thư mục:\n{path}", "Lỗi",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // Ap dung ErrorHandler tap trung - loi KHONG phat sinh tu
+                // Exception (chi la kiem tra Directory.Exists), dung overload
+                // khong co "ex" - NHAN TIEN sua luon loi thieu owner (truoc
+                // day khong truyen "this").
+                ErrorHandler.Show(this, $"Không tìm thấy thư mục:\n{path}");
                 txtPath.Text = _currentPath; // Khoi phuc lai duong dan cu tren thanh dia chi.
                 return;
             }

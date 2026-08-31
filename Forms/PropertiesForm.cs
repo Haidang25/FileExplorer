@@ -85,12 +85,9 @@ namespace FileExplorerApp.Forms
             catch (Exception ex) when (ex is FileNotFoundException || ex is UnauthorizedAccessException
                 || ex is IOException || ex is System.Security.SecurityException)
             {
-                MessageBox.Show(
-                    this,
-                    $"Không thể đọc thuộc tính của mục này:\n{ex.Message}",
-                    "Lỗi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                // thay MessageBox.Show rai rac.
+                ErrorHandler.Show(this, "Không thể đọc thuộc tính của mục này:", ex);
 
                 this.Text = "Thuộc tính";
                 grpAttributes.Enabled = false;
@@ -320,12 +317,9 @@ namespace FileExplorerApp.Forms
             }
             catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
             {
-                MessageBox.Show(
-                    this,
-                    $"Không thể áp dụng thay đổi thuộc tính:\n{ex.Message}",
-                    "Lỗi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                // thay MessageBox.Show rai rac.
+                ErrorHandler.Show(this, "Không thể áp dụng thay đổi thuộc tính:", ex);
             }
         }
 

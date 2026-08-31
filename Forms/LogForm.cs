@@ -351,12 +351,11 @@ namespace FileExplorerApp.Forms
             }
             else
             {
-                MessageBox.Show(
+                // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                // thay MessageBox.Show rai rac.
+                ErrorHandler.Show(
                     this,
-                    "Không thể xóa file lịch sử (có thể đang được mở bởi chương trình khác). Vui lòng thử lại sau.",
-                    "Lỗi",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Error);
+                    "Không thể xóa file lịch sử (có thể đang được mở bởi chương trình khác). Vui lòng thử lại sau.");
             }
         }
 
@@ -413,12 +412,12 @@ namespace FileExplorerApp.Forms
                     // bao loi cu the (VD: file dich dang mo trong chuong trinh khac,
                     // khong du quyen ghi vao thu muc dich) de ho biet ma xu ly,
                     // khong duoc im lang nhu WriteLog.
-                    MessageBox.Show(
+                    // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                    // thay MessageBox.Show rai rac.
+                    ErrorHandler.Show(
                         this,
-                        $"Không thể ghi file CSV (có thể tệp đang được mở bởi chương trình khác, hoặc không đủ quyền ghi vào vị trí đã chọn):\n{ex.Message}",
-                        "Lỗi",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                        "Không thể ghi file CSV (có thể tệp đang được mở bởi chương trình khác, hoặc không đủ quyền ghi vào vị trí đã chọn):",
+                        ex);
                 }
             }
         }
@@ -483,12 +482,11 @@ namespace FileExplorerApp.Forms
                 }
                 else
                 {
-                    MessageBox.Show(
+                    // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                    // thay MessageBox.Show rai rac.
+                    ErrorHandler.Show(
                         this,
-                        "Không thể xuất báo cáo điều tra (có thể tệp đích đang được mở bởi chương trình khác, đường dẫn không hợp lệ, hoặc không đủ quyền ghi vào vị trí đã chọn).",
-                        "Lỗi",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
+                        "Không thể xuất báo cáo điều tra (có thể tệp đích đang được mở bởi chương trình khác, đường dẫn không hợp lệ, hoặc không đủ quyền ghi vào vị trí đã chọn).");
                 }
             }
         }
@@ -556,21 +554,16 @@ namespace FileExplorerApp.Forms
                         break;
 
                     case ReportHashVerificationResult.ReportFileNotFound:
-                        MessageBox.Show(
-                            this,
-                            "Không tìm thấy file báo cáo đã chọn.",
-                            "Xác thực báo cáo",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
+                        // Ap dung ErrorHandler tap trung (xem Helpers/ErrorHandler.cs)
+                        // thay MessageBox.Show rai rac - giu nguyen tieu de rieng
+                        // "Xác thực báo cáo" (khac tieu de mac dinh "Lỗi").
+                        ErrorHandler.Show(this, "Không tìm thấy file báo cáo đã chọn.", "Xác thực báo cáo");
                         break;
 
                     default: // ReportHashVerificationResult.Error
-                        MessageBox.Show(
+                        ErrorHandler.Show(
                             this,
-                            "Không thể xác thực báo cáo (có thể tệp đang bị khóa bởi chương trình khác, hoặc không đủ quyền đọc).",
-                            "Lỗi",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error);
+                            "Không thể xác thực báo cáo (có thể tệp đang bị khóa bởi chương trình khác, hoặc không đủ quyền đọc).");
                         break;
                 }
             }
