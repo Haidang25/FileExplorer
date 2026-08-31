@@ -36,6 +36,12 @@ namespace FileExplorerApp.Forms
         private readonly LogService _logService = new LogService();
 
         /// <summary>
+        /// Trich xuat noi dung van ban tu file Word (.docx)/PDF (.pdf) de
+        /// hien trong panel preview (txtPreview) - xem UpdateDocumentPreview.
+        /// </summary>
+        private readonly DocumentPreviewService _documentPreviewService = new DocumentPreviewService();
+
+        /// <summary>
         /// Theo doi thay doi (tao/xoa/doi ten/sua) trong _currentPath tu BEN NGOAI
         /// ung dung (Explorer, chuong trinh khac...) de tu dong lam moi lvwFiles -
         /// xem RestartFolderMonitoring/Watcher_*Changed. Chi thuc su bat theo doi
@@ -2356,6 +2362,32 @@ namespace FileExplorerApp.Forms
         };
 
         /// <summary>
+        /// Cac phan mo rong duoc xu ly qua DocumentPreviewService (trich xuat
+        /// noi dung van ban tu cau truc rieng cua tung dinh dang, KHAC voi
+        /// TextPreviewExtensions - cac file .docx/.pdf KHONG THE doc truc
+        /// tiep bang StreamReader nhu van ban thuan, xem UpdateTextPreview).
+        /// </summary>
+        private static readonly HashSet<string> DocumentPreviewExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".docx", ".pdf"
+        };
+
+        /// <summary>
+        /// Nguong dung luong toi da CHO PHEP trich xuat preview .docx/.pdf -
+        /// dung LAI cung gia tri voi MaxPreviewImageBytes (20 MB) vi cung
+        /// chung mot ly do: DocumentPreviewService.ExtractWordText/ExtractPdfText
+        /// (khac voi UpdateTextPreview cho van ban thuan) KHONG doc theo
+        /// dong/streaming co gioi han (StreamReader.ReadLine toi da
+        /// MaxPreviewTextLines dong) ma PHAI phan tich TOAN BO cau truc file
+        /// (goi .docx/PDF object) truoc khi lay duoc bat ky doan van ban nao -
+        /// mot file .docx/.pdf RAT LON (VD hang tram MB) se lam UI "treo"
+        /// dang ke trong luc trich xuat (chay dong bo tren luong UI, giong
+        /// UpdateImagePreview) neu khong chan truoc bang mot nguong dung
+        /// luong hop ly.
+        /// </summary>
+        private const long MaxPreviewDocumentBytes = 20 * 1024 * 1024; // 20 MB
+
+        /// <summary>
         /// Dispatcher chinh cho khu vuc preview ben phai lvwFiles: chi hien
         /// preview khi CHINH XAC mot muc duoc chon (khong phai thu muc) -
         /// dua vao phan mo rong de chon giua preview anh (pbxPreview) hay
@@ -2386,6 +2418,10 @@ namespace FileExplorerApp.Forms
             else if (TextPreviewExtensions.Contains(Path.GetExtension(path)))
             {
                 UpdateTextPreview(path);
+            }
+            else if (DocumentPreviewExtensions.Contains(Path.GetExtension(path)))
+            {
+                UpdateDocumentPreview(path);
             }
             else
             {
@@ -2608,6 +2644,126 @@ namespace FileExplorerApp.Forms
             txtPreview.Visible = true;
             lblPreviewCaption.Text = Path.GetFileName(path);
             spcFilesPreview.Panel2Collapsed = false;
+        }
+
+        /// <summary>
+        /// Cap nhat txtPreview cho file Word (.docx)/PDF (.pdf) bang cach goi
+        /// DocumentPreviewService.ExtractWordText/ExtractPdfText (yeu cau
+        /// truoc do) - KHAC voi UpdateTextPreview (doc truc tiep tung dong
+        /// van ban thuan): 2 dinh dang nay co cau truc rieng (Office Open
+        /// XML/PDF object), PHAI qua thu vien chuyen dung (DocumentFormat.OpenXml/
+        /// PdfPig) moi lay duoc noi dung van ban, KHONG THE StreamReader.ReadLine
+        /// truc tiep tren file goc.
+        /// </summary>
+        /// <remarks>
+        /// CHAN TRUOC theo dung luong file (MaxPreviewDocumentBytes) TRUOC KHI
+        /// goi ExtractWordText/ExtractPdfText - xem ghi chu tai hang so do de
+        /// biet vi sao can chan som (khac voi UpdateTextPreview co the doc
+        /// GIOI HAN so dong bat ke file goc lon bao nhieu, 2 ham Extract* o
+        /// day PHAI phan tich toan bo file truoc khi tra ket qua).
+        ///
+        /// PDF duoc hien THEO TUNG TRANG (dung dinh dang tra ve cua
+        /// ExtractPdfText) - moi trang duoc ngan cach bang mot dong tieu de
+        /// "── Trang N ──" (xem FormatPdfPreviewText) de nguoi dùng phân biệt
+        /// được ranh giới trang, giống ý định ban đầu của yêu cầu "đọc theo
+        /// từng trang" khi đưa lên màn hình xem trước.
+        ///
+        /// BAT Exception CHUNG (khong chi liet ke tung loai cu the nhu
+        /// UpdateTextPreview) - file .docx/.pdf HONG/khong dung cau truc co
+        /// the khien DocumentFormat.OpenXml/PdfPig nem RAT NHIEU loai ngoai le
+        /// khac nhau tuy truong hop hong cu the (khong chi IOException/
+        /// UnauthorizedAccessException nhu doc file thuong) - preview la tinh
+        /// nang PHU, KHONG duoc phep lam crash/treo ca ung dung chi vi mot
+        /// file preview bi hong, nen bat rong o day la CO Y, giong nguyen tac
+        /// da ap dung o BaselineService/IntegrityService khi xu ly loi tren
+        /// TUNG file don le.
+        /// </remarks>
+        private void UpdateDocumentPreview(string path)
+        {
+            Image oldImage = pbxPreview.Image;
+            pbxPreview.Image = null;
+            oldImage?.Dispose();
+            pbxPreview.Visible = false;
+
+            long fileSize;
+            try
+            {
+                fileSize = new FileInfo(path).Length;
+            }
+            catch (IOException)
+            {
+                txtPreview.Visible = false;
+                lblPreviewCaption.Text = "Không thể xem trước tệp này";
+                spcFilesPreview.Panel2Collapsed = true;
+                return;
+            }
+
+            if (fileSize > MaxPreviewDocumentBytes)
+            {
+                txtPreview.Visible = false;
+                lblPreviewCaption.Text =
+                    $"Tệp quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewDocumentBytes)})";
+                spcFilesPreview.Panel2Collapsed = true;
+                return;
+            }
+
+            string extractedText;
+            try
+            {
+                bool isPdf = string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
+                extractedText = isPdf
+                    ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path))
+                    : _documentPreviewService.ExtractWordText(path);
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            {
+                // Xem <remarks> tren dau ham - CO Y bat rong (tru cac loi
+                // nghiem trong cap runtime khong nen/khong the "bat va bo qua"
+                // nhu OutOfMemoryException) vi day la file cua nguoi dung
+                // KHAC dinh dang/bi hong ma DocumentFormat.OpenXml/PdfPig co
+                // the phan ung bang nhieu loai ngoai le khac nhau.
+                txtPreview.Visible = false;
+                lblPreviewCaption.Text = "Không thể xem trước tệp này (có thể tệp bị hỏng hoặc không đúng định dạng)";
+                spcFilesPreview.Panel2Collapsed = true;
+                return;
+            }
+
+            bool truncated = extractedText.Length > MaxPreviewTextChars;
+            if (truncated)
+            {
+                extractedText = extractedText.Substring(0, MaxPreviewTextChars) + Environment.NewLine + "… (đã rút gọn)";
+            }
+
+            txtPreview.Text = extractedText;
+            txtPreview.Visible = true;
+            lblPreviewCaption.Text = Path.GetFileName(path);
+            spcFilesPreview.Panel2Collapsed = false;
+        }
+
+        /// <summary>
+        /// Ghep danh sach van ban theo trang (tra ve tu
+        /// DocumentPreviewService.ExtractPdfText) thanh MOT chuoi de hien
+        /// trong txtPreview, chen tieu de "── Trang N ──" truoc noi dung MOI
+        /// trang de nguoi dung phan biet duoc ranh gioi trang - PDF (khac
+        /// .docx) khong co khai niem "doan van" xuyen trang, nen ranh gioi
+        /// TRANG la don vi tu nhien nhat de phan doan khi hien preview.
+        /// </summary>
+        private static string FormatPdfPreviewText(List<string> pageTexts)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < pageTexts.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.AppendLine();
+                    sb.AppendLine();
+                }
+
+                sb.AppendLine($"── Trang {i + 1} ──");
+                sb.Append(pageTexts[i]);
+            }
+
+            return sb.ToString();
         }
 
         /// <summary>
