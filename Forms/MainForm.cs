@@ -2712,7 +2712,7 @@ namespace FileExplorerApp.Forms
             {
                 bool isPdf = string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
                 extractedText = isPdf
-                    ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path))
+                    ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path), MaxPreviewTextChars)
                     : _documentPreviewService.ExtractWordText(path);
             }
             catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
@@ -2748,7 +2748,25 @@ namespace FileExplorerApp.Forms
         /// .docx) khong co khai niem "doan van" xuyen trang, nen ranh gioi
         /// TRANG la don vi tu nhien nhat de phan doan khi hien preview.
         /// </summary>
-        private static string FormatPdfPreviewText(List<string> pageTexts)
+        /// <remarks>
+        /// DUNG SOM (break) NGAY KHI DU maxChars - xem <see cref="MaxPreviewTextChars"/>
+        /// va ghi chu tai UpdateDocumentPreview ve nguy co "treo giao dien"
+        /// voi tep qua lon: mot PDF (du duoi nguong MaxPreviewDocumentBytes)
+        /// VAN CO THE co hang tram trang chu (VD sach/bao cao dai) - neu
+        /// ghep HET tat ca trang roi moi cat (Substring) o UpdateDocumentPreview
+        /// nhu truoc day, van phai TON THOI GIAN noi CHUOI cho toan bo cac
+        /// trang KHONG BAO GIO duoc hien (vi se bi cat bo ngay sau do) truoc
+        /// khi cat. Dung som ngay khi sb.Length da vuot maxChars giup BO QUA
+        /// hoan toan viec ghep noi dung cac trang con lai, giam dang ke thoi
+        /// gian xu ly voi PDF nhieu trang - UpdateDocumentPreview van tu
+        /// Substring lai chinh xac dung maxChars ky tu sau do (co the chuoi
+        /// tra ve tu day dai HON maxChars mot chut, do dung "sau khi them
+        /// mot trang moi vuot nguong" thay vi cat GIUA trang - Substring o
+        /// noi goi se cat chinh xac phan con thua).
+        /// </remarks>
+        /// <param name="pageTexts">Danh sach van ban theo trang (tu ExtractPdfText).</param>
+        /// <param name="maxChars">So ky tu toi da CAN TICH LUY truoc khi dung ghep them trang moi.</param>
+        private static string FormatPdfPreviewText(List<string> pageTexts, int maxChars)
         {
             var sb = new StringBuilder();
             for (int i = 0; i < pageTexts.Count; i++)
@@ -2761,6 +2779,11 @@ namespace FileExplorerApp.Forms
 
                 sb.AppendLine($"── Trang {i + 1} ──");
                 sb.Append(pageTexts[i]);
+
+                if (sb.Length > maxChars)
+                {
+                    break; // Da du de UpdateDocumentPreview cat gon - khong can ghep them cac trang sau.
+                }
             }
 
             return sb.ToString();
