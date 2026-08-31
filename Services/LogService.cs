@@ -622,5 +622,327 @@ namespace FileExplorerApp.Services
             string expandedDirectory = Environment.ExpandEnvironmentVariables(configuredPath);
             return Path.Combine(expandedDirectory, "log" + LogFileExtension);
         }
+
+        // ================================================================
+        // MO RONG: BAO CAO DIEU TRA TOAN VEN (integrity investigation report)
+        // ================================================================
+        //
+        // YEU CAU: "Mo rong LogService xuat bao cao dieu tra: thoi gian,
+        // duong dan, hash truoc/sau, Environment.UserName" - tuc la GHI LAI
+        // moi vi pham toan ven ma IntegrityService phat hien (xem
+        // IntegrityViolationEventArgs/IntegrityViolationDetected tai
+        // Services\IntegrityService.cs) thanh mot BAO CAO co the XEM LAI/XUAT
+        // RA sau nay, phuc vu dieu tra khi nghi ngo co truy cap/sua doi trai
+        // phep.
+        //
+        // QUYET DINH THIET KE: dung MOT FILE/SCHEMA CSV RIENG (khong tai su
+        // dung log.csv/LogFileHeader/LogEntryModel hien co) - xem <remarks>
+        // day du tai Models\IntegrityInvestigationEntry.cs de biet ly do chi
+        // tiet (tom tat: LogFileHeader dang CO DINH 9 cot va TryParseLogLine
+        // TU CHOI moi dong khac 9 cot, nhoi them cot se pha vo tinh tuong
+        // thich nguoc voi file log.csv da co san tren may nguoi dung; hai
+        // khai niem - "nhat ky thao tac cua nguoi dung" va "bao cao dieu tra
+        // vi pham he thong tu phat hien" - cung khac ban chat nhau). Cac
+        // nguyen tac con lai (CSV, append-only luc ghi, escape RFC 4180, khoa
+        // tinh dong bo, dat trong AppData) giu NGUYEN VE NHU voi log.csv -
+        // xem "QUYET DINH THIET KE"/"QUYET DINH THIET KE THU HAI" o remarks
+        // dau lop de biet ly do goc, khong nhac lai o day.
+
+        /// <summary>
+        /// Ten file rieng cho bao cao dieu tra toan ven (KHAC voi "log" +
+        /// LogFileExtension cua nhat ky thao tac thong thuong) - dung CHUNG
+        /// thu muc voi log.csv (Settings.Default.LogPath) vi ca hai deu la
+        /// "du lieu ung dung sinh ra luc chay" theo dung tinh chat cua AppData
+        /// (xem "QUYET DINH THIET KE THU HAI" o remarks dau lop), khong can
+        /// mot Settings.Default.XxxPath rieng chi de doi thu muc.
+        /// </summary>
+        public const string InvestigationReportFileName = "integrity_investigation" + LogFileExtension;
+
+        /// <summary>
+        /// Dong header dau tien cua file bao cao dieu tra CSV - PHAI khop
+        /// chinh xac thu tu voi FormatInvestigationCsvRow (ghi) va
+        /// TryParseInvestigationLine (doc lai).
+        /// </summary>
+        public const string InvestigationReportFileHeader = "Timestamp,FilePath,ViolationType,HashBefore,HashAfter,UserName";
+
+        /// <summary>
+        /// Khoa dong bo hoa RIENG cho file bao cao dieu tra - TACH BIET voi
+        /// WriteLock (log.csv) vi day la HAI FILE KHAC NHAU, khoa chung mot
+        /// object se lam moi lan ghi bao cao dieu tra CHO KHONG CAN THIET moi
+        /// lan co mot thao tac Copy/Move/Delete... (va nguoc lai) dang duoc
+        /// ghi log dong thoi, trong khi hai thao tac ghi nay hoan toan khong
+        /// lien quan/khong dung chung file.
+        /// </summary>
+        private static readonly object InvestigationWriteLock = new object();
+
+        /// <summary>
+        /// Lay duong dan file bao cao dieu tra toan ven hien dang su dung -
+        /// xem InvestigationReportFileName. Dung CHUNG logic doc/mo rong
+        /// Settings.Default.LogPath voi GetLogFilePath (chi khac ten file o
+        /// buoc cuoi), giu dung nguyen tac "khong hardcode duong dan rieng,
+        /// tu Settings ma ra" ap dung cho log.csv.
+        /// </summary>
+        public string GetInvestigationReportFilePath()
+        {
+            string configuredPath = Settings.Default.LogPath;
+            if (string.IsNullOrWhiteSpace(configuredPath))
+            {
+                configuredPath = @"%AppData%\SFileManager\logs";
+            }
+
+            string expandedDirectory = Environment.ExpandEnvironmentVariables(configuredPath);
+            return Path.Combine(expandedDirectory, InvestigationReportFileName);
+        }
+
+        /// <summary>
+        /// Ghi MOT dong bao cao dieu tra tu mot vi pham toan ven da phat hien
+        /// (IntegrityViolationEventArgs - xem IntegrityService). Day la ham
+        /// TIEN LOI danh cho noi goi (VD MainForm.IntegrityService_IntegrityViolationDetected)
+        /// truyen thang doi tuong su kien nhan duoc, khong can tu tay anh xa
+        /// tung truong sang IntegrityInvestigationEntry.
+        /// </summary>
+        /// <remarks>
+        /// UserName duoc lay TU BEN TRONG ham nay bang Environment.UserName
+        /// (KHONG nhan tu tham so ben ngoai) - dung dung yeu cau "xuat...
+        /// Environment.UserName", va dam bao gia tri LUON la nguoi dang dang
+        /// nhap TREN MAY DANG CHAY ham nay (may dang giam sat), bat ke
+        /// IntegrityService duoc goi tu dau.
+        ///
+        /// Cung nhu WriteLog, loi ghi (file dang bi khoa, mat quyen...) duoc
+        /// NUOT (khong nem ra ngoai) - ghi bao cao dieu tra la tinh nang PHU
+        /// TRO chay ngam khi phat hien vi pham, khong duoc phep lam gian doan
+        /// hoac lam crash luong xu ly su kien IntegrityViolationDetected (VD
+        /// dang chay tren luong threadpool cua FileSystemWatcher - xem
+        /// IntegrityService remarks) chi vi khong ghi duoc bao cao.
+        /// </remarks>
+        /// <param name="violation">Vi pham can ghi lai.</param>
+        public void LogIntegrityViolation(IntegrityViolationEventArgs violation)
+        {
+            if (violation == null)
+                return;
+
+            var entry = new IntegrityInvestigationEntry(
+                violation.DetectedAtUtc,
+                violation.FilePath,
+                violation.ViolationType.ToString(),
+                violation.ExpectedHash,
+                violation.ActualHash,
+                Environment.UserName);
+
+            WriteInvestigationEntry(entry);
+        }
+
+        /// <summary>
+        /// Ghi MOT dong IntegrityInvestigationEntry da co san vao file bao cao
+        /// dieu tra CSV - cau truc/ly do y het WriteLog (tao file + ghi header
+        /// neu la lan dau, sau do APPEND mot dong moi), chi khac file dich va
+        /// khoa dung (InvestigationWriteLock thay vi WriteLock).
+        /// </summary>
+        /// <param name="entry">Dong bao cao can ghi.</param>
+        public void WriteInvestigationEntry(IntegrityInvestigationEntry entry)
+        {
+            if (entry == null)
+                return;
+
+            if (!Settings.Default.LogEnabled)
+                return;
+
+            try
+            {
+                lock (InvestigationWriteLock)
+                {
+                    string reportFilePath = GetInvestigationReportFilePath();
+
+                    string reportDirectory = Path.GetDirectoryName(reportFilePath);
+                    if (!string.IsNullOrEmpty(reportDirectory))
+                    {
+                        Directory.CreateDirectory(reportDirectory);
+                    }
+
+                    bool isNewFile = !File.Exists(reportFilePath);
+
+                    using (var stream = new FileStream(reportFilePath, FileMode.Append, FileAccess.Write, FileShare.Read))
+                    using (var writer = new StreamWriter(stream, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+                    {
+                        if (isNewFile)
+                        {
+                            writer.WriteLine(InvestigationReportFileHeader);
+                        }
+
+                        writer.WriteLine(FormatInvestigationCsvRow(entry));
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Nuot loi - xem <remarks> tai LogIntegrityViolation.
+            }
+        }
+
+        /// <summary>
+        /// Chuyen mot IntegrityInvestigationEntry thanh MOT DONG CSV (chua
+        /// bao gom ky tu xuong dong cuoi dong) dung thu tu cot cua
+        /// InvestigationReportFileHeader. FilePath/ViolationType/HashBefore/
+        /// HashAfter/UserName deu qua EscapeCsvField (co san, dung chung voi
+        /// WriteLog) de an toan truoc gia tri hiem gap chua dau phay/ngoac
+        /// kep (VD duong dan file tren mot so he thong tep cho phep dau phay
+        /// trong ten file).
+        /// </summary>
+        private static string FormatInvestigationCsvRow(IntegrityInvestigationEntry entry)
+        {
+            string[] fields =
+            {
+                entry.Timestamp.ToString("o", CultureInfo.InvariantCulture),
+                EscapeCsvField(entry.FilePath),
+                EscapeCsvField(entry.ViolationType),
+                EscapeCsvField(entry.HashBefore),
+                EscapeCsvField(entry.HashAfter),
+                EscapeCsvField(entry.UserName)
+            };
+
+            return string.Join(",", fields);
+        }
+
+        /// <summary>
+        /// Lay toan bo bao cao dieu tra hien co, sap xep giam dan theo
+        /// Timestamp (gan nhat truoc) - cau truc/ly do y het GetLogs (tra ve
+        /// danh sach rong neu file chua ton tai/khong doc duoc, bo qua dong
+        /// khong parse duoc thay vi lam hong ca danh sach).
+        /// </summary>
+        public List<IntegrityInvestigationEntry> GetInvestigationEntries()
+        {
+            var result = new List<IntegrityInvestigationEntry>();
+            string reportFilePath = GetInvestigationReportFilePath();
+
+            if (!File.Exists(reportFilePath))
+                return result;
+
+            try
+            {
+                using (var stream = new FileStream(reportFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    string line = reader.ReadLine();
+                    bool isFirstLine = true;
+
+                    while (line != null)
+                    {
+                        if (isFirstLine)
+                        {
+                            isFirstLine = false;
+                            if (string.Equals(line, InvestigationReportFileHeader, StringComparison.Ordinal))
+                            {
+                                line = reader.ReadLine();
+                                continue;
+                            }
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            IntegrityInvestigationEntry entry = TryParseInvestigationLine(line);
+                            if (entry != null)
+                            {
+                                result.Add(entry);
+                            }
+                        }
+
+                        line = reader.ReadLine();
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                // Xem ghi chu tuong tu tai GetLogs.
+            }
+
+            result.Sort((a, b) => b.Timestamp.CompareTo(a.Timestamp));
+            return result;
+        }
+
+        /// <summary>
+        /// Parse MOT dong CSV du lieu (khong phai dong header) thanh
+        /// IntegrityInvestigationEntry. Tra ve null (thay vi nem loi) neu
+        /// dong khong dung dinh dang - de GetInvestigationEntries bo qua dong
+        /// hong ma khong mat toan bo danh sach, y het TryParseLogLine.
+        /// </summary>
+        private static IntegrityInvestigationEntry TryParseInvestigationLine(string line)
+        {
+            try
+            {
+                string[] fields = ParseCsvLine(line);
+
+                // Dung 6 cot theo InvestigationReportFileHeader.
+                if (fields.Length != 6)
+                    return null;
+
+                return new IntegrityInvestigationEntry
+                {
+                    Timestamp = DateTime.Parse(fields[0], CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind),
+                    FilePath = fields[1],
+                    ViolationType = fields[2],
+                    HashBefore = fields[3],
+                    HashAfter = fields[4],
+                    UserName = fields[5]
+                };
+            }
+            catch (Exception ex) when (ex is FormatException || ex is ArgumentException || ex is OverflowException)
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// XUAT bao cao dieu tra hien co RA MOT FILE do nguoi dung chi dinh
+        /// (dung yeu cau "xuat bao cao dieu tra") - copy nguyen ven file CSV
+        /// noi bo (GetInvestigationReportFilePath) sang destinationFilePath,
+        /// KHONG loc/bien doi noi dung (nguoi dung co the tu mo file dich
+        /// bang Excel de loc/sap xep them neu can, giong cach log.csv duoc
+        /// thiet ke de mo thu cong - xem "QUYET DINH THIET KE" tai remarks
+        /// dau lop).
+        /// </summary>
+        /// <remarks>
+        /// Dung File.Copy (khong phai doc GetInvestigationEntries() roi ghi
+        /// lai tu dau) de giu NGUYEN VAN byte cua file goc (ke ca thu tu dong
+        /// CHUA sap xep lai theo Timestamp - GetInvestigationEntries() tra ve
+        /// da sap xep giam dan CHI DE HIEN THI trong ung dung, khong phai thu
+        /// tu luu tren dia) - don gian va it rui ro sai lech dinh dang hon la
+        /// tu viet lai toan bo file.
+        /// </remarks>
+        /// <param name="destinationFilePath">Duong dan file dich nguoi dung muon luu bao cao ra (VD tu SaveFileDialog).</param>
+        /// <returns>Success neu xuat duoc, Failed neu chua co bao cao nao (file nguon chua ton tai) hoac khong ghi duoc file dich (VD mat quyen, o dia day).</returns>
+        public OperationResult ExportInvestigationReport(string destinationFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(destinationFilePath))
+                return OperationResult.Failed;
+
+            try
+            {
+                string reportFilePath = GetInvestigationReportFilePath();
+                if (!File.Exists(reportFilePath))
+                    return OperationResult.Failed; // Chua tung ghi nhan vi pham nao - khong co gi de xuat.
+
+                lock (InvestigationWriteLock)
+                {
+                    string destinationDirectory = Path.GetDirectoryName(destinationFilePath);
+                    if (!string.IsNullOrEmpty(destinationDirectory))
+                    {
+                        Directory.CreateDirectory(destinationDirectory);
+                    }
+
+                    File.Copy(reportFilePath, destinationFilePath, overwrite: true);
+                }
+
+                return OperationResult.Success;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException || ex is ArgumentException || ex is NotSupportedException)
+            {
+                // Duong dan dich khong hop le, mat quyen ghi, file dang bi
+                // khoa boi chuong trinh khac... - day la thao tac NGUOI DUNG
+                // CHU DONG yeu cau (bam "Xuat bao cao"), nen bao Failed de UI
+                // hien thong bao loi cu the, khac voi WriteLog/LogIntegrityViolation
+                // (ghi ngam, nuot loi am tham).
+                return OperationResult.Failed;
+            }
+        }
     }
 }

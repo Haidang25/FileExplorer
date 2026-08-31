@@ -146,6 +146,7 @@
     <Compile Include="Models\FileOperationType.cs" />
     <Compile Include="Models\FolderBaselineModel.cs" />
     <Compile Include="Models\FolderItemModel.cs" />
+    <Compile Include="Models\IntegrityInvestigationEntry.cs" />
     <Compile Include="Models\LogEntryModel.cs" />
     <Compile Include="Models\OperationResult.cs" />
     <Compile Include="Models\RecycleBinItemModel.cs" />

@@ -203,15 +203,31 @@ namespace FileExplorerApp.Forms
         /// ("Cross-thread operation not valid").
         /// </summary>
         /// <remarks>
-        /// PHAM VI HIEN TAI: chi canh bao khi <see cref="IntegrityViolationType.ContentModified"/>
-        /// ("tệp bị sửa" - dung y yeu cau) - Deleted/NewFile KHONG kich hoat
-        /// canh bao real-time nay (van co the tra cuu qua
-        /// BaselineService.CompareWithBaselineAsync neu can xem toan bo, xem
-        /// yeu cau truoc). Mo rong canh bao cho ca Deleted/NewFile se lam o
-        /// mot yeu cau khac neu can.
+        /// PHAM VI HIEN TAI: chi canh bao (toast/StatusStrip) khi
+        /// <see cref="IntegrityViolationType.ContentModified"/> ("tệp bị sửa" -
+        /// dung y yeu cau) - Deleted/NewFile KHONG kich hoat canh bao
+        /// real-time nay (van co the tra cuu qua BaselineService.CompareWithBaselineAsync
+        /// neu can xem toan bo, xem yeu cau truoc). Mo rong canh bao cho ca
+        /// Deleted/NewFile se lam o mot yeu cau khac neu can.
+        ///
+        /// GHI BAO CAO DIEU TRA (_logService.LogIntegrityViolation): KHAC voi
+        /// canh bao UI, ghi bao cao ap dung cho CA BA loai vi pham (ContentModified
+        /// LAN Deleted/UnexpectedNewFile), khong bi loc theo ContentModified
+        /// nhu nhanh canh bao ben duoi - "bao cao dieu tra" can day du de phuc
+        /// vu dieu tra sau nay (VD mot file bi XOA cung la mot dau hieu can
+        /// dieu tra, du khong hien toast ngay luc do), trong khi canh bao
+        /// real-time chi tap trung vao truong hop quan trong nhat (ContentModified)
+        /// de tranh lam phien nguoi dung voi qua nhieu toast. Vi vay lenh ghi
+        /// bao cao duoc dat TRUOC/DOC LAP voi dieu kien loc ContentModified ben
+        /// duoi, khong phai ben trong nhanh if. Ghi dong bo NGAY TREN LUONG
+        /// THREADPOOL hien tai cua su kien nay (khong can BeginInvoke) vi
+        /// LogService.WriteInvestigationEntry chi thao tac file/CSV, khong
+        /// dung control WinForms nao.
         /// </remarks>
         private void IntegrityService_IntegrityViolationDetected(object sender, IntegrityViolationEventArgs e)
         {
+            _logService.LogIntegrityViolation(e);
+
             if (e.ViolationType != IntegrityViolationType.ContentModified)
                 return;
 
