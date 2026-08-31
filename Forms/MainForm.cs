@@ -262,7 +262,7 @@ namespace FileExplorerApp.Forms
             string zipPath = Path.Combine(parentDir ?? _currentPath, folderName + ".zip");
             string actionDescription = $"nén thư mục \"{folderName}\" thành ZIP";
 
-            OperationResult result;
+            CompressionOperationResult compressionResult;
 
             // cts + copyProgressForm: dung CHUNG co che voi mnuEditPaste_Click (xem
             // chu thich chi tiet o do) - cts.Cancel() duoc goi khi nguoi dung bam nut
@@ -286,7 +286,7 @@ namespace FileExplorerApp.Forms
 
                 try
                 {
-                    result = await _compressionService.CompressFolderAsync(path, zipPath, compressProgress, cts.Token);
+                    compressionResult = await _compressionService.CompressFolderAsync(path, zipPath, compressProgress, cts.Token);
                 }
                 finally
                 {
@@ -299,17 +299,30 @@ namespace FileExplorerApp.Forms
                 }
             }
 
+            OperationResult result = compressionResult.Result;
+
+            // Ghi nhat ky KEM kich thuoc truoc/sau (yeu cau rieng: "Ghi nhat ky
+            // thao tac nen/giai nen kem kich thuoc truoc/sau") - CHI khi Success,
+            // vi CompressionOperationResult.SizeBeforeBytes/SizeAfterBytes chi
+            // chinh xac trong truong hop do (xem CompressionOperationResult).
+            // LogOperationResult tu ghep extraNote nay VAO SAU thong diep loi neu
+            // that bai (khong ap dung o day vi extraNote = null khi khong Success).
+            string sizeNote = result == OperationResult.Success
+                ? $"Dung lượng trước: {FormatHelper.FormatSize(compressionResult.SizeBeforeBytes)}, " +
+                  $"sau khi nén: {FormatHelper.FormatSize(compressionResult.SizeAfterBytes)}"
+                : null;
+
             if (result == OperationResult.Cancelled)
             {
                 // Nguoi dung tu bam Huy - khong can hien MessageBox ket qua (da ro
                 // rang la do chinh nguoi dung yeu cau), giong huong xu ly Cancelled
                 // trong vong lap Dan cua mnuEditPaste_Click.
-                LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription);
+                LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote);
                 return;
             }
 
             ShowOperationResultMessage(result, actionDescription);
-            LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription);
+            LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote);
 
             if (result == OperationResult.Success)
             {
@@ -409,7 +422,7 @@ namespace FileExplorerApp.Forms
             }
 
             string actionDescription = $"giải nén \"{zipFileName}\"";
-            OperationResult result;
+            CompressionOperationResult compressionResult;
 
             using (var cts = new CancellationTokenSource())
             using (var copyProgressForm = new CopyProgressForm())
@@ -429,7 +442,7 @@ namespace FileExplorerApp.Forms
 
                 try
                 {
-                    result = await _compressionService.ExtractZipAsync(path, destPath, extractProgress, cts.Token);
+                    compressionResult = await _compressionService.ExtractZipAsync(path, destPath, extractProgress, cts.Token);
                 }
                 finally
                 {
@@ -440,14 +453,22 @@ namespace FileExplorerApp.Forms
                 }
             }
 
+            OperationResult result = compressionResult.Result;
+
+            // Kich thuoc truoc/sau - xem chu thich tuong tu tai cmsCompressToZip_Click.
+            string sizeNote = result == OperationResult.Success
+                ? $"Dung lượng trước (tệp .zip): {FormatHelper.FormatSize(compressionResult.SizeBeforeBytes)}, " +
+                  $"sau khi giải nén: {FormatHelper.FormatSize(compressionResult.SizeAfterBytes)}"
+                : null;
+
             if (result == OperationResult.Cancelled)
             {
-                LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription);
+                LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote);
                 return;
             }
 
             ShowOperationResultMessage(result, actionDescription);
-            LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription);
+            LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote);
 
             if (result == OperationResult.Success)
             {

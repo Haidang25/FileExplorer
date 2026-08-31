@@ -133,40 +133,53 @@ namespace FileExplorerApp.Services
         /// file (CountFiles).
         /// </param>
         /// <param name="cancellationToken">Token de huy giua chung (VD: nut Huy tren CopyProgressForm).</param>
-        /// <returns>Giong het CompressFolder, cong them OperationResult.Cancelled neu bi huy giua chung.</returns>
-        public async Task<OperationResult> CompressFolderAsync(
+        /// <returns>
+        /// CompressionOperationResult goi lai OperationResult giong het CompressFolder
+        /// (cong them Cancelled neu bi huy giua chung), kem SizeBeforeBytes (tong
+        /// dung luong thu muc nguon) va SizeAfterBytes (dung luong file .zip ket
+        /// qua) - CHI chinh xac khi Result == Success, xem CompressionOperationResult.
+        /// </returns>
+        public async Task<CompressionOperationResult> CompressFolderAsync(
             string path, string zipPath,
             IProgress<FileOperationProgress> progress = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
-                return OperationResult.NotFound;
+                return new CompressionOperationResult(OperationResult.NotFound);
 
             if (string.IsNullOrWhiteSpace(zipPath))
-                return OperationResult.Failed;
+                return new CompressionOperationResult(OperationResult.Failed);
 
             if (File.Exists(zipPath))
-                return OperationResult.Skipped; // Da co file .zip trung ten tai dich.
+                return new CompressionOperationResult(OperationResult.Skipped); // Da co file .zip trung ten tai dich.
 
             string normalizedSourcePath = Path.GetFullPath(path)
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
             string normalizedZipPath = Path.GetFullPath(zipPath);
             if (normalizedZipPath.StartsWith(normalizedSourcePath, StringComparison.OrdinalIgnoreCase))
-                return OperationResult.InvalidDestination; // zipPath nam ben trong chinh path.
+                return new CompressionOperationResult(OperationResult.InvalidDestination); // zipPath nam ben trong chinh path.
 
             string destinationDir = Path.GetDirectoryName(normalizedZipPath);
             if (!PermissionHelper.HasWritePermission(destinationDir))
-                return OperationResult.AccessDenied;
+                return new CompressionOperationResult(OperationResult.AccessDenied);
 
-            // Chi dem so file (CountFiles) khi thuc su co noi theo doi tien do -
-            // giong huong da dung o FolderService.CopyFolderAsync.
+            // Luon dem so file VA tong dung luong (CountFilesAndSize) truoc khi bat
+            // dau - khac CompressFolderAsync ban dau (chi dem khi progress != null):
+            // gio can SizeBeforeBytes de ghi log DU KHI khong ai theo doi tien do
+            // (progress == null), nen khong the tranh chi phi duyet cay thu muc nay
+            // nua. progressState (mutable, cong don FilesCompleted qua de quy) van
+            // CHI duoc tao khi progress != null - khong ton chi phi Report() vo ich.
+            int totalFiles;
+            long sourceSizeBytes;
+            CountFilesAndSize(path, out totalFiles, out sourceSizeBytes);
+
             CompressionProgressState progressState = null;
             if (progress != null)
             {
                 progressState = new CompressionProgressState
                 {
                     Progress = progress,
-                    TotalFiles = CountFiles(path)
+                    TotalFiles = totalFiles
                 };
             }
 
@@ -180,7 +193,12 @@ namespace FileExplorerApp.Services
                     await CompressDirectoryRecursiveAsync(archive, rootDir, path, progressState, cancellationToken).ConfigureAwait(false);
                 }
 
-                return OperationResult.Success;
+                // Doc lai dung luong file .zip SAU KHI zipStream/archive da Dispose()
+                // (using o tren) - ZipArchive chi flush/ghi Central Directory (phan
+                // "muc luc" quyet dinh dung luong cuoi cung) luc Dispose, doc som hon
+                // se ra ket qua sai/chua day du.
+                long resultSizeBytes = new FileInfo(normalizedZipPath).Length;
+                return new CompressionOperationResult(OperationResult.Success, sourceSizeBytes, resultSizeBytes);
             }
             catch (OperationCanceledException)
             {
@@ -192,19 +210,19 @@ namespace FileExplorerApp.Services
                 catch (UnauthorizedAccessException) { /* Khong xoa duoc file rac - bo qua, khong quan trong bang viec da huy theo yeu cau. */ }
                 catch (IOException) { /* Tuong tu (VD: dang bi khoa boi tien trinh khac ngay luc do). */ }
 
-                return OperationResult.Cancelled;
+                return new CompressionOperationResult(OperationResult.Cancelled);
             }
             catch (UnauthorizedAccessException)
             {
-                return OperationResult.AccessDenied;
+                return new CompressionOperationResult(OperationResult.AccessDenied);
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
-                return OperationResult.FileInUse;
+                return new CompressionOperationResult(OperationResult.FileInUse);
             }
             catch (IOException)
             {
-                return OperationResult.Failed;
+                return new CompressionOperationResult(OperationResult.Failed);
             }
         }
 
@@ -277,28 +295,40 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
-        /// Dem so luong file (de quy qua toan bo thu muc con) cua mot thu muc, dung
-        /// de uoc tinh CompressionProgressState.TotalFiles TRUOC khi bat dau nen -
-        /// giong het FolderService.CountFiles (tach rieng ban sao o day vi 2 Service
-        /// khong nen phu thuoc lan nhau chi vi 1 ham tien ich nho).
+        /// Dem so luong file VA tong dung luong (byte) cua tat ca file - de quy
+        /// qua toan bo thu muc con - dung de uoc tinh CompressionProgressState.
+        /// TotalFiles VA SizeBeforeBytes cua CompressionOperationResult TRUOC khi
+        /// bat dau nen. Gop 2 viec (dem + cong dung luong) vao MOT LAN duyet cay
+        /// thu muc duy nhat (thay vi 2 ham rieng, 2 lan duyet rieng) vi ca 2 gia
+        /// tri deu luon can den tu CompressFolderAsync gio da luon tinh
+        /// SizeBeforeBytes (khong chi khi progress != null nhu truoc).
         /// </summary>
-        private static int CountFiles(string folderPath)
+        private static void CountFilesAndSize(string folderPath, out int fileCount, out long totalBytes)
         {
-            int count = 0;
+            fileCount = 0;
+            totalBytes = 0;
 
             try
             {
-                count += Directory.GetFiles(folderPath).Length;
+                foreach (string filePath in Directory.GetFiles(folderPath))
+                {
+                    fileCount++;
+                    try { totalBytes += new FileInfo(filePath).Length; }
+                    catch (UnauthorizedAccessException) { /* Bo qua RIENG file nay - chi anh huong do chinh xac cua uoc tinh. */ }
+                    catch (IOException) { /* Tuong tu. */ }
+                }
 
                 foreach (string subDir in Directory.GetDirectories(folderPath))
                 {
-                    count += CountFiles(subDir);
+                    int subFileCount;
+                    long subTotalBytes;
+                    CountFilesAndSize(subDir, out subFileCount, out subTotalBytes);
+                    fileCount += subFileCount;
+                    totalBytes += subTotalBytes;
                 }
             }
             catch (UnauthorizedAccessException) { /* Bo qua rieng nhanh nay - chi anh huong do chinh xac cua uoc tinh. */ }
             catch (IOException) { /* Tuong tu. */ }
-
-            return count;
         }
 
         /// <summary>
@@ -431,35 +461,45 @@ namespace FileExplorerApp.Services
         /// <param name="destPath">Duong dan thu muc dich se chua noi dung giai nen.</param>
         /// <param name="progress">Bao cao tien do (so entry da giai nen / tong so entry). Bo qua (null) neu khong can.</param>
         /// <param name="cancellationToken">Token de huy giua chung.</param>
-        /// <returns>Giong het ExtractZip, cong them OperationResult.Cancelled neu bi huy giua chung.</returns>
-        public async Task<OperationResult> ExtractZipAsync(
+        /// <returns>
+        /// CompressionOperationResult goi lai OperationResult giong het ExtractZip
+        /// (cong them Cancelled neu bi huy giua chung), kem SizeBeforeBytes (dung
+        /// luong file .zip nguon) va SizeAfterBytes (tong dung luong da giai nen
+        /// ra) - CHI chinh xac khi Result == Success, xem CompressionOperationResult.
+        /// </returns>
+        public async Task<CompressionOperationResult> ExtractZipAsync(
             string zipPath, string destPath,
             IProgress<FileOperationProgress> progress = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             if (string.IsNullOrWhiteSpace(zipPath) || !File.Exists(zipPath))
-                return OperationResult.NotFound;
+                return new CompressionOperationResult(OperationResult.NotFound);
 
             if (string.IsNullOrWhiteSpace(destPath))
-                return OperationResult.Failed;
+                return new CompressionOperationResult(OperationResult.Failed);
 
             string normalizedDestPath = Path.GetFullPath(destPath);
 
             if (File.Exists(normalizedDestPath))
-                return OperationResult.InvalidDestination;
+                return new CompressionOperationResult(OperationResult.InvalidDestination);
 
             bool destPathExistedBefore = Directory.Exists(normalizedDestPath);
             if (destPathExistedBefore && Directory.EnumerateFileSystemEntries(normalizedDestPath).Any())
-                return OperationResult.Skipped;
+                return new CompressionOperationResult(OperationResult.Skipped);
 
             string permissionCheckPath = destPathExistedBefore
                 ? normalizedDestPath
                 : Directory.GetParent(normalizedDestPath)?.FullName;
             if (!PermissionHelper.HasWritePermission(permissionCheckPath))
-                return OperationResult.AccessDenied;
+                return new CompressionOperationResult(OperationResult.AccessDenied);
 
             string normalizedDestPathWithSeparator = normalizedDestPath
                 .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+            // Dung luong file .zip nguon - biet duoc ngay (khong can duyet gi them),
+            // dung lam SizeBeforeBytes cua CompressionOperationResult.
+            long zipSizeBytes = new FileInfo(zipPath).Length;
+            long extractedSizeBytes = 0; // Cong don qua tung entry - xem ben duoi.
 
             try
             {
@@ -501,6 +541,13 @@ namespace FileExplorerApp.Services
                                 await entryStream.CopyToAsync(destStream, 81920, cancellationToken).ConfigureAwait(false);
                             }
 
+                            // entry.Length = dung luong SAU KHI giai nen (uncompressed) cua
+                            // rieng entry nay, doc san tu Central Directory cua file .zip -
+                            // dung thang gia tri nay de cong don SizeAfterBytes, tranh phai
+                            // FileInfo(destEntryPath).Length (mo lai file vua ghi) cho tung
+                            // file mot cach khong can thiet.
+                            extractedSizeBytes += entry.Length;
+
                             try { File.SetLastWriteTime(destEntryPath, entry.LastWriteTime.DateTime); }
                             catch (ArgumentOutOfRangeException) { /* Ngoai khoang DateTime hop le - bo qua, khong quan trong. */ }
                             catch (UnauthorizedAccessException) { /* Tuong tu. */ }
@@ -522,7 +569,7 @@ namespace FileExplorerApp.Services
                     }
                 }
 
-                return OperationResult.Success;
+                return new CompressionOperationResult(OperationResult.Success, zipSizeBytes, extractedSizeBytes);
             }
             catch (OperationCanceledException)
             {
@@ -546,23 +593,23 @@ namespace FileExplorerApp.Services
                     catch (IOException) { /* Tuong tu. */ }
                 }
 
-                return OperationResult.Cancelled;
+                return new CompressionOperationResult(OperationResult.Cancelled);
             }
             catch (UnauthorizedAccessException)
             {
-                return OperationResult.AccessDenied;
+                return new CompressionOperationResult(OperationResult.AccessDenied);
             }
             catch (InvalidDataException)
             {
-                return OperationResult.Failed;
+                return new CompressionOperationResult(OperationResult.Failed);
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
-                return OperationResult.FileInUse;
+                return new CompressionOperationResult(OperationResult.FileInUse);
             }
             catch (IOException)
             {
-                return OperationResult.Failed;
+                return new CompressionOperationResult(OperationResult.Failed);
             }
         }
     }
