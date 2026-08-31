@@ -94,6 +94,22 @@ namespace FileExplorerApp.Services
         /// </exception>
         /// <exception cref="IOException">Loi doc file (VD dang bi khoa boi chuong trinh khac, VD dang mo trong Word).</exception>
         /// <exception cref="UnauthorizedAccessException">Khong du quyen doc file.</exception>
+        /// <remarks>
+        /// SUA LOI (phat hien khi chuan bi test "preview tep Word co bang bieu"):
+        /// PHIEN BAN TRUOC chi doc body.Elements&lt;Paragraph&gt;() - CHI lay
+        /// cac Paragraph la CON TRUC TIEP cua w:body. Trong file .docx, mot
+        /// BANG (w:tbl) cung la CON TRUC TIEP cua body, nhung cac doan van
+        /// BEN TRONG bang lai nam sau 2 cap long nhau (w:tbl > w:tr > w:tc >
+        /// w:p) - KHONG phai con truc tiep cua body - nen bi BO SOT HOAN TOAN,
+        /// nghia la mot tai lieu co bang se bi mat trang toan bo noi dung
+        /// trong bang khi xem truoc. SUA bang cach di qua TUNG PHAN TU CON
+        /// TRUC TIEP cua body theo dung THU TU xuat hien (body.Elements() -
+        /// khong ep kieu Paragraph ngay) - phan tu nao la Paragraph thi doc
+        /// nhu cu, phan tu nao la Table thi goi them AppendTableText de doc
+        /// rieng cau truc bang (xem ham do). Cac loai phan tu khac cua body
+        /// (VD SectionProperties - thong tin trang/le, khong phai noi dung)
+        /// van duoc BO QUA nhu truoc.
+        /// </remarks>
         public string ExtractWordText(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -109,17 +125,35 @@ namespace FileExplorerApp.Services
                     return string.Empty; // Tai lieu hop le nhung khong co than chinh - coi nhu rong, khong nem loi.
 
                 var resultBuilder = new StringBuilder();
-                bool isFirstParagraph = true;
+                bool isFirstBlock = true;
 
-                foreach (Paragraph paragraph in body.Elements<Paragraph>())
+                // Di qua TUNG PHAN TU CON TRUC TIEP cua body theo dung thu tu
+                // xuat hien trong tai lieu - KHONG chi loc rieng Paragraph nhu
+                // truoc, de khong bo sot Table (xem <remarks> cua ham nay).
+                foreach (OpenXmlElement blockElement in body.Elements())
                 {
-                    if (!isFirstParagraph)
+                    if (blockElement is Paragraph paragraph)
                     {
-                        resultBuilder.Append(Environment.NewLine);
-                    }
-                    isFirstParagraph = false;
+                        if (!isFirstBlock)
+                        {
+                            resultBuilder.Append(Environment.NewLine);
+                        }
+                        isFirstBlock = false;
 
-                    AppendParagraphText(paragraph, resultBuilder);
+                        AppendParagraphText(paragraph, resultBuilder);
+                    }
+                    else if (blockElement is Table table)
+                    {
+                        if (!isFirstBlock)
+                        {
+                            resultBuilder.Append(Environment.NewLine);
+                        }
+                        isFirstBlock = false;
+
+                        AppendTableText(table, resultBuilder);
+                    }
+                    // Cac loai phan tu khac cua body (VD SectionProperties -
+                    // thong tin trang/le, khong phai noi dung) - BO QUA.
                 }
 
                 return resultBuilder.ToString();
@@ -147,6 +181,60 @@ namespace FileExplorerApp.Services
                 else if (element is Break || element is CarriageReturn)
                 {
                     resultBuilder.Append(Environment.NewLine);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gop noi dung van ban cua MOT bang (Table) vao builder - moi HANG
+        /// (TableRow) tren MOT dong, cac O (TableCell) trong cung mot hang
+        /// duoc noi voi nhau bang ky tu tab ('\t') de giu duoc cam giac
+        /// "cot" khi xem truoc dang van ban thuan (khong the ve khung bang
+        /// thuc su trong mot o TextBox thuan van ban).
+        /// </summary>
+        /// <remarks>
+        /// MOI O co the chua NHIEU doan van (Paragraph) - noi cac doan van
+        /// TRONG CUNG MOT O bang mot khoang trang (khong dung newline, vi
+        /// newline se lam lech hang/cot khi xem duoi dang bang van ban tho).
+        /// GIOI HAN DA BIET (chap nhan duoc cho muc dich XEM TRUOC): mot O
+        /// bang co the chua BANG LONG BEN TRONG (nested table) - truong hop
+        /// nay HIEM GAP trong thuc te va KHONG duoc doc de tranh de quy phuc
+        /// tap khong can thiet cho tinh nang xem truoc; noi dung o do se bi
+        /// bo qua (chi lay Paragraph truc tiep cua o, khong lay Table long
+        /// trong o).
+        /// </remarks>
+        private static void AppendTableText(Table table, StringBuilder resultBuilder)
+        {
+            bool isFirstRow = true;
+
+            foreach (TableRow row in table.Elements<TableRow>())
+            {
+                if (!isFirstRow)
+                {
+                    resultBuilder.Append(Environment.NewLine);
+                }
+                isFirstRow = false;
+
+                bool isFirstCell = true;
+                foreach (TableCell cell in row.Elements<TableCell>())
+                {
+                    if (!isFirstCell)
+                    {
+                        resultBuilder.Append('\t');
+                    }
+                    isFirstCell = false;
+
+                    bool isFirstParagraphInCell = true;
+                    foreach (Paragraph cellParagraph in cell.Elements<Paragraph>())
+                    {
+                        if (!isFirstParagraphInCell)
+                        {
+                            resultBuilder.Append(' ');
+                        }
+                        isFirstParagraphInCell = false;
+
+                        AppendParagraphText(cellParagraph, resultBuilder);
+                    }
                 }
             }
         }
