@@ -156,8 +156,32 @@ namespace FileExplorerApp.Services
         // MOI LAN ApplyBaseline duoc goi (StartIntegrityMonitoringAsync/
         // ResumeIntegrityMonitoring). OrdinalIgnoreCase vi duong dan Windows
         // khong phan biet hoa/thuong ("C:\A.txt" va "c:\a.txt" la CUNG mot file).
+        //
+        // LUU Y QUAN TRONG: entry.Hash trong dictionary nay CO THE BI GHI DE
+        // sau mot lan ContentModified (xem HandleCreatedOrChanged) - day la
+        // "hash CONG NHAN GAN NHAT" phuc vu muc dich CHONG BAO LAP LAI cung
+        // mot thay doi, KHONG PHAI hash goc bat bien. Muon hash GOC that su
+        // (khong bao gio doi trong suot phien giam sat), dung
+        // _originalHashByPath ben duoi.
         private readonly Dictionary<string, FileBaselineEntry> _baselineByPath =
             new Dictionary<string, FileBaselineEntry>(StringComparer.OrdinalIgnoreCase);
+
+        /// <summary>
+        /// Bang anh xa duong dan -> hash SHA-256 GOC ("hash goc" = hash tai
+        /// DUNG thoi diem baseline duoc chup luc bat dau giam sat, xem
+        /// ApplyBaseline) - CO CHU DICH tach rieng khoi _baselineByPath (noi
+        /// truong Hash CO THE bi cap nhat lai sau ContentModified de chong
+        /// bao lap - xem ghi chu tai _baselineByPath), de LUON co mot noi
+        /// tra cuu "file nay BAN DAU co hash gi" KHONG BAO GIO thay doi
+        /// trong suot phien giam sat, du sau do co bao nhieu lan
+        /// ContentModified xay ra voi cung file. Duoc XAY MOT LAN DUY NHAT
+        /// trong ApplyBaseline VA KHONG BAO GIO duoc ghi lai sau do - day
+        /// chinh la ban ghi trong bo nho khop VOI NOI DUNG DA LUU tren dia
+        /// boi BaselineService.SaveBaseline luc bat dau giam sat (xem
+        /// OriginalHashByPath).
+        /// </summary>
+        private readonly Dictionary<string, string> _originalHashByPath =
+            new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Baseline dang duoc dung de so sanh - null neu chua bat dau giam
@@ -165,6 +189,30 @@ namespace FileExplorerApp.Services
         /// goi StartIntegrityMonitoringAsync/ResumeIntegrityMonitoring lan nao).
         /// </summary>
         public FolderBaselineModel CurrentBaseline { get; private set; }
+
+        /// <summary>
+        /// Bang anh xa duong dan -> hash SHA-256 GOC, CHI DOC tu ben ngoai -
+        /// xem <see cref="_originalHashByPath"/> de biet chi tiet vi sao tach
+        /// rieng khoi baseline "dang lam viec" (co the bi cap nhat) ben trong.
+        /// Rong (khong phai null) neu chua bat dau giam sat toan ven nao.
+        /// Dung ham nay khi can biet CHINH XAC hash cua mot file TAI THOI
+        /// DIEM bat dau giam sat, VD de hien thi "hash goc" trong mot bao cao
+        /// vi pham (khac voi hash "cong nhan gan nhat" ben trong entry cua
+        /// _baselineByPath, co the da bi cap nhat qua nhieu lan
+        /// ContentModified).
+        /// </summary>
+        public IReadOnlyDictionary<string, string> OriginalHashByPath => _originalHashByPath;
+
+        /// <summary>
+        /// Lay hash SHA-256 GOC (bat bien) cua mot duong dan, neu duong dan
+        /// do co trong baseline dang giam sat - xem
+        /// <see cref="OriginalHashByPath"/>.
+        /// </summary>
+        /// <returns>True neu tim thay (co trong baseline), false neu khong (VD file moi phat sinh sau khi bat dau giam sat).</returns>
+        public bool TryGetOriginalHash(string filePath, out string originalHash)
+        {
+            return _originalHashByPath.TryGetValue(filePath, out originalHash);
+        }
 
         /// <summary>
         /// Phat sinh khi phat hien MOT vi pham toan ven (noi dung file thay
@@ -250,16 +298,24 @@ namespace FileExplorerApp.Services
             StopMonitoring();
             CurrentBaseline = null;
             _baselineByPath.Clear();
+            _originalHashByPath.Clear();
         }
 
         private void ApplyBaseline(FolderBaselineModel baseline)
         {
             CurrentBaseline = baseline;
             _baselineByPath.Clear();
+            _originalHashByPath.Clear();
 
             foreach (FileBaselineEntry entry in baseline.Entries)
             {
                 _baselineByPath[entry.FilePath] = entry;
+
+                // Chup lai hash GOC vao MOT bang RIENG, TACH BIET voi
+                // _baselineByPath - xem ghi chu tai _originalHashByPath ve ly
+                // do (entry.Hash o tren se bi HandleCreatedOrChanged ghi de
+                // sau nay, con gia tri o day thi KHONG BAO GIO thay doi).
+                _originalHashByPath[entry.FilePath] = entry.Hash;
             }
         }
 
