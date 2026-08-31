@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 using FileExplorerApp.Properties;
 
@@ -938,6 +939,45 @@ namespace FileExplorerApp.Services
         ///   thay vi de trong (ro rang hon la mot o trong KHONG BIET la
         ///   "khong ap dung" hay "loi xuat").
         ///
+        /// QUYET DINH THIET KE - HASH CUA BAO CAO (tinh hash CHINH file bao
+        /// cao vua xuat, luu kem de doi chieu sau nay): muc dich la de PHAT
+        /// HIEN neu file bao cao CSV nay (mot khi da ra khoi may/duoc gui di
+        /// noi khac de luu tru/trinh bay) co bi SUA DOI sau khi xuat hay
+        /// khong - CUNG logic "toan ven" nhu IntegrityService ap dung cho
+        /// file nguoi dung dang giam sat, gio ap dung cho CHINH bao cao dieu
+        /// tra nay (mot bao cao dieu tra ma khong the tu chung minh no CHUA
+        /// bi sua sau khi xuat thi gia tri lam bang chung se giam di rat
+        /// nhieu). Dung lai HashHelper.ComputeSha256 (thuat toan GIONG HET
+        /// BaselineService/IntegrityService - xem HashHelper.cs, ly do chon
+        /// SHA-256 thay vi MD5) de nguoi dieu tra doi chieu bang CUNG mot
+        /// thuat toan quen thuoc voi phan con lai cua tinh nang giam sat toan
+        /// ven.
+        ///
+        /// Hash duoc ghi vao MOT FILE .sha256 RIENG, DAT CANH file bao cao
+        /// (VD "baocao.csv" -> "baocao.csv.sha256"), KHONG nhoi vao BEN TRONG
+        /// noi dung file bao cao (VD them 1 dong "Hash file nay:..." o cuoi) -
+        /// vi neu lam vay, hash se phai TU BAO GOM CHINH NO trong du lieu
+        /// dau vao tinh hash (nghich ly "hash cua X phu thuoc vao X"), buoc
+        /// phai dung mot quy uoc phuc tap hon (VD tinh hash TRUOC roi chen
+        /// vao, nhung nhu vay hash ghi trong file se KHONG con la hash CUA
+        /// FILE HOAN CHINH nua ma la hash cua file THIEU dong cuoi) - tach
+        /// hash ra file .sha256 rieng, tinh SAU KHI file bao cao da ghi xong
+        /// hoan toan, don gian va chinh xac hon nhieu.
+        ///
+        /// Dinh dang file .sha256 tuan theo QUY UOC CHUAN cua cac cong cu
+        /// checksum pho bien (VD lenh "sha256sum" tren Linux/WSL, hoac
+        /// "certutil -hashfile ... SHA256" tren Windows co the doi chieu thu
+        /// cong bang mat) - "&lt;hash hex chu thuong&gt;  &lt;ten file&gt;" (CHINH XAC
+        /// hai khoang trang) - de nguoi dieu tra (hoac mot cong cu ben ngoai
+        /// ung dung) co the doi chieu bang lenh "sha256sum -c baocao.csv.sha256"
+        /// tieu chuan MA KHONG can phu thuoc vao ung dung nay, thay vi tu
+        /// dat mot dinh dang rieng chi ung dung nay hieu duoc.
+        ///
+        /// XEM THEM: VerifyExportedReportHash ben duoi - ham DOI CHIEU LAI
+        /// (doc file .sha256 da luu, tinh lai hash HIEN TAI cua file bao cao,
+        /// so sanh) - day chinh la "doi chieu sau nay" nhu yeu cau, thuc hien
+        /// NGAY TRONG ung dung nay ma khong bat buoc phai ra ngoai dong lenh.
+        ///
         /// GIO DIA PHUONG (ToLocalTime) CHI o BAN XUAT: file luu tru noi bo
         /// (WriteInvestigationEntry) VAN giu UTC (DetectedAtUtc nguyen ven) -
         /// dung cho MOI doi chieu/phan tich noi bo sau nay (VD so sanh voi
@@ -993,6 +1033,21 @@ namespace FileExplorerApp.Services
                         writer.WriteLine(FormatInvestigationDisplayRow(entry));
                     }
                 }
+
+                // Tinh VA LUU KEM hash cua CHINH file bao cao VUA XUAT - xem
+                // "QUYET DINH THIET KE - HASH CUA BAO CAO" o remarks tren dau
+                // ham nay VA WriteReportHashFile de biet day du ly do/dinh
+                // dang. Lam NGAY SAU KHI file bao cao da GHI XONG va DONG
+                // (StreamWriter da Dispose o tren, thoat khoi khoi using) -
+                // BAT BUOC phai the, vi HashHelper.ComputeSha256 can MO LAI
+                // file de doc (FileShare.Read) - neu con StreamWriter dang mo
+                // ghi file nay o che do doc quyen (FileShare mac dinh cua
+                // StreamWriter constructor la khong chia se ghi), ComputeSha256
+                // se that bai voi IOException "file dang duoc su dung boi mot
+                // tien trinh khac" (that ra la CHINH tien trinh nay, vi con
+                // StreamWriter chua dong).
+                string reportHash = HashHelper.ComputeSha256(destinationFilePath);
+                WriteReportHashFile(destinationFilePath, reportHash, entries.Count);
 
                 return OperationResult.Success;
             }
@@ -1063,5 +1118,151 @@ namespace FileExplorerApp.Services
                     return violationType;
             }
         }
+
+        /// <summary>
+        /// Hau to file luu hash cua mot bao cao dieu tra da xuat - xem "QUYET
+        /// DINH THIET KE - HASH CUA BAO CAO" o remarks tai ExportInvestigationReport.
+        /// </summary>
+        public const string ReportHashFileSuffix = ".sha256";
+
+        /// <summary>
+        /// Lay duong dan file .sha256 tuong ung voi MOT file bao cao dieu tra
+        /// da xuat (VD "C:\bc\baocao.csv" -> "C:\bc\baocao.csv.sha256") - dung
+        /// chung boi ca WriteReportHashFile (ghi) va VerifyExportedReportHash
+        /// (doc lai) de dam bao LUON khop nhau MOT quy uoc dat ten duy nhat.
+        /// </summary>
+        public static string GetReportHashFilePath(string reportFilePath)
+        {
+            return reportFilePath + ReportHashFileSuffix;
+        }
+
+        /// <summary>
+        /// Ghi file .sha256 di kem MOT bao cao dieu tra da xuat - xem "QUYET
+        /// DINH THIET KE - HASH CUA BAO CAO" o remarks tai ExportInvestigationReport
+        /// de biet day du ly do/dinh dang. Duoc goi TU DONG ngay sau khi
+        /// ExportInvestigationReport ghi xong file CSV - noi goi (VD LogForm)
+        /// KHONG can tu goi rieng ham nay trong luong xuat bao cao binh
+        /// thuong.
+        /// </summary>
+        /// <remarks>
+        /// Them mot dong tieu de tieng Viet bat dau bang "#" NGAY TRUOC dong
+        /// checksum chuan - cac cong cu checksum pho bien (VD sha256sum) BO
+        /// QUA cac dong bat dau bang "#" khi doi chieu (coi la chu thich),
+        /// nen dong nay KHONG lam hong kha nang doi chieu bang cong cu ngoai,
+        /// ma van giup nguoi tu mo file .sha256 bang mat hieu ngay day la gi
+        /// (thay vi chi thay mot dong hash + ten file kho hieu doi voi nguoi
+        /// khong quen dinh dang checksum).
+        /// </remarks>
+        private static void WriteReportHashFile(string reportFilePath, string reportHash, int violationCount)
+        {
+            string hashFilePath = GetReportHashFilePath(reportFilePath);
+            string reportFileName = Path.GetFileName(reportFilePath);
+
+            using (var writer = new StreamWriter(hashFilePath, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)))
+            {
+                writer.WriteLine("# Hash SHA-256 cua báo cáo điều tra \"" + reportFileName + "\" (" + violationCount.ToString(CultureInfo.InvariantCulture) + " vi phạm), tính lúc xuất: " + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture));
+                writer.WriteLine("# Đối chiếu bằng lệnh: sha256sum -c \"" + reportFileName + ReportHashFileSuffix + "\" (hoặc dùng LogService.VerifyExportedReportHash trong ứng dụng).");
+                writer.WriteLine(reportHash + "  " + reportFileName);
+            }
+        }
+
+        /// <summary>
+        /// DOI CHIEU LAI một bao cao dieu tra da xuat truoc do voi hash da
+        /// luu kem (file .sha256 - xem WriteReportHashFile) - day chinh la
+        /// chuc nang "doi chieu sau nay" nhu yeu cau: tinh lai hash HIEN TAI
+        /// cua reportFilePath tren dia va so sanh voi hash da ghi nhan LUC
+        /// XUAT, phat hien neu file bao cao da bi SUA DOI (vo tinh hoac co
+        /// chu dich) ke tu luc xuat.
+        /// </summary>
+        /// <param name="reportFilePath">Duong dan file bao cao CSV da xuat truoc do (KHONG phai duong dan file .sha256).</param>
+        /// <returns>
+        /// Match: hash hien tai KHOP voi hash da luu - bao cao con NGUYEN VEN.
+        /// Mismatch: hash KHAC nhau - bao cao DA BI THAY DOI ke tu luc xuat.
+        /// ReportFileNotFound: khong tim thay file bao cao tai reportFilePath.
+        /// HashFileNotFound: tim thay file bao cao nhung KHONG tim thay file
+        ///   .sha256 di kem (VD: bao cao duoc xuat boi phien ban ung dung CU
+        ///   truoc khi co tinh nang nay, hoac file .sha256 da bi xoa/di
+        ///   chuyen rieng).
+        /// Error: khong doc/tinh hash duoc vi ly do khac (mat quyen, file
+        ///   dang bi khoa boi chuong trinh khac...).
+        /// </returns>
+        public ReportHashVerificationResult VerifyExportedReportHash(string reportFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(reportFilePath) || !File.Exists(reportFilePath))
+                return ReportHashVerificationResult.ReportFileNotFound;
+
+            string hashFilePath = GetReportHashFilePath(reportFilePath);
+            if (!File.Exists(hashFilePath))
+                return ReportHashVerificationResult.HashFileNotFound;
+
+            try
+            {
+                string savedHash = ReadSavedReportHash(hashFilePath);
+                if (savedHash == null)
+                    return ReportHashVerificationResult.Error; // File .sha256 ton tai nhung khong doc duoc dong hash hop le (VD bi sua tay sai dinh dang).
+
+                string currentHash = HashHelper.ComputeSha256(reportFilePath);
+                return string.Equals(savedHash, currentHash, StringComparison.OrdinalIgnoreCase)
+                    ? ReportHashVerificationResult.Match
+                    : ReportHashVerificationResult.Mismatch;
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException || ex is System.Security.SecurityException)
+            {
+                return ReportHashVerificationResult.Error;
+            }
+        }
+
+        /// <summary>
+        /// Doc gia tri hash tu file .sha256 (bo qua cac dong chu thich bat
+        /// dau bang "#" va dong trong do WriteReportHashFile ghi them) - tra
+        /// ve null neu khong tim thay dong nao dung dinh dang checksum hop le
+        /// ("&lt;hash&gt;  &lt;ten file&gt;").
+        /// </summary>
+        private static string ReadSavedReportHash(string hashFilePath)
+        {
+            foreach (string line in File.ReadAllLines(hashFilePath, Encoding.UTF8))
+            {
+                string trimmed = line.Trim();
+                if (trimmed.Length == 0 || trimmed.StartsWith("#", StringComparison.Ordinal))
+                    continue;
+
+                // Dinh dang chuan "sha256sum": "<hash hex>  <ten file>" (hai
+                // khoang trang, nhung chi tach theo KHOANG TRANG DAU TIEN de
+                // an toan neu ten file sau do co chua khoang trang).
+                int separatorIndex = trimmed.IndexOf(' ');
+                string candidateHash = separatorIndex > 0 ? trimmed.Substring(0, separatorIndex) : trimmed;
+
+                // Hash SHA-256 luon la CHUOI HEX 64 KY TU - kiem tra so bo de
+                // tranh nham mot dong khac dinh dang thanh hash.
+                if (candidateHash.Length == 64)
+                {
+                    return candidateHash;
+                }
+            }
+
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Ket qua doi chieu hash cua mot bao cao dieu tra da xuat voi hash da
+    /// luu kem luc xuat - xem LogService.VerifyExportedReportHash.
+    /// </summary>
+    public enum ReportHashVerificationResult
+    {
+        /// <summary>Hash hien tai khop voi hash da luu - bao cao con nguyen ven.</summary>
+        Match,
+
+        /// <summary>Hash khac nhau - bao cao da bi thay doi ke tu luc xuat.</summary>
+        Mismatch,
+
+        /// <summary>Khong tim thay file bao cao.</summary>
+        ReportFileNotFound,
+
+        /// <summary>Tim thay file bao cao nhung khong co file .sha256 di kem.</summary>
+        HashFileNotFound,
+
+        /// <summary>Loi khac khi doi chieu (mat quyen, file dang bi khoa...).</summary>
+        Error
     }
 }
