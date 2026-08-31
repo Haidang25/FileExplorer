@@ -892,24 +892,73 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Dong header HIEN THI (tieng Viet, danh cho FILE XUAT RA doc bang
+        /// mat nguoi/Excel) - KHAC voi InvestigationReportFileHeader (tieng
+        /// Anh, danh cho file LUU TRU NOI BO ma TryParseInvestigationLine can
+        /// doc lai chinh xac tung chu). Tach rieng 2 header vi 2 muc dich khac
+        /// nhau - xem "QUYET DINH THIET KE - XUAT BAO CAO DANG BAO CAO DIEU
+        /// TRA" o remarks tai ExportInvestigationReport.
+        /// </summary>
+        public const string InvestigationReportDisplayHeader = "Thời gian,Đường dẫn,Loại vi phạm,Hash trước,Hash sau,Người dùng";
+
+        /// <summary>Tieu de o dong dau file bao cao xuat ra - xem ExportInvestigationReport.</summary>
+        public const string InvestigationReportTitle = "BÁO CÁO ĐIỀU TRA TOÀN VẸN TỆP";
+
+        /// <summary>
         /// XUAT bao cao dieu tra hien co RA MOT FILE do nguoi dung chi dinh
-        /// (dung yeu cau "xuat bao cao dieu tra") - copy nguyen ven file CSV
-        /// noi bo (GetInvestigationReportFilePath) sang destinationFilePath,
-        /// KHONG loc/bien doi noi dung (nguoi dung co the tu mo file dich
-        /// bang Excel de loc/sap xep them neu can, giong cach log.csv duoc
-        /// thiet ke de mo thu cong - xem "QUYET DINH THIET KE" tai remarks
-        /// dau lop).
+        /// (dung yeu cau "xuat bao cao dieu tra"), DUNG DINH DANG DE DOC danh
+        /// cho nguoi dieu tra (KHONG con la copy nguyen si file luu tru noi
+        /// bo nua - xem <remarks> ben duoi de biet ly do thay doi).
         /// </summary>
         /// <remarks>
-        /// Dung File.Copy (khong phai doc GetInvestigationEntries() roi ghi
-        /// lai tu dau) de giu NGUYEN VAN byte cua file goc (ke ca thu tu dong
-        /// CHUA sap xep lai theo Timestamp - GetInvestigationEntries() tra ve
-        /// da sap xep giam dan CHI DE HIEN THI trong ung dung, khong phai thu
-        /// tu luu tren dia) - don gian va it rui ro sai lech dinh dang hon la
-        /// tu viet lai toan bo file.
+        /// QUYET DINH THIET KE - XUAT BAO CAO DANG BAO CAO DIEU TRA (khac
+        /// phien ban truoc CHI File.Copy file noi bo): file LUU TRU NOI BO
+        /// (integrity_investigation.csv, xem InvestigationReportFileHeader)
+        /// duoc toi uu de MAY doc lai chinh xac (header tieng Anh co dinh,
+        /// Timestamp dang "o" UTC round-trip, ViolationType giu nguyen ten
+        /// enum) - phu hop de LogService tu doc lai (GetInvestigationEntries),
+        /// nhung KHO DOC voi con nguoi neu mo truc tiep bang Excel (VD:
+        /// "2026-08-23T10:15:30.1234567Z" thay vi "23/08/2026 17:15:30",
+        /// "ContentModified" thay vi "Nội dung bị sửa"). Vi day la BAO CAO
+        /// XUAT RA (khac voi file luu tru noi bo), uu tien "ro rang, dung
+        /// phong cach bao cao dieu tra" cho nguoi doc hon la de may parse lai
+        /// - nen ham nay GIO DAY tu dung GetInvestigationEntries() (KHONG
+        /// File.Copy) roi tu VIET LAI toan bo noi dung file xuat theo dinh
+        /// dang moi:
+        /// - Dong 1: tieu de bao cao (InvestigationReportTitle).
+        /// - Dong 2-3: sieu du lieu bao cao (thoi diem xuat, tong so vi pham) -
+        ///   giup nguoi doc biet NGAY bao cao nay xuat luc nao, gom bao nhieu
+        ///   dong, khong can tu dem dong.
+        /// - Dong 4: dong trong (phan cach sieu du lieu voi bang du lieu, de
+        ///   Excel/nguoi doc de phan biet 2 phan).
+        /// - Dong 5: header tieng Viet (InvestigationReportDisplayHeader).
+        /// - Cac dong sau: MOI dong MOT vi pham, Thoi gian da doi sang GIO
+        ///   DIA PHUONG (ToLocalTime, xem ben duoi), Loai vi pham da dich
+        ///   sang tieng Viet (TranslateViolationType), Hash rong hien "-"
+        ///   thay vi de trong (ro rang hon la mot o trong KHONG BIET la
+        ///   "khong ap dung" hay "loi xuat").
+        ///
+        /// GIO DIA PHUONG (ToLocalTime) CHI o BAN XUAT: file luu tru noi bo
+        /// (WriteInvestigationEntry) VAN giu UTC (DetectedAtUtc nguyen ven) -
+        /// dung cho MOI doi chieu/phan tich noi bo sau nay (VD so sanh voi
+        /// log tren mot may khac o mui gio khac) can mot moc thoi gian TUYET
+        /// DOI, KHONG phu thuoc mui gio may dang xem; con BAO CAO XUAT la de
+        /// NGUOI DIEU TRA doc truc tiep, ho quen voi gio dia phuong hon la
+        /// UTC (giong FormatHelper.FormatDate/LogEntryModel.Timestamp =
+        /// DateTime.Now dang dung cho hien thi trong toan ung dung).
+        ///
+        /// BOM (encoderShouldEmitUTF8Identifier: TRUE, khac voi WriteLock/
+        /// InvestigationWriteLock ben tren dung FALSE): file luu tru noi bo
+        /// KHONG duoc co BOM vi TryParseInvestigationLine/TryParseLogLine so
+        /// sanh CHUOI HEADER CHINH XAC (string.Equals) - mot BOM vo hinh o
+        /// dau file se lam dong dau tien KHONG con khop header nua. File XUAT
+        /// RA nguoc lai NEN co BOM vi day la file de MO BANG EXCEL - thieu
+        /// BOM, Excel (dac biet ban cu/mac dinh tieng Anh) co the doan sai
+        /// bang ma va hien sai dau tieng Viet (VD "Ni dung b sa" thay vi "Nội
+        /// dung bị sửa").
         /// </remarks>
         /// <param name="destinationFilePath">Duong dan file dich nguoi dung muon luu bao cao ra (VD tu SaveFileDialog).</param>
-        /// <returns>Success neu xuat duoc, Failed neu chua co bao cao nao (file nguon chua ton tai) hoac khong ghi duoc file dich (VD mat quyen, o dia day).</returns>
+        /// <returns>Success neu xuat duoc, Failed neu chua co vi pham nao duoc ghi nhan hoac khong ghi duoc file dich (VD mat quyen, duong dan khong hop le, o dia day).</returns>
         public OperationResult ExportInvestigationReport(string destinationFilePath)
         {
             if (string.IsNullOrWhiteSpace(destinationFilePath))
@@ -917,19 +966,32 @@ namespace FileExplorerApp.Services
 
             try
             {
-                string reportFilePath = GetInvestigationReportFilePath();
-                if (!File.Exists(reportFilePath))
+                // GetInvestigationEntries() da tu doc file luu tru noi bo va
+                // sap xep giam dan theo Timestamp (gan nhat truoc) - giu
+                // nguyen thu tu nay cho ban xuat, phu hop voi cach nguoi dieu
+                // tra thuong muon xem VI PHAM GAN DAY NHAT truoc tien.
+                List<IntegrityInvestigationEntry> entries = GetInvestigationEntries();
+                if (entries.Count == 0)
                     return OperationResult.Failed; // Chua tung ghi nhan vi pham nao - khong co gi de xuat.
 
-                lock (InvestigationWriteLock)
+                string destinationDirectory = Path.GetDirectoryName(destinationFilePath);
+                if (!string.IsNullOrEmpty(destinationDirectory))
                 {
-                    string destinationDirectory = Path.GetDirectoryName(destinationFilePath);
-                    if (!string.IsNullOrEmpty(destinationDirectory))
-                    {
-                        Directory.CreateDirectory(destinationDirectory);
-                    }
+                    Directory.CreateDirectory(destinationDirectory);
+                }
 
-                    File.Copy(reportFilePath, destinationFilePath, overwrite: true);
+                using (var writer = new StreamWriter(destinationFilePath, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)))
+                {
+                    writer.WriteLine(InvestigationReportTitle);
+                    writer.WriteLine("Xuất lúc:," + DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture));
+                    writer.WriteLine("Tổng số vi phạm:," + entries.Count.ToString(CultureInfo.InvariantCulture));
+                    writer.WriteLine();
+                    writer.WriteLine(InvestigationReportDisplayHeader);
+
+                    foreach (IntegrityInvestigationEntry entry in entries)
+                    {
+                        writer.WriteLine(FormatInvestigationDisplayRow(entry));
+                    }
                 }
 
                 return OperationResult.Success;
@@ -942,6 +1004,63 @@ namespace FileExplorerApp.Services
                 // hien thong bao loi cu the, khac voi WriteLog/LogIntegrityViolation
                 // (ghi ngam, nuot loi am tham).
                 return OperationResult.Failed;
+            }
+        }
+
+        /// <summary>
+        /// Chuyen mot IntegrityInvestigationEntry thanh MOT DONG CSV theo dinh
+        /// dang HIEN THI (InvestigationReportDisplayHeader) - xem <remarks>
+        /// tai ExportInvestigationReport de biet day du ly do khac voi
+        /// FormatInvestigationCsvRow (dinh dang luu tru noi bo).
+        /// </summary>
+        private static string FormatInvestigationDisplayRow(IntegrityInvestigationEntry entry)
+        {
+            string[] fields =
+            {
+                entry.Timestamp.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture),
+                EscapeCsvField(entry.FilePath),
+                EscapeCsvField(TranslateViolationType(entry.ViolationType)),
+                EscapeCsvField(string.IsNullOrEmpty(entry.HashBefore) ? "-" : entry.HashBefore),
+                EscapeCsvField(string.IsNullOrEmpty(entry.HashAfter) ? "-" : entry.HashAfter),
+                EscapeCsvField(entry.UserName)
+            };
+
+            return string.Join(",", fields);
+        }
+
+        /// <summary>
+        /// Dich ten enum IntegrityViolationType (luu duoi dang chuoi trong
+        /// IntegrityInvestigationEntry.ViolationType - xem ghi chu tai model)
+        /// sang nhan tieng Viet, DUNG Y HET cach dat ten trong yeu cau phan
+        /// loai truoc do ("Nội dung bị sửa / Tệp bị xóa / Tệp mới xuất hiện")
+        /// de nguoi doc bao cao thay nhan quen thuoc, dong nhat voi phan con
+        /// lai cua ung dung (VD tsslIntegrityAlert, toast canh bao).
+        /// </summary>
+        /// <remarks>
+        /// Nhan tham so dang string (khong phai enum IntegrityViolationType
+        /// truc tiep) vi LogService khong (va khong nen) phu thuoc nguoc lai
+        /// Services\IntegrityService.cs chi de doi 1 ham dich nhan - ca hai
+        /// deu la lop trong CUNG namespace FileExplorerApp.Services nen VE
+        /// MAT KY THUAT co the tham chieu duoc, nhung giu tham so string giup
+        /// ham nay (va IntegrityInvestigationEntry) hoan toan doc lap, khong
+        /// vo tinh gay loi bien dich day chuyen neu IntegrityViolationType
+        /// thay doi ten/vi tri sau nay. Gia tri KHONG khop enum nao da biet
+        /// (VD du lieu cu/bi sua tay) tra ve NGUYEN VAN chuoi goc thay vi nem
+        /// loi hoac hien "khong xac dinh" - an toan hon, khong lam mat thong
+        /// tin dieu tra chi vi mot nhan hien thi khong dich duoc.
+        /// </remarks>
+        private static string TranslateViolationType(string violationType)
+        {
+            switch (violationType)
+            {
+                case "ContentModified":
+                    return "Nội dung bị sửa";
+                case "FileMissing":
+                    return "Tệp bị xóa";
+                case "UnexpectedNewFile":
+                    return "Tệp mới xuất hiện";
+                default:
+                    return violationType;
             }
         }
     }
