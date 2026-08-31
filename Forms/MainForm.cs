@@ -16,12 +16,14 @@ using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 using FileExplorerApp.Properties;
 using FileExplorerApp.Services;
-// Hai using duoi day CHI dung de bat 2 loai ngoai le CU THE cua
-// DocumentPreviewService.ExtractWordText/ExtractPdfText trong UpdateDocumentPreview
-// (phan biet "tep bi khoa mat khau" voi "tep hong/sai dinh dang" thong
-// thuong khi hien thong bao loi) - xem UpdateDocumentPreview.
-using DocumentFormat.OpenXml.Packaging;
-using UglyToad.PdfPig.Exceptions;
+// REFACTOR - dong goi thu vien: 2 using "DocumentFormat.OpenXml.Packaging"/
+// "UglyToad.PdfPig.Exceptions" TRUOC DAY nam o day (chi de MainForm tu bat
+// rieng PdfDocumentEncryptedException/OpenXmlPackageException trong
+// UpdateDocumentPreview) DA DUOC XOA - Form khong duoc goi/biet truc tiep ve
+// OpenXml/PdfPig, chi duoc goi qua DocumentPreviewService (xem
+// Services/DocumentPasswordProtectedException.cs va UpdateDocumentPreview
+// gio chi bat DocumentPasswordProtectedException tu FileExplorerApp.Services,
+// khong can 2 using nay nua).
 // Alias de dung ngan gon FileIconCategory thay vi FileHelper.FileIconCategory
 // moi lan tham chieu (enum nam long ben trong static class FileHelper).
 using FileIconCategory = FileExplorerApp.Helpers.FileHelper.FileIconCategory;
@@ -2772,27 +2774,23 @@ namespace FileExplorerApp.Forms
                     ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path), MaxPreviewTextChars)
                     : _documentPreviewService.ExtractWordText(path);
             }
-            catch (PdfDocumentEncryptedException)
+            catch (DocumentPasswordProtectedException ex)
             {
-                // PdfPig tu phat hien PDF co ma hoa/dat mat khau va nem loi
-                // rieng nay (KHAC voi loi "khong doc duoc noi dung" thong
-                // thuong) - xem <remarks> dau ham.
-                ShowDocumentPreviewUnavailable("Tệp PDF này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.");
-                return;
-            }
-            catch (OpenXmlPackageException ex) when (ex.Message.IndexOf("Encrypt", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                // File Word dat mat khau (VD qua "Mã hóa bằng mật khẩu" trong
-                // Word) duoc luu duoi dang mot goi OLE Compound File MA HOA -
-                // KHONG con la file .zip/OOXML thong thuong nua. SDK OpenXml
-                // tu nhan ra dang goi nay va nem OpenXmlPackageException voi
-                // thong diep co chua "Encrypted" (xem chuoi tai nguyen "Encrypted
-                // packages are not supported." trong DocumentFormat.OpenXml.Framework.dll) -
-                // loc theo noi dung Message (KHONG co mot loai ngoai le rieng
-                // "PasswordProtectedException" nhu PdfPig) de phan biet voi
-                // cac truong hop OpenXmlPackageException khac (VD file hong
-                // thong thuong, khong lien quan mat khau).
-                ShowDocumentPreviewUnavailable("Tệp Word này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.");
+                // REFACTOR - dong goi thu vien (Form khong duoc goi truc tiep
+                // OpenXml/PdfPig, chi qua DocumentPreviewService): truoc day o
+                // day co 2 nhanh catch RIENG cho PdfDocumentEncryptedException
+                // (PdfPig)/OpenXmlPackageException loc theo Message (OpenXml
+                // SDK), buoc MainForm phai "using UglyToad.PdfPig.Exceptions"/
+                // "using DocumentFormat.OpenXml.Packaging" CHI DE bat 2 loai
+                // ngoai le do - VI PHAM dong goi, MOT Form (UI) lai phai biet
+                // ve thu vien BEN TRONG cua mot Service. Gio DocumentPreviewService
+                // tu bat 2 loai do va boc lai thanh DocumentPasswordProtectedException
+                // DUY NHAT (xem Services/DocumentPasswordProtectedException.cs) -
+                // MainForm CHI can bat 1 loai nay, KHONG can biet PdfPig/OpenXml
+                // co ton tai. ex.Message da duoc DocumentPreviewService soan
+                // san, PHAN BIET SAN Word/PDF (2 thong diep khac nhau) - dung
+                // NGUYEN VAN, khong tu ghep lai.
+                ShowDocumentPreviewUnavailable(ex.Message);
                 return;
             }
             catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))

@@ -8,6 +8,11 @@ using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
+// REFACTOR - dong goi thu vien: them using nay VAO DAY (truoc kia nam ben
+// MainForm) - DocumentPreviewService gio la noi DUY NHAT trong toan ung
+// dung con "biet" ve UglyToad.PdfPig.Exceptions/DocumentFormat.OpenXml.Packaging.OpenXmlPackageException,
+// xem DocumentPasswordProtectedException.cs de biet chi tiet.
+using UglyToad.PdfPig.Exceptions;
 
 namespace FileExplorerApp.Services
 {
@@ -94,6 +99,11 @@ namespace FileExplorerApp.Services
         /// </exception>
         /// <exception cref="IOException">Loi doc file (VD dang bi khoa boi chuong trinh khac, VD dang mo trong Word).</exception>
         /// <exception cref="UnauthorizedAccessException">Khong du quyen doc file.</exception>
+        /// <exception cref="DocumentPasswordProtectedException">
+        /// File .docx duoc bao ve bang mat khau - xem <see cref="DocumentPasswordProtectedException"/>
+        /// de biet ly do co loai ngoai le rieng nay (thay vi de OpenXmlPackageException
+        /// cua SDK lot ra ngoai truc tiep).
+        /// </exception>
         /// <remarks>
         /// SUA LOI (phat hien khi chuan bi test "preview tep Word co bang bieu"):
         /// PHIEN BAN TRUOC chi doc body.Elements&lt;Paragraph&gt;() - CHI lay
@@ -118,45 +128,60 @@ namespace FileExplorerApp.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("Không tìm thấy file cần đọc.", filePath);
 
-            using (WordprocessingDocument document = WordprocessingDocument.Open(filePath, isEditable: false))
+            try
             {
-                Body body = document.MainDocumentPart?.Document?.Body;
-                if (body == null)
-                    return string.Empty; // Tai lieu hop le nhung khong co than chinh - coi nhu rong, khong nem loi.
-
-                var resultBuilder = new StringBuilder();
-                bool isFirstBlock = true;
-
-                // Di qua TUNG PHAN TU CON TRUC TIEP cua body theo dung thu tu
-                // xuat hien trong tai lieu - KHONG chi loc rieng Paragraph nhu
-                // truoc, de khong bo sot Table (xem <remarks> cua ham nay).
-                foreach (OpenXmlElement blockElement in body.Elements())
+                using (WordprocessingDocument document = WordprocessingDocument.Open(filePath, isEditable: false))
                 {
-                    if (blockElement is Paragraph paragraph)
-                    {
-                        if (!isFirstBlock)
-                        {
-                            resultBuilder.Append(Environment.NewLine);
-                        }
-                        isFirstBlock = false;
+                    Body body = document.MainDocumentPart?.Document?.Body;
+                    if (body == null)
+                        return string.Empty; // Tai lieu hop le nhung khong co than chinh - coi nhu rong, khong nem loi.
 
-                        AppendParagraphText(paragraph, resultBuilder);
-                    }
-                    else if (blockElement is Table table)
-                    {
-                        if (!isFirstBlock)
-                        {
-                            resultBuilder.Append(Environment.NewLine);
-                        }
-                        isFirstBlock = false;
+                    var resultBuilder = new StringBuilder();
+                    bool isFirstBlock = true;
 
-                        AppendTableText(table, resultBuilder);
+                    // Di qua TUNG PHAN TU CON TRUC TIEP cua body theo dung thu tu
+                    // xuat hien trong tai lieu - KHONG chi loc rieng Paragraph nhu
+                    // truoc, de khong bo sot Table (xem <remarks> cua ham nay).
+                    foreach (OpenXmlElement blockElement in body.Elements())
+                    {
+                        if (blockElement is Paragraph paragraph)
+                        {
+                            if (!isFirstBlock)
+                            {
+                                resultBuilder.Append(Environment.NewLine);
+                            }
+                            isFirstBlock = false;
+
+                            AppendParagraphText(paragraph, resultBuilder);
+                        }
+                        else if (blockElement is Table table)
+                        {
+                            if (!isFirstBlock)
+                            {
+                                resultBuilder.Append(Environment.NewLine);
+                            }
+                            isFirstBlock = false;
+
+                            AppendTableText(table, resultBuilder);
+                        }
+                        // Cac loai phan tu khac cua body (VD SectionProperties -
+                        // thong tin trang/le, khong phai noi dung) - BO QUA.
                     }
-                    // Cac loai phan tu khac cua body (VD SectionProperties -
-                    // thong tin trang/le, khong phai noi dung) - BO QUA.
+
+                    return resultBuilder.ToString();
                 }
-
-                return resultBuilder.ToString();
+            }
+            catch (OpenXmlPackageException ex) when (ex.Message.IndexOf("Encrypt", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // REFACTOR - dong goi thu vien: bat rieng truong hop mat khau
+                // NGAY TAI DAY (noi DUY NHAT trong ung dung con "biet" ve
+                // OpenXmlPackageException, xem <see cref="DocumentPasswordProtectedException"/>)
+                // va boc lai thanh mot loai ngoai le CHUNG, KHONG thuoc ve bat
+                // ky thu vien cu the nao - de Form goi ham nay (MainForm) KHONG
+                // CAN "using DocumentFormat.OpenXml.Packaging" chi de bat truong
+                // hop nay nua (truoc day PHAI lam vay, vi pham dong goi).
+                throw new DocumentPasswordProtectedException(
+                    "Tệp Word này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.", ex);
             }
         }
 
@@ -294,6 +319,12 @@ namespace FileExplorerApp.Services
         /// </exception>
         /// <exception cref="IOException">Loi doc file (VD dang bi khoa boi chuong trinh khac).</exception>
         /// <exception cref="UnauthorizedAccessException">Khong du quyen doc file.</exception>
+        /// <exception cref="DocumentPasswordProtectedException">
+        /// File .pdf duoc bao ve bang mat khau - xem <see cref="DocumentPasswordProtectedException"/>
+        /// de biet ly do co loai ngoai le rieng nay (thay vi de
+        /// UglyToad.PdfPig.Exceptions.PdfDocumentEncryptedException cua PdfPig
+        /// lot ra ngoai truc tiep).
+        /// </exception>
         public List<string> ExtractPdfText(string filePath)
         {
             if (string.IsNullOrWhiteSpace(filePath))
@@ -302,12 +333,23 @@ namespace FileExplorerApp.Services
             if (!File.Exists(filePath))
                 throw new FileNotFoundException("Không tìm thấy file cần đọc.", filePath);
 
-            using (PdfDocument document = PdfDocument.Open(filePath))
+            try
             {
-                return document.GetPages()
-                    .OrderBy(page => page.Number)
-                    .Select(page => page.Text ?? string.Empty)
-                    .ToList();
+                using (PdfDocument document = PdfDocument.Open(filePath))
+                {
+                    return document.GetPages()
+                        .OrderBy(page => page.Number)
+                        .Select(page => page.Text ?? string.Empty)
+                        .ToList();
+                }
+            }
+            catch (PdfDocumentEncryptedException ex)
+            {
+                // REFACTOR - dong goi thu vien: xem ghi chu tuong tu tai
+                // ExtractWordText/catch (OpenXmlPackageException...) o tren -
+                // cung ly do, ap dung cho PdfPig thay OpenXml SDK.
+                throw new DocumentPasswordProtectedException(
+                    "Tệp PDF này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.", ex);
             }
         }
     }
