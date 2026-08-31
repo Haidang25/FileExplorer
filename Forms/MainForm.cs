@@ -16,6 +16,12 @@ using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
 using FileExplorerApp.Properties;
 using FileExplorerApp.Services;
+// Hai using duoi day CHI dung de bat 2 loai ngoai le CU THE cua
+// DocumentPreviewService.ExtractWordText/ExtractPdfText trong UpdateDocumentPreview
+// (phan biet "tep bi khoa mat khau" voi "tep hong/sai dinh dang" thong
+// thuong khi hien thong bao loi) - xem UpdateDocumentPreview.
+using DocumentFormat.OpenXml.Packaging;
+using UglyToad.PdfPig.Exceptions;
 // Alias de dung ngan gon FileIconCategory thay vi FileHelper.FileIconCategory
 // moi lan tham chieu (enum nam long ben trong static class FileHelper).
 using FileIconCategory = FileExplorerApp.Helpers.FileHelper.FileIconCategory;
@@ -2668,10 +2674,20 @@ namespace FileExplorerApp.Forms
         /// được ranh giới trang, giống ý định ban đầu của yêu cầu "đọc theo
         /// từng trang" khi đưa lên màn hình xem trước.
         ///
-        /// BAT Exception CHUNG (khong chi liet ke tung loai cu the nhu
-        /// UpdateTextPreview) - file .docx/.pdf HONG/khong dung cau truc co
-        /// the khien DocumentFormat.OpenXml/PdfPig nem RAT NHIEU loai ngoai le
-        /// khac nhau tuy truong hop hong cu the (khong chi IOException/
+        /// BAT RIENG 2 loai ngoai le CU THE truoc (PdfDocumentEncryptedException/
+        /// OpenXmlPackageException voi thong diep chua "Encrypt") de bao ro
+        /// truong hop "tep bi khoa mat khau" - day la nguyen nhan RIENG,
+        /// THUONG GAP (nguoi dung dat mat khau bao ve tai lieu Word/PDF qua
+        /// chinh Word/Adobe Acrobat) va co the KHIEN NGUOI DUNG NHAM la tep
+        /// bi hong neu chi thay thong bao chung "khong the xem truoc" -
+        /// thong bao rieng giup ho biet CAN LAM GI (mo file bang phan mem
+        /// goc va nhap mat khau) thay vi nghi tep da hong.
+        ///
+        /// SAU DO moi BAT Exception CHUNG (khong chi liet ke tung loai cu
+        /// the khac nhu UpdateTextPreview) cho MOI truong hop con lai - file
+        /// .docx/.pdf HONG/khong dung cau truc (KHONG lien quan mat khau) co
+        /// the khien DocumentFormat.OpenXml/PdfPig nem RAT NHIEU loai ngoai
+        /// le khac nhau tuy truong hop hong cu the (khong chi IOException/
         /// UnauthorizedAccessException nhu doc file thuong) - preview la tinh
         /// nang PHU, KHONG duoc phep lam crash/treo ca ung dung chi vi mot
         /// file preview bi hong, nen bat rong o day la CO Y, giong nguyen tac
@@ -2692,18 +2708,14 @@ namespace FileExplorerApp.Forms
             }
             catch (IOException)
             {
-                txtPreview.Visible = false;
-                lblPreviewCaption.Text = "Không thể xem trước tệp này";
-                spcFilesPreview.Panel2Collapsed = true;
+                ShowDocumentPreviewUnavailable("Không thể xem trước tệp này");
                 return;
             }
 
             if (fileSize > MaxPreviewDocumentBytes)
             {
-                txtPreview.Visible = false;
-                lblPreviewCaption.Text =
-                    $"Tệp quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewDocumentBytes)})";
-                spcFilesPreview.Panel2Collapsed = true;
+                ShowDocumentPreviewUnavailable(
+                    $"Tệp quá lớn để xem trước ({FormatHelper.FormatSize(fileSize)} > {FormatHelper.FormatSize(MaxPreviewDocumentBytes)})");
                 return;
             }
 
@@ -2715,16 +2727,32 @@ namespace FileExplorerApp.Forms
                     ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path), MaxPreviewTextChars)
                     : _documentPreviewService.ExtractWordText(path);
             }
+            catch (PdfDocumentEncryptedException)
+            {
+                // PdfPig tu phat hien PDF co ma hoa/dat mat khau va nem loi
+                // rieng nay (KHAC voi loi "khong doc duoc noi dung" thong
+                // thuong) - xem <remarks> dau ham.
+                ShowDocumentPreviewUnavailable("Tệp PDF này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.");
+                return;
+            }
+            catch (OpenXmlPackageException ex) when (ex.Message.IndexOf("Encrypt", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                // File Word dat mat khau (VD qua "Mã hóa bằng mật khẩu" trong
+                // Word) duoc luu duoi dang mot goi OLE Compound File MA HOA -
+                // KHONG con la file .zip/OOXML thong thuong nua. SDK OpenXml
+                // tu nhan ra dang goi nay va nem OpenXmlPackageException voi
+                // thong diep co chua "Encrypted" (xem chuoi tai nguyen "Encrypted
+                // packages are not supported." trong DocumentFormat.OpenXml.Framework.dll) -
+                // loc theo noi dung Message (KHONG co mot loai ngoai le rieng
+                // "PasswordProtectedException" nhu PdfPig) de phan biet voi
+                // cac truong hop OpenXmlPackageException khac (VD file hong
+                // thong thuong, khong lien quan mat khau).
+                ShowDocumentPreviewUnavailable("Tệp Word này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.");
+                return;
+            }
             catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
             {
-                // Xem <remarks> tren dau ham - CO Y bat rong (tru cac loi
-                // nghiem trong cap runtime khong nen/khong the "bat va bo qua"
-                // nhu OutOfMemoryException) vi day la file cua nguoi dung
-                // KHAC dinh dang/bi hong ma DocumentFormat.OpenXml/PdfPig co
-                // the phan ung bang nhieu loai ngoai le khac nhau.
-                txtPreview.Visible = false;
-                lblPreviewCaption.Text = "Không thể xem trước tệp này (có thể tệp bị hỏng hoặc không đúng định dạng)";
-                spcFilesPreview.Panel2Collapsed = true;
+                ShowDocumentPreviewUnavailable("Không thể xem trước tệp này (có thể tệp bị hỏng hoặc không đúng định dạng)");
                 return;
             }
 
@@ -2738,6 +2766,19 @@ namespace FileExplorerApp.Forms
             txtPreview.Visible = true;
             lblPreviewCaption.Text = Path.GetFileName(path);
             spcFilesPreview.Panel2Collapsed = false;
+        }
+
+        /// <summary>
+        /// An txtPreview va thu gon panel preview voi mot thong bao loi/khong
+        /// ho tro - gop 3 dong lap lai NHIEU LAN trong UpdateDocumentPreview
+        /// (moi nhanh loi deu can dung 3 buoc nay) thanh mot ham dung chung,
+        /// tranh sao chep-dan (copy-paste) cung 3 dong o nhieu noi.
+        /// </summary>
+        private void ShowDocumentPreviewUnavailable(string message)
+        {
+            txtPreview.Visible = false;
+            lblPreviewCaption.Text = message;
+            spcFilesPreview.Panel2Collapsed = true;
         }
 
         /// <summary>
