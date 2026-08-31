@@ -83,6 +83,53 @@
     </Reference>
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="WindowsBase" />
+    <!-- PdfPig (goi NuGet da co san trong packages.config) - dung de doc
+         noi dung van ban PDF trong DocumentPreviewService.ExtractPdfText.
+         PdfPig KHONG dong goi thanh 1 file .dll duy nhat ma chia thanh
+         NHIEU assembly con (Core/Fonts/Tokenization/Tokens) - da kiem tra
+         truc tiep (strings tren cac .dll trong thu muc packages\) de xac
+         dinh CHINH XAC UglyToad.PdfPig.dll THUC SU can nhung assembly con
+         nao (KHONG bao gom UglyToad.PdfPig.Package.dll/DocumentLayoutAnalysis.dll -
+         2 assembly nay KHONG duoc UglyToad.PdfPig.dll tham chieu toi, chi
+         can cho cac tinh nang khac ngoai pham vi ExtractPdfText hien tai
+         nhu ghi/xuat PDF hay phan tich bo cuc trang). Dung thu muc "net471"
+         (khong co ban rieng cho 4.7.2, day la ban .NET Framework GAN NHAT
+         ma goi PdfPig co san). System.Memory/System.Buffers/System.Numerics.Vectors/
+         Microsoft.Bcl.HashCode la cac goi "polyfill" ma PdfPig can tren .NET
+         Framework (theo .nuspec cua goi, nhom targetFramework=".NETFramework4.7.1") -
+         dung thu muc "net462" cua CAC goi nay (khong co ban rieng cho 4.7.x,
+         day la ban Framework gan nhat chung co san). System.IO.Compression
+         (assembly co san trong .NET Framework, KHONG phai NuGet) can cho
+         PdfPig giai ma cac luong du lieu nen (compressed stream) ben trong
+         PDF. -->
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="UglyToad.PdfPig">
+      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.dll</HintPath>
+    </Reference>
+    <Reference Include="UglyToad.PdfPig.Core">
+      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="UglyToad.PdfPig.Fonts">
+      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Fonts.dll</HintPath>
+    </Reference>
+    <Reference Include="UglyToad.PdfPig.Tokenization">
+      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Tokenization.dll</HintPath>
+    </Reference>
+    <Reference Include="UglyToad.PdfPig.Tokens">
+      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Tokens.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.HashCode">
+      <HintPath>packages\Microsoft.Bcl.HashCode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory">
+      <HintPath>packages\System.Memory.4.6.0\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Buffers">
+      <HintPath>packages\System.Buffers.4.6.0\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics.Vectors">
+      <HintPath>packages\System.Numerics.Vectors.4.6.0\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Forms\MainForm.cs">

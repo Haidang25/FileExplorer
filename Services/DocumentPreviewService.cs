@@ -1,21 +1,25 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Wordprocessing;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.Content;
 
 namespace FileExplorerApp.Services
 {
     /// <summary>
     /// Doc va trich xuat NOI DUNG VAN BAN THUAN (plain text) tu cac file van
-    /// phong de PHUC VU XEM TRUOC (preview) - hien tai chi ho tro Word
-    /// (.docx) qua <see cref="ExtractWordText"/>. Cac dinh dang khac (VD
-    /// .pdf qua goi PdfPig da co san trong packages.config, .pptx) se bo
-    /// sung sau neu can, moi dinh dang mot ham ExtractXxxText rieng - KHONG
-    /// co gang dung MOT ham chung cho tat ca dinh dang, vi cau truc/thu vien
-    /// doc cua tung dinh dang qua khac nhau (OpenXml SDK cho .docx/.pptx,
-    /// PdfPig cho .pdf...) de dung chung logic ma khong lam kho hieu.
+    /// phong de PHUC VU XEM TRUOC (preview) - ho tro Word (.docx) qua
+    /// <see cref="ExtractWordText"/> va PDF qua <see cref="ExtractPdfText"/>.
+    /// Dinh dang khac (VD .pptx) se bo sung sau neu can, moi dinh dang mot
+    /// ham ExtractXxxText rieng - KHONG co gang dung MOT ham chung cho tat
+    /// ca dinh dang, vi cau truc/thu vien doc cua tung dinh dang qua khac
+    /// nhau (OpenXml SDK cho .docx/.pptx, PdfPig cho .pdf...) de dung chung
+    /// logic ma khong lam kho hieu.
     /// </summary>
     /// <remarks>
     /// QUYET DINH THIET KE - DUNG DocumentFormat.OpenXml SDK (goi NuGet chinh
@@ -144,6 +148,78 @@ namespace FileExplorerApp.Services
                 {
                     resultBuilder.Append(Environment.NewLine);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Trich xuat noi dung VAN BAN THUAN tu mot file PDF, tra ve THEO
+        /// TUNG TRANG (KHONG gop thanh mot chuoi duy nhat nhu ExtractWordText) -
+        /// dung yeu cau "doc noi dung van ban theo tung trang PDF". Phan tu
+        /// tai chi so i (0-based) trong danh sach tra ve la noi dung van ban
+        /// cua TRANG SO (i + 1) trong file PDF (PDF danh so trang tu 1, xem
+        /// <returns> ben duoi).
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE - DUNG PdfPig (goi NuGet da co san trong
+        /// packages.config, KHONG phai .NET Framework tu co san nhu
+        /// System.IO.Compression/System.Xml.Linq da dung cho .docx): dinh
+        /// dang PDF (khac han Office Open XML cua .docx - KHONG phai zip/XML)
+        /// can mot bo PARSER PDF THUC SU (doc cau truc object/cross-reference
+        /// table/content stream, giai ma font de biet MA BYTE nao ung voi KY
+        /// TU nao...) - tu viet lai tu dau la KHONG THUC TE, nen dung PdfPig
+        /// (thu vien PDF thuan .NET pho bien, KHONG can phu thuoc native/
+        /// COM nhu mot so thu vien PDF khac, phu hop de chay ben trong ung
+        /// dung WinForms nay).
+        ///
+        /// Moi Page (UglyToad.PdfPig.Content.Page) da co san thuoc tinh .Text
+        /// - CHINH LA toan bo van ban thuan cua trang do, PdfPig da tu lam
+        /// het viec ghep cac ky tu/tu/dong theo dung vi tri hinh hoc tren
+        /// trang (PDF khong luu "doan van" nhu .docx, chi luu VI TRI VE TUNG
+        /// KY TU/CHUOI ky tu tren trang - PdfPig tu suy luan thu tu doc hop
+        /// ly tu cac vi tri do) - vi vay KHONG can tu ghep noi dung tu cac
+        /// phan tu con nho hon (Letter/Word) nhu cach ExtractWordText phai tu
+        /// lam voi Text/TabChar/Break cua .docx, dung truc tiep .Text la du
+        /// cho muc dich xem truoc.
+        ///
+        /// SAP XEP LAI THEO Page.Number (OrderBy) - PHONG XA du document.GetPages()
+        /// tren ly thuyet da tra ve dung thu tu trang, sap xep lai RO RANG
+        /// THEO SO TRANG (khong dua vao thu tu enumerate ngam dinh) giup ket
+        /// qua LUON dung voi thu tu trang thuc te, ke ca neu mot phien ban
+        /// PdfPig sau nay thay doi thu tu enumerate ben trong.
+        /// </remarks>
+        /// <param name="filePath">Duong dan file .pdf can doc.</param>
+        /// <returns>
+        /// Danh sach van ban theo trang, THEO DUNG THU TU trang trong file
+        /// (phan tu 0 = trang 1, phan tu 1 = trang 2, v.v.) - danh sach RONG
+        /// (khong phai null) neu PDF hop le nhung khong co trang nao (truong
+        /// hop rat hiem). Mot trang KHONG co van ban (VD trang toan hinh anh
+        /// quet - scan, chua qua OCR) se co phan tu tuong ung la CHUOI RONG,
+        /// KHONG bi bo qua khoi danh sach - giu dung so luong phan tu BANG SO
+        /// TRANG THUC TE de chi so (index) luon khop voi so trang.
+        /// </returns>
+        /// <exception cref="ArgumentException">filePath rong hoac chi chua khoang trang.</exception>
+        /// <exception cref="FileNotFoundException">File khong ton tai tai duong dan chi dinh.</exception>
+        /// <exception cref="UglyToad.PdfPig.Exceptions.PdfDocumentFormatException">
+        /// File ton tai nhung KHONG phai file PDF hop le/dung cau truc (VD
+        /// nguoi dung doi ten mot file khac thanh .pdf, hoac file bi hong) -
+        /// PdfPig tu kiem tra va nem loi nay khi cau truc PDF khong hop le.
+        /// </exception>
+        /// <exception cref="IOException">Loi doc file (VD dang bi khoa boi chuong trinh khac).</exception>
+        /// <exception cref="UnauthorizedAccessException">Khong du quyen doc file.</exception>
+        public List<string> ExtractPdfText(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("Đường dẫn file không được rỗng.", nameof(filePath));
+
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException("Không tìm thấy file cần đọc.", filePath);
+
+            using (PdfDocument document = PdfDocument.Open(filePath))
+            {
+                return document.GetPages()
+                    .OrderBy(page => page.Number)
+                    .Select(page => page.Text ?? string.Empty)
+                    .ToList();
             }
         }
     }
