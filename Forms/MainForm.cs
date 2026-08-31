@@ -593,6 +593,16 @@ namespace FileExplorerApp.Forms
             lblEmptyFolder.ForeColor = AppTheme.TextSecondary;
             lblEmptyFolder.BackColor = AppTheme.Surface;
 
+            // tsslIntegrityAlert (canh bao toan ven tren StatusStrip): Designer.cs
+            // truoc day dat ForeColor = Color.OrangeRed CO DINH (mau code cung,
+            // khong doi theo Light/Dark), ap dung AppTheme.Error o day de dong
+            // bo voi phan con lai cua ung dung va tu doi dung theo che do hien
+            // tai (giong cach cac dong log/vi pham loi trong LogForm dung
+            // AppTheme.Error) - gan SAU InitializeComponent (ApplyTheme luon
+            // duoc goi sau) nen se GHI DE gia tri OrangeRed cu, khong can sua
+            // Designer.cs.
+            tsslIntegrityAlert.ForeColor = AppTheme.Error;
+
             // Ghi chu: mau dong duoc chon (SelectedRow trong AppTheme) do he
             // dieu hanh tu ve theo mau he thong khi TreeView/ListView khong o
             // che do OwnerDraw. WinForms khong co thuoc tinh de doi rieng mau

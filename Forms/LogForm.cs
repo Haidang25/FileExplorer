@@ -55,9 +55,66 @@ namespace FileExplorerApp.Forms
         public LogForm()
         {
             InitializeComponent();
+            ApplyTheme();
             InitializeFilterOptions();
             LoadLogs();
             LoadViolations();
+        }
+
+        /// <summary>
+        /// Ap dung AppTheme cho cum control tab "Nhật ký thao tác"/"Vi phạm
+        /// toàn vẹn" (tabsLog/tabOperationLog/tabViolations/lvwViolations/
+        /// lvwLogs) va 2 nut bao cao dieu tra (btnVerifyReport/
+        /// btnExportInvestigationReport) - toan bo cum nay duoc THEM MOI trong
+        /// cung mot lan sua doi (yeu cau "cong cu xem nhat ky thi khong ghi
+        /// lai") va CHUA TUNG duoc to mau theo AppTheme, chi Form.BackColor/
+        /// ForeColor o Designer.cs la theo AppTheme - cac control con van giu
+        /// mau he thong (system color) mac dinh, se hien SAI (VD lvwViolations
+        /// nen trang giua Form nen toi o Dark Mode) va KHONG DONG BO giua 2
+        /// tab (mot tab da to theo AppTheme rieng le trong .cs nhu mau chu do
+        /// ContentModified/FileMissing - xem GetViolationForeColor/lvwViolations -
+        /// tab con lai hoan toan mac dinh).
+        /// </summary>
+        /// <remarks>
+        /// KHONG dong theo grpFilters/btnRefresh/btnExportCsv/btnClearLogs/
+        /// btnClose - CAC CONTROL DO co truoc tinh nang toan ven nay, ngoai
+        /// pham vi yeu cau "control canh bao toan ven moi them"; theo cung
+        /// mau cho toan bo LogForm (neu can) nen la mot yeu cau rieng de
+        /// khong lam thay doi pham vi ngoai du dinh.
+        ///
+        /// Goi 1 LAN trong constructor (giong BatchRenameForm.ApplyTheme) -
+        /// LogForm la hop thoai modal (ShowDialog), khong can cap nhat theme
+        /// "song" giua luc dang mo.
+        /// </remarks>
+        private void ApplyTheme()
+        {
+            tabsLog.BackColor = AppTheme.Surface;
+
+            tabOperationLog.BackColor = AppTheme.Surface;
+            tabOperationLog.ForeColor = AppTheme.TextPrimary;
+            tabViolations.BackColor = AppTheme.Surface;
+            tabViolations.ForeColor = AppTheme.TextPrimary;
+
+            lvwLogs.BackColor = AppTheme.Surface;
+            lvwLogs.ForeColor = AppTheme.TextPrimary;
+            lvwLogs.BorderStyle = BorderStyle.FixedSingle;
+
+            lvwViolations.BackColor = AppTheme.Surface;
+            lvwViolations.ForeColor = AppTheme.TextPrimary;
+            lvwViolations.BorderStyle = BorderStyle.FixedSingle;
+
+            // btnVerifyReport/btnExportInvestigationReport: 2 nut HANH DONG
+            // CHINH cua tinh nang bao cao dieu tra (giong btnGo/btnApply da
+            // dung mau Accent lam noi bat o MainForm/BatchRenameForm).
+            btnVerifyReport.FlatStyle = FlatStyle.Flat;
+            btnVerifyReport.FlatAppearance.BorderColor = AppTheme.Accent;
+            btnVerifyReport.BackColor = AppTheme.Accent;
+            btnVerifyReport.ForeColor = System.Drawing.Color.White;
+
+            btnExportInvestigationReport.FlatStyle = FlatStyle.Flat;
+            btnExportInvestigationReport.FlatAppearance.BorderColor = AppTheme.Accent;
+            btnExportInvestigationReport.BackColor = AppTheme.Accent;
+            btnExportInvestigationReport.ForeColor = System.Drawing.Color.White;
         }
 
         /// <summary>

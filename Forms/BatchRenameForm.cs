@@ -36,6 +36,7 @@ namespace FileExplorerApp.Forms
         public BatchRenameForm(List<string> paths)
         {
             InitializeComponent();
+            ApplyTheme();
 
             _paths = paths ?? new List<string>();
 
@@ -49,6 +50,52 @@ namespace FileExplorerApp.Forms
         private void txtPattern_TextChanged(object sender, EventArgs e)
         {
             UpdatePreview();
+        }
+
+        /// <summary>
+        /// Ap dung bang mau dung chung (AppTheme - xem Helpers/AppTheme.cs) cho
+        /// TUNG control cua Form nay - truoc day Designer.cs CHI dat BackColor/
+        /// ForeColor o CAP FORM (this.BackColor/this.ForeColor), cac control con
+        /// (txtPattern, lvwPreview, 2 nut) van giu mau he thong (system color)
+        /// mac dinh cua WinForms - o Dark Mode se lam txtPattern/lvwPreview hien
+        /// NEN TRANG choi giua mot Form nen toi, khong dong bo, giong loi da
+        /// sua cho MainForm qua ApplyTheme() (xem MainForm.cs) nhung BatchRenameForm
+        /// chua tung co ham tuong tu.
+        /// </summary>
+        /// <remarks>
+        /// Goi 1 LAN trong constructor (KHONG can goi lai khi dang mo, khac
+        /// MainForm/SettingsForm) - Form nay la HOP THOAI MODAL, mo moi lan
+        /// tu MainForm va dong lai ngay sau khi dung (ShowDialog) - khong ton
+        /// tai lau de can cap nhat theme "song" giua luc dang mo.
+        /// </remarks>
+        private void ApplyTheme()
+        {
+            txtPattern.BackColor = AppTheme.Surface;
+            txtPattern.ForeColor = AppTheme.TextPrimary;
+            txtPattern.BorderStyle = BorderStyle.FixedSingle;
+
+            // Chu thich huong dan token {name}/{ext}/{n}/{date} - mau chu phu
+            // (TextSecondary), giong quy uoc "chu thich/placeholder" da dung o
+            // MainForm.ApplyTheme (VD lblEmptyFolder).
+            lblPatternHint.ForeColor = AppTheme.TextSecondary;
+
+            lvwPreview.BackColor = AppTheme.Surface;
+            lvwPreview.ForeColor = AppTheme.TextPrimary;
+            lvwPreview.BorderStyle = BorderStyle.FixedSingle;
+
+            // btnApply: nut HANH DONG CHINH cua Form (giong btnGo trong
+            // MainForm.ApplyTheme) - dung mau Accent lam noi bat.
+            btnApply.FlatStyle = FlatStyle.Flat;
+            btnApply.FlatAppearance.BorderColor = AppTheme.Accent;
+            btnApply.BackColor = AppTheme.Accent;
+            btnApply.ForeColor = System.Drawing.Color.White;
+
+            // btnClose: nut phu (giong btnUp trong MainForm.ApplyTheme) - mau
+            // Surface/Border trung tinh, khong canh tranh voi btnApply.
+            btnClose.FlatStyle = FlatStyle.Flat;
+            btnClose.FlatAppearance.BorderColor = AppTheme.Border;
+            btnClose.BackColor = AppTheme.Surface;
+            btnClose.ForeColor = AppTheme.TextPrimary;
         }
 
         /// <summary>
