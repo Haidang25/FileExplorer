@@ -44,6 +44,19 @@ namespace FileExplorerApp.Forms
         private readonly FileMonitorService _fileMonitorService = new FileMonitorService();
 
         /// <summary>
+        /// Giam sat TOAN VEN (hash SHA-256 so voi baseline) MOT thu muc do
+        /// nguoi dung chu dong chon qua mnuToolsIntegrityMonitor_Click - HOAN
+        /// TOAN TACH BIET voi _fileMonitorService o tren (chi tu dong lam moi
+        /// ListView, khong biet gi ve hash/noi dung file): nguoi dung co the
+        /// dang duyet MOT thu muc khac trong khi mot thu muc RIENG dang duoc
+        /// giam sat toan ven nen (xem IntegrityService.cs).
+        /// </summary>
+        private readonly IntegrityService _integrityService = new IntegrityService();
+
+        /// <summary>Tong so canh bao toan ven (ContentModified) da phat hien tu luc bat dau giam sat lan gan nhat - hien tren tsslIntegrityAlert.</summary>
+        private int _integrityAlertCount;
+
+        /// <summary>
         /// Gop nhieu su kien FileSystemWatcher lien tiep trong thoi gian ngan (VD:
         /// sao chep hang tram file lien tuc vao thu muc dang mo) thanh MOT lan
         /// LoadListViewFiles() duy nhat, thay vi nap lai ListView moi khi co 1 su
@@ -132,6 +145,7 @@ namespace FileExplorerApp.Forms
             LoadTreeViewFolders();
             LoadDisplaySettings();
             InitializeFolderMonitoring();
+            RegisterIntegrityServiceEvents();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
             // Cung la noi RestartFolderMonitoring lan dau duoc goi (ben trong
@@ -165,6 +179,141 @@ namespace FileExplorerApp.Forms
             _fileMonitorService.FileChanged += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.FileRenamed += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.MonitorError += FileMonitorService_MonitorError;
+        }
+
+        /// <summary>
+        /// Dang ky su kien IntegrityViolationDetected cua _integrityService -
+        /// tach RIENG khoi InitializeFolderMonitoring() du ca hai deu la dang
+        /// ky su kien cho mot FileMonitorService (IntegrityService KE THUA
+        /// FileMonitorService), vi day la HAI TINH NANG khac nhau ve ban chat
+        /// (tu dong lam moi ListView so voi canh bao toan ven thu muc dang
+        /// giam sat) tren HAI INSTANCE hoan toan doc lap.
+        /// </summary>
+        private void RegisterIntegrityServiceEvents()
+        {
+            _integrityService.IntegrityViolationDetected += IntegrityService_IntegrityViolationDetected;
+        }
+
+        /// <summary>
+        /// Xu ly su kien IntegrityViolationDetected cua _integrityService -
+        /// LUON chay tren luong THREADPOOL cua FileSystemWatcher (xem "LUONG
+        /// (THREAD)" tai IntegrityService.cs), KHONG PHAI luong UI, nen PHAI
+        /// tu BeginInvoke truoc khi dung bat ky control WinForms nao (tsslIntegrityAlert,
+        /// IntegrityToastForm...) - goi truc tiep se nem InvalidOperationException
+        /// ("Cross-thread operation not valid").
+        /// </summary>
+        /// <remarks>
+        /// PHAM VI HIEN TAI: chi canh bao khi <see cref="IntegrityViolationType.ContentModified"/>
+        /// ("tệp bị sửa" - dung y yeu cau) - Deleted/NewFile KHONG kich hoat
+        /// canh bao real-time nay (van co the tra cuu qua
+        /// BaselineService.CompareWithBaselineAsync neu can xem toan bo, xem
+        /// yeu cau truoc). Mo rong canh bao cho ca Deleted/NewFile se lam o
+        /// mot yeu cau khac neu can.
+        /// </remarks>
+        private void IntegrityService_IntegrityViolationDetected(object sender, IntegrityViolationEventArgs e)
+        {
+            if (e.ViolationType != IntegrityViolationType.ContentModified)
+                return;
+
+            if (this.IsHandleCreated && !this.IsDisposed)
+            {
+                try
+                {
+                    this.BeginInvoke(new Action(() => ShowIntegrityAlert(e)));
+                }
+                catch (ObjectDisposedException)
+                {
+                    // Form vua dong DUNG luc su kien nay toi (hiem, race condition
+                    // giua luc dong ung dung va luc IntegrityService phat hien vi
+                    // pham) - khong con noi nao de hien canh bao nua, bo qua an toan.
+                }
+            }
+        }
+
+        /// <summary>
+        /// Hien canh bao real-time tren CA HAI kenh nhu yeu cau: cap nhat/hien
+        /// tsslIntegrityAlert tren StatusStrip (ben vung, con lai cho den khi
+        /// nguoi dung xem/dung giam sat) VA hien mot IntegrityToastForm (tam
+        /// thoi, tu dong bien mat sau vai giay) - LUON duoc goi TREN LUONG UI
+        /// (xem IntegrityService_IntegrityViolationDetected).
+        /// </summary>
+        private void ShowIntegrityAlert(IntegrityViolationEventArgs e)
+        {
+            _integrityAlertCount++;
+
+            tsslIntegrityAlert.Text = $"⚠ {_integrityAlertCount} cảnh báo toàn vẹn";
+            tsslIntegrityAlert.Visible = true;
+
+            IntegrityToastForm.ShowToast(this, e.FilePath);
+        }
+
+        /// <summary>
+        /// Bam vao tsslIntegrityAlert tren StatusStrip - hien lai canh bao GAN
+        /// NHAT mot lan nua (xem lai duoc du da bo lo toast tu dong dong truoc
+        /// do). Danh sach day du tat ca canh bao tu luc bat dau giam sat (khong
+        /// chi canh bao gan nhat) se lam o mot yeu cau khac neu can (VD mot
+        /// Form rieng liet ke lich su vi pham, tuong tu LogForm).
+        /// </summary>
+        private void tsslIntegrityAlert_Click(object sender, EventArgs e)
+        {
+            MessageBox.Show(this,
+                $"Đã phát hiện {_integrityAlertCount} lần nội dung tệp bị sửa so với baseline kể từ khi bắt đầu giám sát thư mục \"{_integrityService.CurrentBaseline?.FolderPath}\".",
+                "Cảnh báo toàn vẹn thư mục", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+
+        /// <summary>
+        /// Bat/tat giam sat toan ven cho _currentPath (thu muc dang mo trong
+        /// lvwFiles) - toggle dua theo _integrityService.IsMonitoring (ke thua
+        /// tu FileMonitorService). Bat: chup baseline MOI (co the mat vai giay
+        /// voi thu muc lon, hien con tro cho - xem UseWaitCursor) roi bat dau
+        /// theo doi; nguoi dung dang giam sat MOT thu muc KHAC truoc do se tu
+        /// dong CHUYEN sang thu muc nay (giong FileMonitorService.StartMonitoring,
+        /// chi theo doi MOT thu muc tai mot thoi diem).
+        /// </summary>
+        private async void mnuToolsIntegrityMonitor_Click(object sender, EventArgs e)
+        {
+            if (_integrityService.IsMonitoring)
+            {
+                _integrityService.StopIntegrityMonitoring();
+                mnuToolsIntegrityMonitor.Checked = false;
+                tsslIntegrityAlert.Visible = false;
+                _integrityAlertCount = 0;
+                tsslStatus.Text = "Đã dừng giám sát toàn vẹn thư mục.";
+                return;
+            }
+
+            string folderPath = _currentPath;
+            if (string.IsNullOrWhiteSpace(folderPath) || !Directory.Exists(folderPath))
+            {
+                MessageBox.Show(this, "Vui lòng mở một thư mục hợp lệ trước khi bắt đầu giám sát.",
+                    "Giám sát toàn vẹn", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            mnuToolsIntegrityMonitor.Enabled = false;
+            this.UseWaitCursor = true;
+            tsslStatus.Text = $"Đang chụp baseline cho \"{folderPath}\"...";
+
+            try
+            {
+                await _integrityService.StartIntegrityMonitoringAsync(folderPath, includeSubdirectories: true);
+
+                mnuToolsIntegrityMonitor.Checked = true;
+                _integrityAlertCount = 0;
+                tsslIntegrityAlert.Visible = false;
+                tsslStatus.Text = $"Đang giám sát toàn vẹn: {folderPath}";
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                MessageBox.Show(this, $"Không thể bắt đầu giám sát: {ex.Message}",
+                    "Giám sát toàn vẹn", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                tsslStatus.Text = "Sẵn sàng";
+            }
+            finally
+            {
+                mnuToolsIntegrityMonitor.Enabled = true;
+                this.UseWaitCursor = false;
+            }
         }
 
         /// <summary>
@@ -299,6 +448,7 @@ namespace FileExplorerApp.Forms
             _watcherDebounceTimer.Stop();
             _watcherDebounceTimer.Dispose();
             _fileMonitorService.Dispose();
+            _integrityService.Dispose();
             pbxPreview.Image?.Dispose();
         }
 

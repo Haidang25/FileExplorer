@@ -61,6 +61,7 @@
 
         private System.Windows.Forms.StatusStrip stsMain;
         private System.Windows.Forms.ToolStripStatusLabel tsslStatus;
+        private System.Windows.Forms.ToolStripStatusLabel tsslIntegrityAlert;
         private System.Windows.Forms.ToolStripStatusLabel tsslItemCount;
         private System.Windows.Forms.ToolStripStatusLabel tsslTotalSize;
         private System.Windows.Forms.ToolStripProgressBar tspProgress;
@@ -114,6 +115,7 @@
         private System.Windows.Forms.ToolStripMenuItem mnuToolsSearch;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsFindDuplicates;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsBatchRename;
+        private System.Windows.Forms.ToolStripMenuItem mnuToolsIntegrityMonitor;
         private System.Windows.Forms.ToolStripSeparator mnuToolsSeparator1;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsRecycleBin;
         private System.Windows.Forms.ToolStripMenuItem mnuToolsLogs;
@@ -160,6 +162,7 @@
             this.mnuToolsSearch = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsFindDuplicates = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsBatchRename = new System.Windows.Forms.ToolStripMenuItem();
+            this.mnuToolsIntegrityMonitor = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsSeparator1 = new System.Windows.Forms.ToolStripSeparator();
             this.mnuToolsRecycleBin = new System.Windows.Forms.ToolStripMenuItem();
             this.mnuToolsLogs = new System.Windows.Forms.ToolStripMenuItem();
@@ -217,6 +220,7 @@
             this.stsMain = new System.Windows.Forms.StatusStrip();
             this.tsslStatus = new System.Windows.Forms.ToolStripStatusLabel();
             this.tspProgress = new System.Windows.Forms.ToolStripProgressBar();
+            this.tsslIntegrityAlert = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslItemCount = new System.Windows.Forms.ToolStripStatusLabel();
             this.tsslTotalSize = new System.Windows.Forms.ToolStripStatusLabel();
             this.mnsMain.SuspendLayout();
@@ -458,6 +462,7 @@
             this.mnuToolsSearch,
             this.mnuToolsFindDuplicates,
             this.mnuToolsBatchRename,
+            this.mnuToolsIntegrityMonitor,
             this.mnuToolsSeparator1,
             this.mnuToolsRecycleBin,
             this.mnuToolsLogs,
@@ -488,6 +493,13 @@
             this.mnuToolsBatchRename.Size = new System.Drawing.Size(246, 26);
             this.mnuToolsBatchRename.Text = "Đổi tên hàng &loạt...";
             this.mnuToolsBatchRename.Click += new System.EventHandler(this.mnuToolsBatchRename_Click);
+            //
+            // mnuToolsIntegrityMonitor
+            //
+            this.mnuToolsIntegrityMonitor.Name = "mnuToolsIntegrityMonitor";
+            this.mnuToolsIntegrityMonitor.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsIntegrityMonitor.Text = "&Giám sát toàn vẹn thư mục này";
+            this.mnuToolsIntegrityMonitor.Click += new System.EventHandler(this.mnuToolsIntegrityMonitor_Click);
             //
             // mnuToolsSeparator1
             //
@@ -1017,6 +1029,7 @@
             this.stsMain.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.tsslStatus,
             this.tspProgress,
+            this.tsslIntegrityAlert,
             this.tsslItemCount,
             this.tsslTotalSize});
             this.stsMain.Location = new System.Drawing.Point(0, 670);
@@ -1038,7 +1051,19 @@
             this.tspProgress.Size = new System.Drawing.Size(120, 22);
             this.tspProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.tspProgress.Visible = false;
-            // 
+            //
+            // tsslIntegrityAlert
+            //
+            this.tsslIntegrityAlert.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
+            this.tsslIntegrityAlert.ForeColor = System.Drawing.Color.OrangeRed;
+            this.tsslIntegrityAlert.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.tsslIntegrityAlert.Name = "tsslIntegrityAlert";
+            this.tsslIntegrityAlert.Size = new System.Drawing.Size(0, 24);
+            this.tsslIntegrityAlert.Text = "⚠ 0 cảnh báo toàn vẹn";
+            this.tsslIntegrityAlert.ToolTipText = "Bấm để xem chi tiết các cảnh báo toàn vẹn thư mục gần đây";
+            this.tsslIntegrityAlert.Visible = false;
+            this.tsslIntegrityAlert.Click += new System.EventHandler(this.tsslIntegrityAlert_Click);
+            //
             // tsslItemCount
             // 
             this.tsslItemCount.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
