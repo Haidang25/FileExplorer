@@ -39,11 +39,25 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private List<LogEntryModel> _currentFilteredLogs = new List<LogEntryModel>();
 
+        /// <summary>
+        /// Toan bo vi pham toan ven da ghi nhan (LogService.GetInvestigationEntries,
+        /// da sap xep gan nhat truoc) - hien tren tab "Vi phạm toàn vẹn"
+        /// (lvwViolations). KHAC HAN _allLogs/_currentFilteredLogs (nhat ky
+        /// thao tac thong thuong) - day la ly do yeu cau truoc do ("cong cu
+        /// xem nhat ky thi khong ghi lai") xay ra: lvwLogs CHI hien _allLogs,
+        /// KHONG he lien quan den danh sach nay - can mot ListView/tab RIENG
+        /// (xem LogForm.Designer.cs: tabsLog/tabOperationLog/tabViolations)
+        /// de nguoi dung thay duoc vi pham NGAY TRONG ung dung, khong bat
+        /// buoc phai "Xuất báo cáo điều tra" ra file moi xem duoc.
+        /// </summary>
+        private List<IntegrityInvestigationEntry> _allViolations = new List<IntegrityInvestigationEntry>();
+
         public LogForm()
         {
             InitializeComponent();
             InitializeFilterOptions();
             LoadLogs();
+            LoadViolations();
         }
 
         /// <summary>
@@ -140,7 +154,96 @@ namespace FileExplorerApp.Forms
             }
 
             lvwLogs.EndUpdate();
-            lblStatus.Text = $"{entries.Count} dòng log";
+
+            // CHI cap nhat lblStatus khi tab "Nhật ký thao tác" dang duoc xem -
+            // tranh de dong chu "N dòng log" GHI DE len dong chu "N vi phạm
+            // ghi nhận" neu nguoi dung dang o tab kia luc LoadLogs() chay
+            // (VD: btnRefresh_Click lam moi CA HAI tab cung luc - xem
+            // tabsLog_SelectedIndexChanged).
+            if (tabsLog.SelectedTab == tabOperationLog)
+            {
+                lblStatus.Text = $"{entries.Count} dòng log";
+            }
+        }
+
+        /// <summary>
+        /// Doc lai TOAN BO danh sach vi pham toan ven tu
+        /// LogService.GetInvestigationEntries() (da sap xep gan nhat truoc)
+        /// roi ve lai lvwViolations - cau truc song song voi LoadLogs()/
+        /// PopulateListView o tren, danh cho tab "Vi phạm toàn vẹn".
+        /// </summary>
+        private void LoadViolations()
+        {
+            _allViolations = _logService.GetInvestigationEntries();
+            PopulateViolationsListView(_allViolations);
+        }
+
+        /// <summary>
+        /// Ve lai lvwViolations tu danh sach IntegrityInvestigationEntry, va
+        /// cap nhat lblStatus (CHI khi tab "Vi phạm toàn vẹn" dang duoc xem -
+        /// xem ghi chu tuong tu tai PopulateListView).
+        /// </summary>
+        /// <remarks>
+        /// Thoi gian hien LOCAL (ToLocalTime) va loai vi pham DICH sang tieng
+        /// Viet (LogService.TranslateViolationType) - DUNG Y HET cach
+        /// ExportInvestigationReport dinh dang file xuat ra (xem
+        /// LogService.FormatInvestigationDisplayRow), de nguoi dung thay
+        /// CUNG MOT thong tin du xem truc tiep trong ung dung hay mo file da
+        /// xuat, khong bi lech nhau (VD: mot noi hien UTC, noi kia hien gio
+        /// dia phuong se gay nham lan).
+        /// </remarks>
+        private void PopulateViolationsListView(List<IntegrityInvestigationEntry> entries)
+        {
+            lvwViolations.BeginUpdate();
+            lvwViolations.Items.Clear();
+
+            foreach (IntegrityInvestigationEntry entry in entries)
+            {
+                var item = new ListViewItem(entry.Timestamp.ToLocalTime().ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture));
+                item.SubItems.Add(entry.FilePath ?? string.Empty);
+                item.SubItems.Add(LogService.TranslateViolationType(entry.ViolationType));
+                item.SubItems.Add(string.IsNullOrEmpty(entry.HashBefore) ? "-" : entry.HashBefore);
+                item.SubItems.Add(string.IsNullOrEmpty(entry.HashAfter) ? "-" : entry.HashAfter);
+                item.SubItems.Add(entry.UserName ?? string.Empty);
+
+                // To mau ContentModified/FileMissing bang AppTheme.Error - day
+                // la 2 loai vi pham NGHIEM TRONG (mat/sua noi dung), giong
+                // quy uoc PopulateListView dung cho OperationResult that bai o
+                // tren. UnexpectedNewFile giu mau thuong (TextPrimary) vi ban
+                // than IntegrityService.cs da ghi chu day CO THE la hoat dong
+                // binh thuong (file moi hop le), khong chac chan la van de.
+                item.ForeColor = entry.ViolationType == "ContentModified" || entry.ViolationType == "FileMissing"
+                    ? AppTheme.Error
+                    : AppTheme.TextPrimary;
+
+                lvwViolations.Items.Add(item);
+            }
+
+            lvwViolations.EndUpdate();
+
+            if (tabsLog.SelectedTab == tabViolations)
+            {
+                lblStatus.Text = $"{entries.Count} vi phạm ghi nhận";
+            }
+        }
+
+        /// <summary>
+        /// Khi nguoi dung chuyen qua lai giua 2 tab, cap nhat lai lblStatus
+        /// cho DUNG voi noi dung dang xem (dung lai danh sach da co san trong
+        /// bo nho - _currentFilteredLogs/_allViolations - KHONG doc lai tu
+        /// dia moi lan chuyen tab, giu dung nguyen tac "chi doc lai tu dia
+        /// khi bam Lam moi" da neu tai remarks dau lop).
+        /// </summary>
+        private void tabsLog_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (tabsLog.SelectedTab == tabOperationLog)
+            {
+                lblStatus.Text = $"{_currentFilteredLogs.Count} dòng log";
+            }
+            else if (tabsLog.SelectedTab == tabViolations)
+            {
+                lblStatus.Text = $"{_allViolations.Count} vi phạm ghi nhận";
+            }
         }
 
         /// <summary>
@@ -208,9 +311,17 @@ namespace FileExplorerApp.Forms
             ApplyFilter();
         }
 
+        /// <summary>
+        /// Lam moi CA HAI tab (nhat ky thao tac VA vi pham toan ven) cung
+        /// luc, du chi mot nut "Lam mới" duy nhat o Form (khong tach rieng 2
+        /// nut lam moi cho 2 tab) - don gian hon cho nguoi dung, va chi phi
+        /// doc lai 2 file CSV don gian nay khong dang ke ke ca khi khong can
+        /// thiet (VD dang o tab kia).
+        /// </summary>
         private void btnRefresh_Click(object sender, EventArgs e)
         {
             LoadLogs();
+            LoadViolations();
         }
 
         /// <summary>

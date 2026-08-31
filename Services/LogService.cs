@@ -1103,8 +1103,16 @@ namespace FileExplorerApp.Services
         /// (VD du lieu cu/bi sua tay) tra ve NGUYEN VAN chuoi goc thay vi nem
         /// loi hoac hien "khong xac dinh" - an toan hon, khong lam mat thong
         /// tin dieu tra chi vi mot nhan hien thi khong dich duoc.
+        ///
+        /// PUBLIC (khong con private): ban dau chi FormatInvestigationDisplayRow
+        /// (xuat file) dung ham nay, nay LogForm.PopulateViolationsListView
+        /// (man hinh "Vi phạm toàn vẹn" xem TRUC TIEP trong ung dung) CUNG can
+        /// hien CUNG mot nhan tieng Viet nay cho nguoi dung - mo public thay
+        /// vi COPY lai y het logic switch nay sang LogForm, tranh 2 noi cung
+        /// dinh nghia 1 anh xa enum-sang-nhan-hien-thi de dan den lech nhau
+        /// ve sau (VD chi sua 1 noi khi doi cach dat ten).
         /// </remarks>
-        private static string TranslateViolationType(string violationType)
+        public static string TranslateViolationType(string violationType)
         {
             switch (violationType)
             {

@@ -7,6 +7,16 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private System.ComponentModel.IContainer components = null;
 
+        private System.Windows.Forms.TabControl tabsLog;
+        private System.Windows.Forms.TabPage tabOperationLog;
+        private System.Windows.Forms.TabPage tabViolations;
+        private System.Windows.Forms.ListView lvwViolations;
+        private System.Windows.Forms.ColumnHeader colViolationTime;
+        private System.Windows.Forms.ColumnHeader colViolationPath;
+        private System.Windows.Forms.ColumnHeader colViolationType;
+        private System.Windows.Forms.ColumnHeader colViolationHashBefore;
+        private System.Windows.Forms.ColumnHeader colViolationHashAfter;
+        private System.Windows.Forms.ColumnHeader colViolationUser;
         private System.Windows.Forms.GroupBox grpFilters;
         private System.Windows.Forms.Label lblFilterOperation;
         private System.Windows.Forms.ComboBox cboFilterOperation;
@@ -56,6 +66,16 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void InitializeComponent()
         {
+            this.tabsLog = new System.Windows.Forms.TabControl();
+            this.tabOperationLog = new System.Windows.Forms.TabPage();
+            this.tabViolations = new System.Windows.Forms.TabPage();
+            this.lvwViolations = new System.Windows.Forms.ListView();
+            this.colViolationTime = new System.Windows.Forms.ColumnHeader();
+            this.colViolationPath = new System.Windows.Forms.ColumnHeader();
+            this.colViolationType = new System.Windows.Forms.ColumnHeader();
+            this.colViolationHashBefore = new System.Windows.Forms.ColumnHeader();
+            this.colViolationHashAfter = new System.Windows.Forms.ColumnHeader();
+            this.colViolationUser = new System.Windows.Forms.ColumnHeader();
             this.grpFilters = new System.Windows.Forms.GroupBox();
             this.btnResetFilter = new System.Windows.Forms.Button();
             this.btnApplyFilter = new System.Windows.Forms.Button();
@@ -83,9 +103,97 @@ namespace FileExplorerApp.Forms
             this.btnExportInvestigationReport = new System.Windows.Forms.Button();
             this.btnClearLogs = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
+            this.tabsLog.SuspendLayout();
+            this.tabOperationLog.SuspendLayout();
+            this.tabViolations.SuspendLayout();
             this.grpFilters.SuspendLayout();
             this.components = new System.ComponentModel.Container();
             this.SuspendLayout();
+            //
+            // tabsLog
+            //
+            this.tabsLog.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
+            this.tabsLog.Controls.Add(this.tabOperationLog);
+            this.tabsLog.Controls.Add(this.tabViolations);
+            this.tabsLog.Location = new System.Drawing.Point(12, 12);
+            this.tabsLog.Name = "tabsLog";
+            this.tabsLog.SelectedIndex = 0;
+            this.tabsLog.Size = new System.Drawing.Size(1328, 516);
+            this.tabsLog.TabIndex = 0;
+            this.tabsLog.SelectedIndexChanged += new System.EventHandler(this.tabsLog_SelectedIndexChanged);
+            //
+            // tabOperationLog
+            //
+            this.tabOperationLog.Controls.Add(this.grpFilters);
+            this.tabOperationLog.Controls.Add(this.lvwLogs);
+            this.tabOperationLog.Location = new System.Drawing.Point(4, 24);
+            this.tabOperationLog.Name = "tabOperationLog";
+            this.tabOperationLog.Padding = new System.Windows.Forms.Padding(0);
+            this.tabOperationLog.Size = new System.Drawing.Size(1320, 488);
+            this.tabOperationLog.TabIndex = 0;
+            this.tabOperationLog.Text = "Nhật ký thao tác";
+            this.tabOperationLog.UseVisualStyleBackColor = true;
+            //
+            // tabViolations
+            //
+            this.tabViolations.Controls.Add(this.lvwViolations);
+            this.tabViolations.Location = new System.Drawing.Point(4, 24);
+            this.tabViolations.Name = "tabViolations";
+            this.tabViolations.Padding = new System.Windows.Forms.Padding(0);
+            this.tabViolations.Size = new System.Drawing.Size(1320, 488);
+            this.tabViolations.TabIndex = 1;
+            this.tabViolations.Text = "Vi phạm toàn vẹn";
+            this.tabViolations.UseVisualStyleBackColor = true;
+            //
+            // lvwViolations
+            //
+            this.lvwViolations.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) | System.Windows.Forms.AnchorStyles.Left) | System.Windows.Forms.AnchorStyles.Right)));
+            this.lvwViolations.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
+            this.colViolationTime,
+            this.colViolationPath,
+            this.colViolationType,
+            this.colViolationHashBefore,
+            this.colViolationHashAfter,
+            this.colViolationUser});
+            this.lvwViolations.FullRowSelect = true;
+            this.lvwViolations.GridLines = true;
+            this.lvwViolations.HideSelection = false;
+            this.lvwViolations.Location = new System.Drawing.Point(0, 0);
+            this.lvwViolations.Name = "lvwViolations";
+            this.lvwViolations.Size = new System.Drawing.Size(1320, 488);
+            this.lvwViolations.TabIndex = 0;
+            this.lvwViolations.UseCompatibleStateImageBehavior = false;
+            this.lvwViolations.View = System.Windows.Forms.View.Details;
+            //
+            // colViolationTime
+            //
+            this.colViolationTime.Text = "Thời gian";
+            this.colViolationTime.Width = 130;
+            //
+            // colViolationPath
+            //
+            this.colViolationPath.Text = "Đường dẫn";
+            this.colViolationPath.Width = 340;
+            //
+            // colViolationType
+            //
+            this.colViolationType.Text = "Loại vi phạm";
+            this.colViolationType.Width = 150;
+            //
+            // colViolationHashBefore
+            //
+            this.colViolationHashBefore.Text = "Hash trước";
+            this.colViolationHashBefore.Width = 230;
+            //
+            // colViolationHashAfter
+            //
+            this.colViolationHashAfter.Text = "Hash sau";
+            this.colViolationHashAfter.Width = 230;
+            //
+            // colViolationUser
+            //
+            this.colViolationUser.Text = "Người dùng";
+            this.colViolationUser.Width = 120;
             //
             // grpFilters
             //
@@ -100,7 +208,7 @@ namespace FileExplorerApp.Forms
             this.grpFilters.Controls.Add(this.lblFilterResult);
             this.grpFilters.Controls.Add(this.cboFilterOperation);
             this.grpFilters.Controls.Add(this.lblFilterOperation);
-            this.grpFilters.Location = new System.Drawing.Point(12, 12);
+            this.grpFilters.Location = new System.Drawing.Point(0, 0);
             this.grpFilters.Name = "grpFilters";
             this.grpFilters.Size = new System.Drawing.Size(1328, 88);
             this.grpFilters.TabIndex = 0;
@@ -214,7 +322,7 @@ namespace FileExplorerApp.Forms
             this.lvwLogs.FullRowSelect = true;
             this.lvwLogs.GridLines = true;
             this.lvwLogs.HideSelection = false;
-            this.lvwLogs.Location = new System.Drawing.Point(12, 106);
+            this.lvwLogs.Location = new System.Drawing.Point(0, 94);
             this.lvwLogs.Name = "lvwLogs";
             this.lvwLogs.Size = new System.Drawing.Size(1328, 422);
             this.lvwLogs.TabIndex = 1;
@@ -338,8 +446,7 @@ namespace FileExplorerApp.Forms
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
             this.ClientSize = new System.Drawing.Size(1352, 578);
-            this.Controls.Add(this.grpFilters);
-            this.Controls.Add(this.lvwLogs);
+            this.Controls.Add(this.tabsLog);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnVerifyReport);
             this.Controls.Add(this.btnExportInvestigationReport);
@@ -356,6 +463,9 @@ namespace FileExplorerApp.Forms
             this.Text = "Nhật ký hoạt động";
             this.grpFilters.ResumeLayout(false);
             this.grpFilters.PerformLayout();
+            this.tabOperationLog.ResumeLayout(false);
+            this.tabViolations.ResumeLayout(false);
+            this.tabsLog.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
         }
