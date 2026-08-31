@@ -62,6 +62,27 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
+    <!-- DocumentFormat.OpenXml + DocumentFormat.OpenXml.Framework (goi NuGet
+         da co san trong packages.config/packages\ - dung de doc noi dung
+         file Word .docx trong DocumentPreviewService.ExtractWordText, xem
+         ghi chu day du tai dau file DocumentPreviewService.cs). Ban .NET
+         Framework (thu muc "net46" trong lib\ cua goi - khong co ban rieng
+         cho 4.7.2 nhung 4.6 tuong thich xuoi binh thuong) KHONG can them goi
+         NuGet System.IO.Packaging nhu ban .NET/netstandard hien dai (xem
+         group targetFramework=".NETFramework4.6" rong trong .nuspec cua 2
+         goi tren) - thay vao do dung truc tiep WindowsBase.dll co san TRONG
+         BAN THAN .NET Framework (namespace System.IO.Packaging nam trong
+         WindowsBase, khong phai mot goi NuGet rieng tren Framework) nen chi
+         can them tham chieu WindowsBase (co san, khong can HintPath) ben
+         duoi, KHONG can tham chieu goi System.IO.Packaging trong packages.config. -->
+    <Reference Include="DocumentFormat.OpenXml">
+      <HintPath>packages\DocumentFormat.OpenXml.3.5.1\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
+    </Reference>
+    <Reference Include="DocumentFormat.OpenXml.Framework">
+      <HintPath>packages\DocumentFormat.OpenXml.Framework.3.5.1\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Forms\MainForm.cs">
@@ -151,6 +172,7 @@
     <Compile Include="Models\OperationResult.cs" />
     <Compile Include="Models\RecycleBinItemModel.cs" />
     <Compile Include="Services\BaselineService.cs" />
+    <Compile Include="Services\DocumentPreviewService.cs" />
     <Compile Include="Services\DuplicateService.cs" />
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\FileMonitorService.cs" />
