@@ -30,6 +30,7 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Button btnExportCsv;
+        private System.Windows.Forms.Button btnVerifyReport;
         private System.Windows.Forms.Button btnExportInvestigationReport;
         private System.Windows.Forms.Button btnClearLogs;
         private System.Windows.Forms.Button btnClose;
@@ -78,6 +79,7 @@ namespace FileExplorerApp.Forms
             this.lblStatus = new System.Windows.Forms.Label();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.btnExportCsv = new System.Windows.Forms.Button();
+            this.btnVerifyReport = new System.Windows.Forms.Button();
             this.btnExportInvestigationReport = new System.Windows.Forms.Button();
             this.btnClearLogs = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
@@ -100,7 +102,7 @@ namespace FileExplorerApp.Forms
             this.grpFilters.Controls.Add(this.lblFilterOperation);
             this.grpFilters.Location = new System.Drawing.Point(12, 12);
             this.grpFilters.Name = "grpFilters";
-            this.grpFilters.Size = new System.Drawing.Size(1172, 88);
+            this.grpFilters.Size = new System.Drawing.Size(1328, 88);
             this.grpFilters.TabIndex = 0;
             this.grpFilters.TabStop = false;
             this.grpFilters.Text = "Bộ lọc";
@@ -108,7 +110,7 @@ namespace FileExplorerApp.Forms
             // btnResetFilter
             //
             this.btnResetFilter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnResetFilter.Location = new System.Drawing.Point(1076, 50);
+            this.btnResetFilter.Location = new System.Drawing.Point(1232, 50);
             this.btnResetFilter.Name = "btnResetFilter";
             this.btnResetFilter.Size = new System.Drawing.Size(80, 27);
             this.btnResetFilter.TabIndex = 9;
@@ -118,7 +120,7 @@ namespace FileExplorerApp.Forms
             // btnApplyFilter
             //
             this.btnApplyFilter.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnApplyFilter.Location = new System.Drawing.Point(990, 50);
+            this.btnApplyFilter.Location = new System.Drawing.Point(1146, 50);
             this.btnApplyFilter.Name = "btnApplyFilter";
             this.btnApplyFilter.Size = new System.Drawing.Size(80, 27);
             this.btnApplyFilter.TabIndex = 8;
@@ -214,7 +216,7 @@ namespace FileExplorerApp.Forms
             this.lvwLogs.HideSelection = false;
             this.lvwLogs.Location = new System.Drawing.Point(12, 106);
             this.lvwLogs.Name = "lvwLogs";
-            this.lvwLogs.Size = new System.Drawing.Size(1172, 422);
+            this.lvwLogs.Size = new System.Drawing.Size(1328, 422);
             this.lvwLogs.TabIndex = 1;
             this.lvwLogs.UseCompatibleStateImageBehavior = false;
             this.lvwLogs.View = System.Windows.Forms.View.Details;
@@ -271,53 +273,63 @@ namespace FileExplorerApp.Forms
             this.lblStatus.TabIndex = 2;
             this.lblStatus.Text = "0 dòng log";
             //
+            // btnVerifyReport
+            //
+            this.btnVerifyReport.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnVerifyReport.Location = new System.Drawing.Point(568, 534);
+            this.btnVerifyReport.Name = "btnVerifyReport";
+            this.btnVerifyReport.Size = new System.Drawing.Size(150, 32);
+            this.btnVerifyReport.TabIndex = 3;
+            this.btnVerifyReport.Text = "Xác thực báo cáo";
+            this.btnVerifyReport.Click += new System.EventHandler(this.btnVerifyReport_Click);
+            //
             // btnExportInvestigationReport
             //
             this.btnExportInvestigationReport.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnExportInvestigationReport.Location = new System.Drawing.Point(568, 534);
+            this.btnExportInvestigationReport.Location = new System.Drawing.Point(724, 534);
             this.btnExportInvestigationReport.Name = "btnExportInvestigationReport";
             this.btnExportInvestigationReport.Size = new System.Drawing.Size(170, 32);
-            this.btnExportInvestigationReport.TabIndex = 3;
+            this.btnExportInvestigationReport.TabIndex = 4;
             this.btnExportInvestigationReport.Text = "Xuất báo cáo điều tra";
             this.btnExportInvestigationReport.Click += new System.EventHandler(this.btnExportInvestigationReport_Click);
             //
             // btnRefresh
             //
             this.btnRefresh.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnRefresh.Location = new System.Drawing.Point(744, 534);
+            this.btnRefresh.Location = new System.Drawing.Point(900, 534);
             this.btnRefresh.Name = "btnRefresh";
             this.btnRefresh.Size = new System.Drawing.Size(100, 32);
-            this.btnRefresh.TabIndex = 4;
+            this.btnRefresh.TabIndex = 5;
             this.btnRefresh.Text = "Làm mới";
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
             //
             // btnExportCsv
             //
             this.btnExportCsv.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnExportCsv.Location = new System.Drawing.Point(850, 534);
+            this.btnExportCsv.Location = new System.Drawing.Point(1006, 534);
             this.btnExportCsv.Name = "btnExportCsv";
             this.btnExportCsv.Size = new System.Drawing.Size(120, 32);
-            this.btnExportCsv.TabIndex = 5;
+            this.btnExportCsv.TabIndex = 6;
             this.btnExportCsv.Text = "Xuất CSV";
             this.btnExportCsv.Click += new System.EventHandler(this.btnExportCsv_Click);
             //
             // btnClearLogs
             //
             this.btnClearLogs.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClearLogs.Location = new System.Drawing.Point(976, 534);
+            this.btnClearLogs.Location = new System.Drawing.Point(1132, 534);
             this.btnClearLogs.Name = "btnClearLogs";
             this.btnClearLogs.Size = new System.Drawing.Size(100, 32);
-            this.btnClearLogs.TabIndex = 6;
+            this.btnClearLogs.TabIndex = 7;
             this.btnClearLogs.Text = "Xóa lịch sử";
             this.btnClearLogs.Click += new System.EventHandler(this.btnClearLogs_Click);
             //
             // btnClose
             //
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClose.Location = new System.Drawing.Point(1084, 534);
+            this.btnClose.Location = new System.Drawing.Point(1240, 534);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(100, 32);
-            this.btnClose.TabIndex = 7;
+            this.btnClose.TabIndex = 8;
             this.btnClose.Text = "Đóng";
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
             //
@@ -325,10 +337,11 @@ namespace FileExplorerApp.Forms
             //
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = FileExplorerApp.Helpers.AppTheme.Background;
-            this.ClientSize = new System.Drawing.Size(1196, 578);
+            this.ClientSize = new System.Drawing.Size(1352, 578);
             this.Controls.Add(this.grpFilters);
             this.Controls.Add(this.lvwLogs);
             this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.btnVerifyReport);
             this.Controls.Add(this.btnExportInvestigationReport);
             this.Controls.Add(this.btnRefresh);
             this.Controls.Add(this.btnExportCsv);

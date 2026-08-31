@@ -383,6 +383,89 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Xac thuc mot bao cao dieu tra DA XUAT TU TRUOC: cho nguoi dung
+        /// chon LAI file CSV bao cao (VD file da nhan duoc tu
+        /// btnExportInvestigationReport_Click, co the o bat ky dau, khong
+        /// nhat thiet con trong ung dung nay), tinh lai hash SHA-256 HIEN TAI
+        /// cua file do va so sanh voi hash da luu trong file .sha256 di kem
+        /// luc xuat (LogService.VerifyExportedReportHash) - day chinh la
+        /// chuc nang "doi chieu sau nay" ma tinh hash luc xuat (yeu cau
+        /// truoc) huong toi, gio duoc dua LEN GIAO DIEN de nguoi dung tu bam
+        /// kiem tra ma khong can dong lenh/cong cu ngoai.
+        /// </summary>
+        /// <remarks>
+        /// Dung OpenFileDialog (khong phai thao tac tren _currentFilteredLogs/
+        /// lvwLogs) vi bao cao can xac thuc la MOT FILE DOC LAP tren dia,
+        /// KHONG con lien quan gi den danh sach dang hien trong LogForm tai
+        /// thoi diem xac thuc (co the da xuat tu rat lau truoc, hoac tu mot
+        /// may khac roi mang ve day de kiem tra).
+        /// </remarks>
+        private void btnVerifyReport_Click(object sender, EventArgs e)
+        {
+            using (var openDialog = new OpenFileDialog())
+            {
+                openDialog.Filter = "Tệp CSV (*.csv)|*.csv|Tất cả tệp (*.*)|*.*";
+                openDialog.Title = "Chọn báo cáo điều tra cần xác thực";
+
+                if (openDialog.ShowDialog(this) != DialogResult.OK)
+                    return;
+
+                ReportHashVerificationResult result = _logService.VerifyExportedReportHash(openDialog.FileName);
+
+                switch (result)
+                {
+                    case ReportHashVerificationResult.Match:
+                        MessageBox.Show(
+                            this,
+                            $"Báo cáo còn NGUYÊN VẸN - hash SHA-256 hiện tại khớp với hash đã lưu lúc xuất.\n\n{openDialog.FileName}",
+                            "Xác thực báo cáo",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        break;
+
+                    case ReportHashVerificationResult.Mismatch:
+                        // Icon Warning (khong phai Error) - day la mot PHAT HIEN can
+                        // nguoi dung chu y, khong phai loi thao tac cua chinh ung
+                        // dung (giong quy uoc IntegrityService dung cho ContentModified).
+                        MessageBox.Show(
+                            this,
+                            $"CẢNH BÁO: báo cáo ĐÃ BỊ THAY ĐỔI kể từ lúc xuất (hash SHA-256 hiện tại KHÔNG khớp với hash đã lưu).\n\n{openDialog.FileName}",
+                            "Xác thực báo cáo",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        break;
+
+                    case ReportHashVerificationResult.HashFileNotFound:
+                        MessageBox.Show(
+                            this,
+                            $"Không tìm thấy file hash (.sha256) đi kèm báo cáo này - có thể báo cáo được xuất từ phiên bản ứng dụng cũ (trước khi có tính năng lưu hash), hoặc file .sha256 đã bị xóa/di chuyển riêng khỏi báo cáo.\n\nCần đặt cạnh báo cáo file:\n{LogService.GetReportHashFilePath(openDialog.FileName)}",
+                            "Xác thực báo cáo",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        break;
+
+                    case ReportHashVerificationResult.ReportFileNotFound:
+                        MessageBox.Show(
+                            this,
+                            "Không tìm thấy file báo cáo đã chọn.",
+                            "Xác thực báo cáo",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        break;
+
+                    default: // ReportHashVerificationResult.Error
+                        MessageBox.Show(
+                            this,
+                            "Không thể xác thực báo cáo (có thể tệp đang bị khóa bởi chương trình khác, hoặc không đủ quyền đọc).",
+                            "Lỗi",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+                        break;
+                }
+            }
+        }
+
+        /// <summary>
         /// Ghi danh sach LogEntryModel ra file CSV tai duong dan chi dinh, dung
         /// LAI dung dinh dang cot va cach escape RFC 4180 voi LogService (xem
         /// LogService.FormatCsvRow/EscapeCsvField) de file xuat ra tuong thich
