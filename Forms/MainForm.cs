@@ -271,8 +271,13 @@ namespace FileExplorerApp.Forms
         {
             this.Font = new Font("Segoe UI", 10F);
 
-            this.ClientSize = new Size(1360, 800);
-            this.MinimumSize = new Size(800, 520);
+            // ClientSize KHONG tinh thanh tieu de/vien cua so (them ~30-40px chieu
+            // cao) - lan dau chinh 1360x800 tren man hinh 1366x768 (do phan giai
+            // rat pho bien cho laptop 15.6 inch) bi tran, che mat status bar
+            // (stsMain) sau thanh taskbar. Giam xuong 1280x680 de an toan tren ca
+            // 1366x768 (con du ~50px cho tieu de/taskbar) lan man hinh to hon.
+            this.ClientSize = new Size(1280, 680);
+            this.MinimumSize = new Size(800, 500);
 
             imlIcons.ImageSize = new Size(20, 20);
             _imlIconsLarge.ImageSize = new Size(40, 40);
