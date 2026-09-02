@@ -117,6 +117,32 @@ namespace FileExplorerApp.Forms
         // cho ListView.View khi da co ListView). Mac dinh la Details, giong Windows Explorer.
         private View _currentViewMode = View.Details;
 
+        /// <summary>
+        /// ImageList RIENG cho che do xem "Biểu tượng lớn" (View.LargeIcon) -
+        /// 32x32, dung cung ImageKey voi imlIcons (16x16, dung cho Details/
+        /// List/"Biểu tượng nhỏ") de LoadListViewFiles khong can biet/quan
+        /// tam dang o che do xem nao khi gan ListViewItem.ImageKey.
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE - TAO BANG CODE (KHONG khai bao trong
+        /// MainForm.Designer.cs): mnuViewModeLargeIcon/SetViewMode da co san
+        /// (chuyen lvwFiles.View sang View.LargeIcon) nhung lvwFiles chi moi
+        /// duoc gan SmallImageList (= imlIcons, 16x16) - ListView.View.LargeIcon
+        /// doc rieng tu LargeImageList (KHAC SmallImageList), chua tung duoc
+        /// gan o dau ca nen truoc gio "Biểu tượng lớn" hien icon TRONG (khong
+        /// co gi). Tao ImageList nay bang code (Dispose qua MainForm_FormClosed,
+        /// giong cach _watcherDebounceTimer/_fileMonitorService dang lam - xem
+        /// ghi chu tai noi goi FormClosed trong constructor) de KHONG phai
+        /// sua MainForm.Designer.cs (file do dang la WIP dang lam trong Visual
+        /// Studio Designer, sua tay ngoai Designer se de bi Designer ghi de
+        /// mat khi mo lai).
+        /// </remarks>
+        private readonly ImageList _imlIconsLarge = new ImageList
+        {
+            ImageSize = new Size(32, 32),
+            ColorDepth = ColorDepth.Depth32Bit
+        };
+
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
@@ -788,6 +814,12 @@ namespace FileExplorerApp.Forms
             _fileMonitorService.Dispose();
             _integrityService.Dispose();
             pbxPreview.Image?.Dispose();
+
+            // _imlIconsLarge duoc tao bang code (khong qua "components" cua
+            // Designer.cs), nen khong tu duoc Dispose() qua components.Dispose()
+            // nhu imlIcons - giai phong thu cong tai day, giong cach lam voi
+            // _watcherDebounceTimer/_fileMonitorService/_integrityService o tren.
+            _imlIconsLarge.Dispose();
         }
 
         /// <summary>
@@ -919,31 +951,83 @@ namespace FileExplorerApp.Forms
         /// Ve va nap 2 icon placeholder ("folder"/"file") vao imlIcons, dung
         /// chung cho trvFolders va lvwFiles. Ve bang code thay vi nhung
         /// san file .ico/.png de khong phai quan ly them tai nguyen nhi phan.
+        /// Moi icon duoc them qua AddIconPair - vua nap ban 16x16 vao imlIcons
+        /// (Details/List/"Biểu tượng nhỏ"), vua nap ban 32x32 phong to vao
+        /// _imlIconsLarge (rieng cho "Biểu tượng lớn", xem remarks tai
+        /// _imlIconsLarge).
         /// </summary>
         private void LoadIconImages()
         {
-            imlIcons.Images.Add("folder", CreateFolderIcon());
-            imlIcons.Images.Add("file", CreateFileIcon());
+            AddIconPair("folder", CreateFolderIcon());
+            AddIconPair("file", CreateFileIcon());
 
             // Icon rieng cho tung loai o dia (xem GetDriveImageKey), de TreeView phan
             // biet truc quan o cung (Fixed) voi o roi/USB/dia quang/o mang, giong
             // Windows Explorer.
-            imlIcons.Images.Add("driveFixed", CreateDriveIcon(DriveIconStyle.Fixed));
-            imlIcons.Images.Add("driveRemovable", CreateDriveIcon(DriveIconStyle.Removable));
-            imlIcons.Images.Add("driveCDRom", CreateDriveIcon(DriveIconStyle.CDRom));
-            imlIcons.Images.Add("driveNetwork", CreateDriveIcon(DriveIconStyle.Network));
-            imlIcons.Images.Add("driveNotReady", CreateDriveIcon(DriveIconStyle.NotReady));
+            AddIconPair("driveFixed", CreateDriveIcon(DriveIconStyle.Fixed));
+            AddIconPair("driveRemovable", CreateDriveIcon(DriveIconStyle.Removable));
+            AddIconPair("driveCDRom", CreateDriveIcon(DriveIconStyle.CDRom));
+            AddIconPair("driveNetwork", CreateDriveIcon(DriveIconStyle.Network));
+            AddIconPair("driveNotReady", CreateDriveIcon(DriveIconStyle.NotReady));
 
             // Icon rieng cho tung nhom file tren lvwFiles, dua tren
             // FileHelper.GetFileIconCategory() (VD: anh, tai lieu, bang tinh...) -
             // nhom nao khong khop se dung lai "file" (icon to giay trang trung tinh
             // co san) thay vi ve them mot ImageCategory.Generic rieng khong can thiet.
-            imlIcons.Images.Add("fileImage", CreateFileTypeIcon(FileIconCategory.Image));
-            imlIcons.Images.Add("fileDocument", CreateFileTypeIcon(FileIconCategory.Document));
-            imlIcons.Images.Add("fileSpreadsheet", CreateFileTypeIcon(FileIconCategory.Spreadsheet));
-            imlIcons.Images.Add("fileArchive", CreateFileTypeIcon(FileIconCategory.Archive));
-            imlIcons.Images.Add("fileMedia", CreateFileTypeIcon(FileIconCategory.Media));
-            imlIcons.Images.Add("fileCode", CreateFileTypeIcon(FileIconCategory.Code));
+            AddIconPair("fileImage", CreateFileTypeIcon(FileIconCategory.Image));
+            AddIconPair("fileDocument", CreateFileTypeIcon(FileIconCategory.Document));
+            AddIconPair("fileSpreadsheet", CreateFileTypeIcon(FileIconCategory.Spreadsheet));
+            AddIconPair("fileArchive", CreateFileTypeIcon(FileIconCategory.Archive));
+            AddIconPair("fileMedia", CreateFileTypeIcon(FileIconCategory.Media));
+            AddIconPair("fileCode", CreateFileTypeIcon(FileIconCategory.Code));
+
+            // lvwFiles.SmallImageList = imlIcons da duoc gan san trong
+            // MainForm.Designer.cs - chi con thieu LargeImageList (chua tung
+            // duoc gan o dau ca, xem remarks tai _imlIconsLarge), gan tai day
+            // (thay vi trong Designer.cs) vi _imlIconsLarge duoc tao bang code.
+            lvwFiles.LargeImageList = _imlIconsLarge;
+        }
+
+        /// <summary>
+        /// Them CUNG mot icon (cung ImageKey) vao CA imlIcons (16x16) VA
+        /// _imlIconsLarge (32x32, phong to tu chinh ban 16x16 vua ve) - xem
+        /// remarks tai _imlIconsLarge ve ly do can 2 ban kich thuoc khac nhau.
+        /// </summary>
+        /// <param name="key">ImageKey dung chung cho ca 2 ImageList - LoadListViewFiles/GetFileImageKey/GetDriveImageKey chi can biet MOT key nay, khong can quan tam dang o che do xem nao.</param>
+        /// <param name="smallIcon">Bitmap 16x16 da ve san (VD tu CreateFolderIcon/CreateFileTypeIcon...).</param>
+        private void AddIconPair(string key, Bitmap smallIcon)
+        {
+            imlIcons.Images.Add(key, smallIcon);
+            _imlIconsLarge.Images.Add(key, ScaleIcon(smallIcon, _imlIconsLarge.ImageSize.Width));
+        }
+
+        /// <summary>
+        /// Phong to mot bitmap icon (VD 16x16) len kich thuoc size x size bang
+        /// noi suy bicubic chat luong cao (InterpolationMode.HighQualityBicubic).
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE: phong to lai ban 16x16 da ve san THAY VI viet
+        /// them mot bo CreateXxxIcon rieng ve truc tiep o 32x32 (toa do pixel
+        /// hardcode rieng cho tung ham CreateFolderIcon/CreateFileIcon/
+        /// CreateFileTypeIcon/CreateDriveIcon) - tranh nhan doi hoan toan
+        /// logic ve (10 ham) va rui ro 2 ban kich thuoc bi LECH NHAU (VD sua
+        /// mau/hinh dang ban 16x16 sau nay ma quen sua ban 32x32). Cac icon
+        /// nay la hinh khoi mau don gian, ve bang AntiAlias nen phong to bang
+        /// bicubic van du "mem mai" chap nhan duoc cho icon placeholder, du
+        /// khong sac net tuyet doi nhu ve rieng tung kich thuoc.
+        /// </remarks>
+        private static Bitmap ScaleIcon(Bitmap source, int size)
+        {
+            var scaled = new Bitmap(size, size);
+            using (Graphics g = Graphics.FromImage(scaled))
+            {
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                g.DrawImage(source, 0, 0, size, size);
+            }
+
+            return scaled;
         }
 
         /// <summary>
