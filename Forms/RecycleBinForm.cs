@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -18,6 +20,23 @@ namespace FileExplorerApp.Forms
     /// sach mot lan vao _allItems, ve len ListView, "Lam moi" doc lai tu dia)
     /// de nhat quan voi Form xem-danh-sach-chi-doc khac da co trong ung dung,
     /// thay vi tao mot khuon mau moi.
+    ///
+    /// QUYET DINH THIET KE - CHAY BAT DONG BO TREN THREAD STA RIENG (KHONG
+    /// dung Task.Run/threadpool thong thuong): RecycleBinService.GetRecycleBinItems/
+    /// RestoreFromRecycleBin/EmptyRecycleBin goi Shell32 COM automation
+    /// (Shell.Application) - loai COM nay yeu cau chay tren mot thread STA
+    /// (Single-Threaded Apartment) co message pump, giong UI thread cua
+    /// WinForms, KHONG phai MTA (Multi-Threaded Apartment) cua threadpool
+    /// thong thuong (Task.Run) - goi tren MTA co the nem loi hoac cham/treo
+    /// do phai marshal qua apartment khac. Vi vay dung RunOnStaThreadAsync
+    /// (tao MOT Thread rieng, dat ApartmentState.STA, chay xong roi thoat)
+    /// cho MOI lan goi vao RecycleBinService, thay vi goi truc tiep tren UI
+    /// thread (nguyen nhan ung dung bi "đơ" truoc khi sua: Thung rac cua
+    /// Windows co the co hang tram/nghin muc, moi muc can nhieu lan goi COM
+    /// qua late binding (Type.InvokeMember) de doc Name/ExtendedProperty/
+    /// IsFolder/Size - tong thoi gian co the len den vai chuc giay, chay
+    /// dong bo NGAY TRONG constructor/Click handler tren UI thread se lam
+    /// toan bo cua so (ke ca thanh tieu de) khong phan hoi cho den khi xong).
     /// </remarks>
     public partial class RecycleBinForm : Form
     {
@@ -28,7 +47,15 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             ApplyTheme();
-            LoadItems();
+
+            // Fire-and-forget (khong await trong constructor - constructor
+            // khong the la async) - Form se hien NGAY (do ShowDialog goi sau
+            // khi constructor tra ve), con LoadItemsAsync tiep tuc chay ngam
+            // va tu cap nhat lvwItems/lblStatus khi xong. LoadItemsAsync da
+            // tu bat toan bo Exception ben trong (xem than ham), nen KHONG co
+            // rui ro "unobserved task exception" khi bo qua ket qua Task nhu
+            // the nay.
+            _ = LoadItemsAsync();
         }
 
         /// <summary>
@@ -53,15 +80,86 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Doc lai TOAN BO danh sach tu RecycleBinService.GetRecycleBinItems()
-        /// roi ve lai lvwItems - goi luc mo Form va sau moi thao tac thay doi
-        /// noi dung Thung rac (Khoi phuc/Don trong) de danh sach hien thi luon
-        /// khop voi thuc te.
+        /// Chay mot ham CHI CO KET QUA (khong can tham so) tren MOT Thread
+        /// STA rieng roi tra ve Task<T> hoan thanh khi ham do xong - dung
+        /// chung cho ca 3 thao tac goi RecycleBinService (doc danh sach/khoi
+        /// phuc/don trong), xem giai thich ly do can STA tai remarks dau lop.
+        /// Loi (Exception) ben trong action se duoc chuyen sang Task loi
+        /// (qua TaskCompletionSource.SetException) de noi await tiep tuc bat
+        /// duoc bang try/catch thong thuong, khong bi "nuot" tren thread rieng.
         /// </summary>
-        private void LoadItems()
+        private static Task<T> RunOnStaThreadAsync<T>(Func<T> action)
         {
-            _allItems = _recycleBinService.GetRecycleBinItems();
+            var tcs = new TaskCompletionSource<T>();
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    tcs.SetResult(action());
+                }
+                catch (Exception ex)
+                {
+                    tcs.SetException(ex);
+                }
+            });
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.IsBackground = true;
+            thread.Start();
+            return tcs.Task;
+        }
+
+        /// <summary>
+        /// Bat/tat trang thai "dang xu ly": khoa 3 nut hanh dong (Lam mới/
+        /// Khôi phục/Dọn trống - KHONG khoa btnClose, de nguoi dung van dong
+        /// duoc Form neu thao tac cham bat thuong, VD Thung rac qua nhieu
+        /// muc), doi con chuot thanh hinh cho (UseWaitCursor) va cap nhat
+        /// lblStatus voi thong bao dang lam gi.
+        /// </summary>
+        private void SetBusyState(bool busy, string statusText = null)
+        {
+            btnRefresh.Enabled = !busy;
+            btnRestore.Enabled = !busy;
+            btnEmptyRecycleBin.Enabled = !busy;
+            UseWaitCursor = busy;
+
+            if (statusText != null)
+                lblStatus.Text = statusText;
+        }
+
+        /// <summary>
+        /// Doc lai TOAN BO danh sach tu RecycleBinService.GetRecycleBinItems()
+        /// (tren thread STA rieng - xem RunOnStaThreadAsync) roi ve lai
+        /// lvwItems - goi luc mo Form va sau moi thao tac thay doi noi dung
+        /// Thung rac (Khoi phuc/Don trong) de danh sach hien thi luon khop
+        /// voi thuc te.
+        /// </summary>
+        private async Task LoadItemsAsync()
+        {
+            SetBusyState(true, "Đang tải danh sách Thùng rác...");
+
+            List<RecycleBinItemModel> items;
+            try
+            {
+                items = await RunOnStaThreadAsync(() => _recycleBinService.GetRecycleBinItems());
+            }
+            catch (Exception)
+            {
+                // GetRecycleBinItems() ban than da tu bat loi va tra ve danh
+                // sach rong (xem RecycleBinService) - nhanh catch nay chi de
+                // phong xa (defensive) truoc bat ky loi phat sinh ngoai du
+                // kien khac (VD tao Thread that bai).
+                items = new List<RecycleBinItemModel>();
+            }
+
+            // Nguoi dung co the da dong Form trong luc dang tai (btnClose
+            // khong bi khoa - xem SetBusyState) - kiem tra IsDisposed truoc
+            // khi dong bat ky control nao de tranh ObjectDisposedException.
+            if (IsDisposed)
+                return;
+
+            _allItems = items;
             PopulateListView(_allItems);
+            SetBusyState(false);
         }
 
         /// <summary>
@@ -94,18 +192,20 @@ namespace FileExplorerApp.Forms
             lblStatus.Text = $"{items.Count} mục - Tổng dung lượng: {FormatHelper.FormatSize(totalSize)}";
         }
 
-        private void btnRefresh_Click(object sender, EventArgs e)
+        private async void btnRefresh_Click(object sender, EventArgs e)
         {
-            LoadItems();
+            await LoadItemsAsync();
         }
 
         /// <summary>
         /// Khoi phuc TOAN BO cac muc dang duoc chon (lvwItems.SelectedItems) ve
         /// vi tri goc - cho phep chon nhieu muc cung luc (lvwItems.MultiSelect =
         /// true, xem Designer.cs) de khoi phuc theo lo, khong bat nguoi dung
-        /// phai lam tung muc mot khi can khoi phuc nhieu file/thu muc.
+        /// phai lam tung muc mot khi can khoi phuc nhieu file/thu muc. Toan bo
+        /// vong lap goi RestoreFromRecycleBin chay tren MOT thread STA rieng
+        /// (RunOnStaThreadAsync) de khong lam "đơ" giao dien, xem remarks dau lop.
         /// </summary>
-        private void btnRestore_Click(object sender, EventArgs e)
+        private async void btnRestore_Click(object sender, EventArgs e)
         {
             if (lvwItems.SelectedItems.Count == 0)
             {
@@ -118,25 +218,49 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            int successCount = 0;
-            var failedNames = new List<string>();
-
+            var modelsToRestore = new List<RecycleBinItemModel>();
             foreach (ListViewItem selected in lvwItems.SelectedItems)
-            {
-                var model = (RecycleBinItemModel)selected.Tag;
-                OperationResult result = _recycleBinService.RestoreFromRecycleBin(model.OriginalPath);
+                modelsToRestore.Add((RecycleBinItemModel)selected.Tag);
 
-                if (result == OperationResult.Success)
-                    successCount++;
-                else
+            SetBusyState(true, $"Đang khôi phục {modelsToRestore.Count} mục...");
+
+            int successCount = 0;
+            List<string> failedNames;
+            try
+            {
+                (successCount, failedNames) = await RunOnStaThreadAsync(() =>
+                {
+                    int success = 0;
+                    var failed = new List<string>();
+
+                    foreach (RecycleBinItemModel model in modelsToRestore)
+                    {
+                        OperationResult result = _recycleBinService.RestoreFromRecycleBin(model.OriginalPath);
+                        if (result == OperationResult.Success)
+                            success++;
+                        else
+                            failed.Add(model.Name);
+                    }
+
+                    return (success, failed);
+                });
+            }
+            catch (Exception)
+            {
+                failedNames = new List<string>();
+                foreach (RecycleBinItemModel model in modelsToRestore)
                     failedNames.Add(model.Name);
             }
 
             // Doc lai danh sach NGAY sau khi khoi phuc (du thanh cong mot phan
             // hay toan bo) - cac muc da khoi phuc thanh cong khong con trong
             // Thung rac nua, phai bien mat khoi lvwItems ngay, khong doi nguoi
-            // dung tu bam "Lam mới".
-            LoadItems();
+            // dung tu bam "Lam mới". LoadItemsAsync tu goi SetBusyState(false)
+            // khi xong nen khong can goi lai o day.
+            await LoadItemsAsync();
+
+            if (IsDisposed)
+                return;
 
             if (failedNames.Count == 0)
             {
@@ -171,7 +295,7 @@ namespace FileExplorerApp.Forms
         /// nua), nen bat buoc hoi lai truoc, cung tinh than voi
         /// LogForm.btnClearLogs_Click.
         /// </summary>
-        private void btnEmptyRecycleBin_Click(object sender, EventArgs e)
+        private async void btnEmptyRecycleBin_Click(object sender, EventArgs e)
         {
             if (_allItems.Count == 0)
             {
@@ -195,8 +319,22 @@ namespace FileExplorerApp.Forms
             if (confirm != DialogResult.Yes)
                 return;
 
-            OperationResult result = _recycleBinService.EmptyRecycleBin();
-            LoadItems();
+            SetBusyState(true, "Đang dọn trống Thùng rác...");
+
+            OperationResult result;
+            try
+            {
+                result = await RunOnStaThreadAsync(() => _recycleBinService.EmptyRecycleBin());
+            }
+            catch (Exception)
+            {
+                result = OperationResult.Failed;
+            }
+
+            await LoadItemsAsync();
+
+            if (IsDisposed)
+                return;
 
             if (result == OperationResult.Success)
             {
