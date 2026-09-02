@@ -157,6 +157,15 @@ namespace FileExplorerApp.Forms
         private ToolStripDropDownButton tscbView;
         private ToolStripDropDownButton tscbMore;
 
+        /// <summary>
+        /// STAGE 2 (breadcrumb dang tung doan bam duoc, xem RebuildBreadcrumb) -
+        /// chua danh sach nut (1 nut/thu muc trong duong dan) + nhan "›" ngan
+        /// cach, dat CUNG vi tri (Dock = Fill) voi txtPath trong breadcrumbBar.
+        /// Chi 1 trong 2 (pnlBreadcrumbSegments hoac txtPath) Visible = true tai
+        /// mot thoi diem - xem ShowBreadcrumbView/ShowPathTextBoxForEdit.
+        /// </summary>
+        private FlowLayoutPanel pnlBreadcrumbSegments;
+
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
@@ -339,6 +348,23 @@ namespace FileExplorerApp.Forms
             breadcrumbBar.Controls.Add(btnCmdForward);
             breadcrumbBar.Controls.Add(btnCmdBack);
 
+            // Stage 2 - xem RebuildBreadcrumb/ShowBreadcrumbView/ShowPathTextBoxForEdit:
+            // pnlBreadcrumbSegments dat CUNG cho (Dock = Fill) voi txtPath - mac dinh
+            // hien pnlBreadcrumbSegments, txtPath chi hien lai khi nguoi dung bam vao
+            // vung trong cua breadcrumb de go tay duong dan (giong Windows Explorer).
+            pnlBreadcrumbSegments = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                AutoScroll = false,
+            };
+            pnlBreadcrumbSegments.Click += (s, e) => ShowPathTextBoxForEdit();
+            breadcrumbBar.Controls.Add(pnlBreadcrumbSegments);
+
+            txtPath.Visible = false;
+            txtPath.Leave += (s, e) => ShowBreadcrumbView();
+
             this.Controls.Add(breadcrumbBar);
 
             // 3) commandBar: thay tlsMain, dung ToolStripButton/ToolStripDropDownButton
@@ -484,6 +510,92 @@ namespace FileExplorerApp.Forms
             var item = new ToolStripMenuItem(text);
             item.Click += handler;
             menu.DropDownItems.Add(item);
+        }
+
+        /// <summary>
+        /// STAGE 2 cua redesign - xay lai pnlBreadcrumbSegments thanh 1 chuoi nut
+        /// (1 nut/thu muc tren duong dan tu goc o dia toi path) + nhan "›" ngan
+        /// cach, giong breadcrumb cua Windows Explorer. Bam vao 1 nut se NavigateTo
+        /// dung thu muc do (BreadcrumbSegment_Click) - KHONG them logic dieu huong
+        /// moi, chi goi lai NavigateTo da co san.
+        /// </summary>
+        /// <param name="path">Duong dan hien tai (_currentPath) - goi tu mnuViewRefresh_Click.</param>
+        private void RebuildBreadcrumb(string path)
+        {
+            pnlBreadcrumbSegments.Controls.Clear();
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            List<DirectoryInfo> chain = new List<DirectoryInfo>();
+            DirectoryInfo current;
+            try
+            {
+                current = new DirectoryInfo(path);
+            }
+            catch (Exception)
+            {
+                // Duong dan khong hop le (VD nguoi dung go tay sai) - khong ve
+                // breadcrumb, giu nguyen txtPath de nguoi dung tu sua.
+                return;
+            }
+
+            while (current != null)
+            {
+                chain.Insert(0, current);
+                current = current.Parent;
+            }
+
+            for (int i = 0; i < chain.Count; i++)
+            {
+                DirectoryInfo dir = chain[i];
+                var segmentButton = new Button
+                {
+                    Text = dir.Name,
+                    AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                    FlatStyle = FlatStyle.Flat,
+                    Margin = new Padding(0, 4, 0, 4),
+                    Padding = new Padding(4, 0, 4, 0),
+                    Tag = dir.FullName,
+                };
+                segmentButton.FlatAppearance.BorderSize = 0;
+                segmentButton.Click += BreadcrumbSegment_Click;
+                pnlBreadcrumbSegments.Controls.Add(segmentButton);
+
+                if (i < chain.Count - 1)
+                {
+                    pnlBreadcrumbSegments.Controls.Add(new Label
+                    {
+                        Text = "›",
+                        AutoSize = true,
+                        Margin = new Padding(0, 8, 0, 0),
+                    });
+                }
+            }
+        }
+
+        /// <summary>Bam vao 1 doan breadcrumb - NavigateTo dung thu muc do (khong logic moi).</summary>
+        private void BreadcrumbSegment_Click(object sender, EventArgs e)
+        {
+            string path = (sender as Control)?.Tag as string;
+            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+                NavigateTo(path);
+        }
+
+        /// <summary>An pnlBreadcrumbSegments, hien txtPath de nguoi dung go tay duong dan.</summary>
+        private void ShowPathTextBoxForEdit()
+        {
+            pnlBreadcrumbSegments.Visible = false;
+            txtPath.Visible = true;
+            txtPath.Focus();
+            txtPath.SelectAll();
+        }
+
+        /// <summary>An txtPath, hien lai breadcrumb dang danh sach nut (mac dinh).</summary>
+        private void ShowBreadcrumbView()
+        {
+            txtPath.Visible = false;
+            pnlBreadcrumbSegments.Visible = true;
         }
 
         /// <summary>
@@ -2447,6 +2559,15 @@ namespace FileExplorerApp.Forms
             // Dong bo thanh dia chi voi duong dan hien tai - lam truoc tien de txtPath
             // luon dung ke ca khi phan duyet noi dung ben duoi gap loi.
             txtPath.Text = _currentPath;
+
+            // Stage 2 redesign (xem InitializeRedesignedCommandUi/RebuildBreadcrumb):
+            // dong bo lai breadcrumb (danh sach nut theo tung doan duong dan) VA
+            // chuyen ve che do hien breadcrumb (khong con o go tay) - dung ngay tai
+            // day (diem dong bo duy nhat, giong txtPath.Text ngay tren) de MOI noi
+            // goi mnuViewRefresh_Click (NavigateTo/Back/Forward/Up/F5...) deu tu
+            // dong cap nhat breadcrumb, khong can sua rieng tung noi.
+            RebuildBreadcrumb(_currentPath);
+            ShowBreadcrumbView();
 
             // Moi lan noi dung duoc nap lai deu co the vi _currentPath VUA DOI
             // (NavigateTo/Back/Forward/Up deu goi mnuViewRefresh_Click ngay sau
