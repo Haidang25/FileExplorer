@@ -166,6 +166,17 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private FlowLayoutPanel pnlBreadcrumbSegments;
 
+        /// <summary>
+        /// STAGE 3 (to mau/bo tron OwnerDraw cho lvwFiles, xem InitializeListViewOwnerDraw) -
+        /// ImageList "gia" CHI dung de ep chieu cao dong (Details view lay chieu
+        /// cao dong tu SmallImageList.ImageSize.Height, khong co thuoc tinh RowHeight
+        /// truc tiep) len 32px giong mockup - KHONG chua icon thuc su (icon thuc su
+        /// van lay tu imlIcons, ve tay trong lvwFiles_DrawSubItem). Tao rieng (khong
+        /// dung lai imlIcons) de KHONG lam doi chieu cao/kich thuoc icon cua trvFolders
+        /// (dang dung chung imlIcons).
+        /// </summary>
+        private ImageList _imlRowSpacer;
+
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
@@ -225,6 +236,8 @@ namespace FileExplorerApp.Forms
 
             InitializeCompressionContextMenuItems();
             InitializeRedesignedCommandUi();
+            InitializeListViewOwnerDraw();
+            InitializeTreeViewOwnerDraw();
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
@@ -596,6 +609,169 @@ namespace FileExplorerApp.Forms
         {
             txtPath.Visible = false;
             pnlBreadcrumbSegments.Visible = true;
+        }
+
+        /// <summary>
+        /// STAGE 3 cua redesign - OwnerDraw cho lvwFiles: dong cao 32px (qua
+        /// _imlRowSpacer, xem remarks tai khai bao) + dong dang chon duoc ve rieng
+        /// thanh hinh chu nhat bo tron 4px, mau AppTheme.SelectedRow - giong dung
+        /// mockup ("row height 32px, selected row #EDE9FE voi 4px rounding").
+        ///
+        /// QUYET DINH THIET KE: CHI OwnerDraw khi lvwFiles.View == View.Details
+        /// (xem lvwFiles_DrawItem) - DrawSubItem CHI duoc WinForms goi trong
+        /// Details view, nen neu OwnerDraw tu ve ca cac che do khac (Bieu tuong
+        /// lon/nho, Danh sach) ma khong co DrawSubItem, icon/chu se bien mat hoan
+        /// toan (mat luon tinh nang "Biểu tượng lớn" moi sua o phan truoc) - vi vay
+        /// cac che do do van duoc tra ve DrawDefault = true (ve nhu WinForms mac
+        /// dinh, khong doi gi).
+        ///
+        /// KHONG doi lvwFiles.SmallImageList thanh imlIcons nhu truoc (van la
+        /// _imlRowSpacer, chi de ep chieu cao) - icon THUC SU duoc ve tay trong
+        /// lvwFiles_DrawSubItem, doc truc tiep tu imlIcons.Images[ImageKey], hoan
+        /// toan doc lap voi SmallImageList dang gan.
+        /// </summary>
+        private void InitializeListViewOwnerDraw()
+        {
+            _imlRowSpacer = new ImageList
+            {
+                ImageSize = new Size(1, 32),
+                ColorDepth = ColorDepth.Depth32Bit,
+            };
+            _imlRowSpacer.Images.Add("spacer", new Bitmap(1, 32));
+            lvwFiles.SmallImageList = _imlRowSpacer;
+
+            // Bo GridLines - ke thang cua WinForms se cat ngang qua goc bo tron cua
+            // dong dang chon, nhin khong dep; Win11 File Explorer that cung khong
+            // hien ke o che do Chi tiet.
+            lvwFiles.GridLines = false;
+
+            lvwFiles.OwnerDraw = true;
+            lvwFiles.DrawColumnHeader += lvwFiles_DrawColumnHeader;
+            lvwFiles.DrawItem += lvwFiles_DrawItem;
+            lvwFiles.DrawSubItem += lvwFiles_DrawSubItem;
+        }
+
+        private void lvwFiles_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
+        {
+            e.DrawDefault = true;
+        }
+
+        private void lvwFiles_DrawItem(object sender, DrawListViewItemEventArgs e)
+        {
+            if (lvwFiles.View != View.Details)
+            {
+                // Xem <remarks> tai InitializeListViewOwnerDraw - cac che do khac
+                // Details van phai ve mac dinh, khong co DrawSubItem ho tro.
+                e.DrawDefault = true;
+                return;
+            }
+
+            Rectangle rowBounds = e.Item.GetBounds(ItemBoundsPortion.Entire);
+            using (SolidBrush backgroundBrush = new SolidBrush(AppTheme.Surface))
+                e.Graphics.FillRectangle(backgroundBrush, rowBounds);
+
+            if (e.Item.Selected)
+            {
+                Rectangle highlightBounds = Rectangle.Inflate(rowBounds, -2, -1);
+                System.Drawing.Drawing2D.SmoothingMode oldMode = e.Graphics.SmoothingMode;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var path = CreateRoundedRectPath(highlightBounds, 4))
+                using (SolidBrush highlightBrush = new SolidBrush(AppTheme.SelectedRow))
+                {
+                    e.Graphics.FillPath(highlightBrush, path);
+                }
+                e.Graphics.SmoothingMode = oldMode;
+            }
+
+            e.DrawDefault = false;
+        }
+
+        private void lvwFiles_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
+        {
+            // Mau chu: giu NGUYEN mau da duoc gan san ngoai OwnerDraw (VD mo di
+            // khi item dang o trang thai Cut - xem noi gan ForeColor cho
+            // ListViewItem khi Cut/Copy) - khong tu quyet dinh mau rieng o day.
+            Color textColor = e.Item.ForeColor;
+            Rectangle bounds = e.Bounds;
+
+            if (e.ColumnIndex == 0)
+            {
+                Image icon = null;
+                if (!string.IsNullOrEmpty(e.Item.ImageKey) && imlIcons.Images.ContainsKey(e.Item.ImageKey))
+                    icon = imlIcons.Images[e.Item.ImageKey];
+
+                int textLeft = bounds.Left + 4;
+                if (icon != null)
+                {
+                    int iconTop = bounds.Top + (bounds.Height - icon.Height) / 2;
+                    e.Graphics.DrawImage(icon, bounds.Left + 4, iconTop, icon.Width, icon.Height);
+                    textLeft = bounds.Left + 4 + icon.Width + 6;
+                }
+
+                Rectangle textBounds = new Rectangle(textLeft, bounds.Top, Math.Max(bounds.Right - textLeft, 0), bounds.Height);
+                TextRenderer.DrawText(e.Graphics, e.Item.Text, lvwFiles.Font, textBounds, textColor,
+                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
+            }
+            else
+            {
+                TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
+                flags |= e.Header.TextAlign == HorizontalAlignment.Right ? TextFormatFlags.Right : TextFormatFlags.Left;
+
+                Rectangle textBounds = new Rectangle(bounds.Left + 4, bounds.Top, Math.Max(bounds.Width - 8, 0), bounds.Height);
+                TextRenderer.DrawText(e.Graphics, e.SubItem.Text, lvwFiles.Font, textBounds, textColor, flags);
+            }
+        }
+
+        /// <summary>
+        /// STAGE 3 - OwnerDrawText cho trvFolders (bo tron dong dang chon, mau
+        /// AppTheme.SelectedRow, dong bo voi lvwFiles) - CHI ve rieng phan chu/nen
+        /// (DrawMode = OwnerDrawText), GIU NGUYEN icon/duong ke cay/nut +-/thu tu
+        /// thu do WinForms tu ve (khong OwnerDrawAll) de giam rui ro le/mat icon.
+        /// CHUA kiem tra truc quan tren Visual Studio thuc te - bao lai neu dong
+        /// chon bi lech/che mat icon de dieu chinh (VD do bounds/offset).
+        /// </summary>
+        private void InitializeTreeViewOwnerDraw()
+        {
+            trvFolders.DrawMode = TreeViewDrawMode.OwnerDrawText;
+            trvFolders.DrawNode += trvFolders_DrawNode;
+        }
+
+        private void trvFolders_DrawNode(object sender, DrawTreeNodeEventArgs e)
+        {
+            bool isSelected = (e.State & TreeNodeStates.Selected) != 0;
+            Rectangle bounds = e.Bounds;
+
+            using (SolidBrush backgroundBrush = new SolidBrush(AppTheme.Surface))
+                e.Graphics.FillRectangle(backgroundBrush, bounds);
+
+            if (isSelected)
+            {
+                Rectangle highlightBounds = Rectangle.Inflate(bounds, 2, -1);
+                System.Drawing.Drawing2D.SmoothingMode oldMode = e.Graphics.SmoothingMode;
+                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var path = CreateRoundedRectPath(highlightBounds, 4))
+                using (SolidBrush highlightBrush = new SolidBrush(AppTheme.SelectedRow))
+                {
+                    e.Graphics.FillPath(highlightBrush, path);
+                }
+                e.Graphics.SmoothingMode = oldMode;
+            }
+
+            TextRenderer.DrawText(e.Graphics, e.Node.Text, trvFolders.Font, bounds, AppTheme.TextPrimary,
+                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
+        }
+
+        /// <summary>Tao GraphicsPath hinh chu nhat bo tron 4 goc (dung cho dong dang chon cua lvwFiles).</summary>
+        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectPath(Rectangle bounds, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            int diameter = radius * 2;
+            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
+            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            return path;
         }
 
         /// <summary>
@@ -1169,6 +1345,10 @@ namespace FileExplorerApp.Forms
             // nhu imlIcons - giai phong thu cong tai day, giong cach lam voi
             // _watcherDebounceTimer/_fileMonitorService/_integrityService o tren.
             _imlIconsLarge.Dispose();
+
+            // _imlRowSpacer cung tao bang code (xem remarks tai khai bao) - giai
+            // phong thu cong giong _imlIconsLarge ngay tren.
+            _imlRowSpacer?.Dispose();
         }
 
         /// <summary>
