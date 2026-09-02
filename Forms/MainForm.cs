@@ -352,15 +352,6 @@ namespace FileExplorerApp.Forms
             };
             btnCmdForward.Click += tsbForward_Click;
 
-            breadcrumbBar.Controls.Add(txtSearch);
-            breadcrumbBar.Controls.Add(cboFileTypeFilter);
-            breadcrumbBar.Controls.Add(txtQuickFilter);
-            breadcrumbBar.Controls.Add(btnGo);
-            breadcrumbBar.Controls.Add(txtPath);
-            breadcrumbBar.Controls.Add(btnUp);
-            breadcrumbBar.Controls.Add(btnCmdForward);
-            breadcrumbBar.Controls.Add(btnCmdBack);
-
             // Stage 2 - xem RebuildBreadcrumb/ShowBreadcrumbView/ShowPathTextBoxForEdit:
             // pnlBreadcrumbSegments dat CUNG cho (Dock = Fill) voi txtPath - mac dinh
             // hien pnlBreadcrumbSegments, txtPath chi hien lai khi nguoi dung bam vao
@@ -373,10 +364,27 @@ namespace FileExplorerApp.Forms
                 AutoScroll = false,
             };
             pnlBreadcrumbSegments.Click += (s, e) => ShowPathTextBoxForEdit();
-            breadcrumbBar.Controls.Add(pnlBreadcrumbSegments);
 
             txtPath.Visible = false;
             txtPath.Leave += (s, e) => ShowBreadcrumbView();
+
+            // QUAN TRONG - thu tu Controls.Add duoi day CO Y GIU DUNG vi tri tuong
+            // doi ma txtPath (Dock = Fill) tung nam trong pnlAddressBar goc (Right x4,
+            // roi Fill, roi Left) - Designer.cs goc da chung minh thu tu nay cho layout
+            // DUNG (txtPath tung lap day dung khoang giua). 2 control Dock = Fill
+            // (txtPath + pnlBreadcrumbSegments, chi 1 trong 2 Visible tai 1 thoi diem)
+            // duoc them CUNG vi tri do, TRUOC nhom Dock.Left (btnUp/btnCmdForward/
+            // btnCmdBack) - THU TU KHAC (VD them Fill sau nhom Left, nhu ban dau) da
+            // gay loi breadcrumb hien trong khong co chu/nut nao ca.
+            breadcrumbBar.Controls.Add(txtSearch);
+            breadcrumbBar.Controls.Add(cboFileTypeFilter);
+            breadcrumbBar.Controls.Add(txtQuickFilter);
+            breadcrumbBar.Controls.Add(btnGo);
+            breadcrumbBar.Controls.Add(txtPath);
+            breadcrumbBar.Controls.Add(pnlBreadcrumbSegments);
+            breadcrumbBar.Controls.Add(btnUp);
+            breadcrumbBar.Controls.Add(btnCmdForward);
+            breadcrumbBar.Controls.Add(btnCmdBack);
 
             this.Controls.Add(breadcrumbBar);
 
@@ -570,8 +578,16 @@ namespace FileExplorerApp.Forms
                     Margin = new Padding(0, 4, 0, 4),
                     Padding = new Padding(4, 0, 4, 0),
                     Tag = dir.FullName,
+                    // Dat mau tuong minh (khong de mac dinh SystemColors) - tranh
+                    // truong hop nut/chu bi lan vao nen (VD SystemColors.Control
+                    // trung/gan trung AppTheme.Surface) khien breadcrumb nhin nhu
+                    // trong khong co gi.
+                    BackColor = AppTheme.Surface,
+                    ForeColor = AppTheme.TextPrimary,
+                    UseVisualStyleBackColor = false,
                 };
                 segmentButton.FlatAppearance.BorderSize = 0;
+                segmentButton.FlatAppearance.MouseOverBackColor = AppTheme.Border;
                 segmentButton.Click += BreadcrumbSegment_Click;
                 pnlBreadcrumbSegments.Controls.Add(segmentButton);
 
@@ -582,6 +598,8 @@ namespace FileExplorerApp.Forms
                         Text = "›",
                         AutoSize = true,
                         Margin = new Padding(0, 8, 0, 0),
+                        ForeColor = AppTheme.TextSecondary,
+                        BackColor = Color.Transparent,
                     });
                 }
             }
@@ -1401,6 +1419,11 @@ namespace FileExplorerApp.Forms
             commandBar.Renderer = renderer;
             commandBar.BackColor = AppTheme.Surface;
             breadcrumbBar.BackColor = AppTheme.Surface;
+            pnlBreadcrumbSegments.BackColor = AppTheme.Surface;
+            // Ve lai breadcrumb de cac nut segment (mau dat luc tao trong
+            // RebuildBreadcrumb) cap nhat theo theme moi - xem chu thich tai
+            // segmentButton.BackColor/ForeColor.
+            RebuildBreadcrumb(_currentPath);
             btnCmdBack.FlatStyle = FlatStyle.Flat;
             btnCmdBack.FlatAppearance.BorderColor = AppTheme.Border;
             btnCmdBack.BackColor = AppTheme.Surface;
