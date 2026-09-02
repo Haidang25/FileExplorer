@@ -7,6 +7,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -992,12 +993,23 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void LoadIconImages()
         {
-            AddIconPair("folder", CreateFolderIcon());
-            AddIconPair("file", CreateFileIcon());
+            // DA DOI (theo yeu cau "chỉnh icon giống File Explorer nhất"): folder/
+            // file/tung nhom file KHONG con tu ve bang GDI+ nua (CreateFolderIcon/
+            // CreateFileIcon/CreateFileTypeIcon van giu lai lam PHUONG AN DU PHONG,
+            // xem AddShellIconPair) - thay vao do LAY THANG icon that cua Windows
+            // Shell qua SHGetFileInfo (xem GetShellIconRaw), dung CHINH icon he dieu
+            // hanh dang dung cho File Explorer tren may nguoi dung (folder that,
+            // icon lien ket voi .jpg/.txt/.xlsx/.zip/.mp3...) - giong nhat co the ma
+            // khong can nhung file .ico rieng.
+            AddShellIconPair("folder", "folder", isDirectory: true, fallbackIcon: CreateFolderIcon());
+            AddShellIconPair("file", "file", isDirectory: false, fallbackIcon: CreateFileIcon());
 
-            // Icon rieng cho tung loai o dia (xem GetDriveImageKey), de TreeView phan
-            // biet truc quan o cung (Fixed) voi o roi/USB/dia quang/o mang, giong
-            // Windows Explorer.
+            // Icon rieng cho tung loai o dia (xem GetDriveImageKey) - GIU NGUYEN ve
+            // bang GDI+ (khong doi sang Shell): SHGetFileInfo can duong dan O DIA
+            // THAT DANG TON TAI tren may de tra dung icon theo tung loai (Fixed/
+            // Removable/CDRom/Network), trong khi 5 icon nay duoc nap 1 LAN DUY
+            // NHAT luc khoi dong cho CA loai o dia noi chung (khong phai 1 o cu
+            // the) - dung o dia gia se cho ket qua sai/khong on dinh tuy may.
             AddIconPair("driveFixed", CreateDriveIcon(DriveIconStyle.Fixed));
             AddIconPair("driveRemovable", CreateDriveIcon(DriveIconStyle.Removable));
             AddIconPair("driveCDRom", CreateDriveIcon(DriveIconStyle.CDRom));
@@ -1006,14 +1018,16 @@ namespace FileExplorerApp.Forms
 
             // Icon rieng cho tung nhom file tren lvwFiles, dua tren
             // FileHelper.GetFileIconCategory() (VD: anh, tai lieu, bang tinh...) -
-            // nhom nao khong khop se dung lai "file" (icon to giay trang trung tinh
-            // co san) thay vi ve them mot ImageCategory.Generic rieng khong can thiet.
-            AddIconPair("fileImage", CreateFileTypeIcon(FileIconCategory.Image));
-            AddIconPair("fileDocument", CreateFileTypeIcon(FileIconCategory.Document));
-            AddIconPair("fileSpreadsheet", CreateFileTypeIcon(FileIconCategory.Spreadsheet));
-            AddIconPair("fileArchive", CreateFileTypeIcon(FileIconCategory.Archive));
-            AddIconPair("fileMedia", CreateFileTypeIcon(FileIconCategory.Media));
-            AddIconPair("fileCode", CreateFileTypeIcon(FileIconCategory.Code));
+            // moi nhom dung 1 phan mo rong DAI DIEN, PHO BIEN de lay icon Shell that
+            // (VD ".txt" luon co san Notepad tren moi may Windows) - nhom nao khong
+            // khop se dung lai "file" (icon Shell trung tinh co san) thay vi ve them
+            // mot ImageCategory.Generic rieng khong can thiet.
+            AddShellIconPair("fileImage", ".jpg", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Image));
+            AddShellIconPair("fileDocument", ".txt", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Document));
+            AddShellIconPair("fileSpreadsheet", ".xlsx", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Spreadsheet));
+            AddShellIconPair("fileArchive", ".zip", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Archive));
+            AddShellIconPair("fileMedia", ".mp3", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Media));
+            AddShellIconPair("fileCode", ".js", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Code));
 
             // lvwFiles.SmallImageList = imlIcons da duoc gan san trong
             // MainForm.Designer.cs - chi con thieu LargeImageList (chua tung
@@ -1021,6 +1035,113 @@ namespace FileExplorerApp.Forms
             // (thay vi trong Designer.cs) vi _imlIconsLarge duoc tao bang code.
             lvwFiles.LargeImageList = _imlIconsLarge;
         }
+
+        #region Lay icon that cua Windows Shell (SHGetFileInfo)
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct SHFILEINFO
+        {
+            public IntPtr hIcon;
+            public int iIcon;
+            public uint dwAttributes;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            public string szDisplayName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
+            public string szTypeName;
+        }
+
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+        private static extern IntPtr SHGetFileInfo(string pszPath, uint dwFileAttributes,
+            ref SHFILEINFO psfi, uint cbFileInfo, uint uFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool DestroyIcon(IntPtr hIcon);
+
+        private const uint SHGFI_ICON = 0x100;
+        private const uint SHGFI_LARGEICON = 0x0;
+        private const uint SHGFI_SMALLICON = 0x1;
+        private const uint SHGFI_USEFILEATTRIBUTES = 0x10;
+        private const uint FILE_ATTRIBUTE_DIRECTORY = 0x10;
+        private const uint FILE_ATTRIBUTE_NORMAL = 0x80;
+
+        /// <summary>
+        /// Lay icon THAT cua Windows Shell (chinh la icon File Explorer dang dung
+        /// tren may nguoi dung) qua SHGetFileInfo, dung SHGFI_USEFILEATTRIBUTES nen
+        /// KHONG can file/thu muc do THAT SU ton tai - chi can 1 duong dan/phan mo
+        /// rong dai dien (VD ".jpg", hoac bat ky chuoi nao cho thu muc). Tra ve
+        /// null (khong nem Exception) neu API loi hoac chay tren moi truong khong
+        /// ho tro Shell32 (VD build/test ngoai Windows that) - AddShellIconPair se
+        /// tu dong ve du phong bang GDI+ (CreateFolderIcon/CreateFileIcon) trong
+        /// truong hop do.
+        /// </summary>
+        /// <param name="pathOrExtension">Duong dan/phan mo rong dai dien (VD ".jpg"), khong can ton tai that.</param>
+        /// <param name="isDirectory">True neu muon lay icon thu muc (folder), false neu lay icon file.</param>
+        /// <param name="large">True lay ban icon lon (thuong 32x32) cho _imlIconsLarge, false lay ban nho (thuong 16x16) cho imlIcons.</param>
+        private static Bitmap GetShellIconRaw(string pathOrExtension, bool isDirectory, bool large)
+        {
+            try
+            {
+                var shinfo = new SHFILEINFO();
+                uint flags = SHGFI_ICON | SHGFI_USEFILEATTRIBUTES | (large ? SHGFI_LARGEICON : SHGFI_SMALLICON);
+                uint attributes = isDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
+
+                IntPtr callResult = SHGetFileInfo(pathOrExtension, attributes, ref shinfo,
+                    (uint)Marshal.SizeOf(shinfo), flags);
+
+                if (callResult == IntPtr.Zero || shinfo.hIcon == IntPtr.Zero)
+                    return null;
+
+                try
+                {
+                    using (Icon icon = Icon.FromHandle(shinfo.hIcon))
+                        return icon.ToBitmap();
+                }
+                finally
+                {
+                    DestroyIcon(shinfo.hIcon);
+                }
+            }
+            catch (Exception)
+            {
+                // Khong de loi Shell32 (VD chay tren may/moi truong khong ho tro)
+                // lam sap ung dung ngay luc khoi dong - AddShellIconPair se tu ve
+                // du phong bang GDI+.
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Nhu AddIconPair, nhung LAY icon that cua Windows Shell (xem
+        /// GetShellIconRaw) thay vi ve bang GDI+ - dung cho folder/file/tung nhom
+        /// file (xem LoadIconImages) de giao dien giong File Explorer that nhat.
+        /// Neu Shell32 tra ve null (loi/khong ho tro), tu dong ve du phong bang
+        /// CreateFileIcon() (icon to giay trang trung tinh) de KHONG bao gio thieu
+        /// icon hoan toan.
+        /// </summary>
+        /// <param name="key">ImageKey dung chung cho ca 2 ImageList.</param>
+        /// <param name="pathOrExtension">Duong dan/phan mo rong dai dien truyen cho GetShellIconRaw.</param>
+        /// <param name="isDirectory">True neu la icon thu muc.</param>
+        private void AddShellIconPair(string key, string pathOrExtension, bool isDirectory, Bitmap fallbackIcon = null)
+        {
+            // fallbackIcon: icon GDI+ du phong RIENG cho tung truong hop (VD
+            // CreateFolderIcon() cho "folder", CreateFileTypeIcon(category) cho
+            // tung nhom file) - neu khong truyen, mac dinh dung CreateFileIcon()
+            // (to giay trang trung tinh, hop ly cho file noi chung).
+            using (Bitmap fallback = fallbackIcon ?? CreateFileIcon())
+            {
+                using (Bitmap smallSource = GetShellIconRaw(pathOrExtension, isDirectory, large: false) ?? (Bitmap)fallback.Clone())
+                {
+                    imlIcons.Images.Add(key, ScaleIcon(smallSource, imlIcons.ImageSize.Width));
+                }
+
+                using (Bitmap largeSource = GetShellIconRaw(pathOrExtension, isDirectory, large: true) ?? (Bitmap)fallback.Clone())
+                {
+                    _imlIconsLarge.Images.Add(key, ScaleIcon(largeSource, _imlIconsLarge.ImageSize.Width));
+                }
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// Them CUNG mot icon (cung ImageKey) vao CA imlIcons (16x16) VA
