@@ -160,11 +160,33 @@ namespace FileExplorerApp.Services
                 name, BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Instance, null, target, args);
         }
 
-        /// <summary>Doc mot PROPERTY COM qua late binding - xem InvokeCom o tren.</summary>
+        /// <summary>
+        /// Doc mot PROPERTY COM qua late binding - xem InvokeCom o tren.
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE - KET HOP CA 2 CO BindingFlags.GetProperty VA
+        /// BindingFlags.InvokeMethod: cac property CO THAM SO (indexed, VD
+        /// FolderItems.Item(i), FolderItemVerbs.Item(i)) qua IDispatch cua
+        /// Shell32 automation KHONG LUON duoc InvokeMember nhan dung la
+        /// "property get" neu CHI truyen rieng co GetProperty (tuy DISPID/
+        /// cach typelib khai bao, co truong hop InvokeMember chi khop duoc
+        /// khi co CA co InvokeMethod) - day chinh la nguyen nhan khien
+        /// GetRecycleBinItems truoc do LUON tra ve danh sach RONG (goi
+        /// GetComProperty(items, "Item", i) nem Exception ngay lan lap dau
+        /// tien, bi catch o muc ngoai cua GetRecycleBinItems nuot mat, khien
+        /// Thung rac trong app luon hien trong du Windows Recycle Bin thuc
+        /// te co file). Ket hop ca 2 co la cach lam AN TOAN duoc dung pho
+        /// bien cho tinh huong late-binding COM nhu the nay, khong gay tac
+        /// dung phu voi cac property KHONG tham so (VD Count) - InvokeMember
+        /// tu chon dung loai invoke phu hop dua tren metadata thuc te cua
+        /// COM object o runtime.
+        /// </remarks>
         private static object GetComProperty(object target, string name, params object[] args)
         {
             return target.GetType().InvokeMember(
-                name, BindingFlags.GetProperty | BindingFlags.Public | BindingFlags.Instance, null, target, args);
+                name,
+                BindingFlags.GetProperty | BindingFlags.InvokeMethod | BindingFlags.Public | BindingFlags.Instance,
+                null, target, args);
         }
 
         /// <summary>
@@ -187,15 +209,29 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Thong bao loi GAN NHAT tu lan goi GetRecycleBinItems() gan nhat -
+        /// null neu lan do khong gap loi (KE CA khi Thung rac thuc su dang
+        /// rong - phan biet voi truong hop nay o RecycleBinForm.LoadItemsAsync,
+        /// vi GetRecycleBinItems() ban than KHONG nem Exception ra ngoai, xem
+        /// remarks cua ham do). Chi phuc vu CHAN DOAN (hien cho nguoi dung/
+        /// nguoi ho tro biet ly do cu the neu danh sach rong bat thuong),
+        /// KHONG anh huong logic - RecycleBinForm van hoat dong binh thuong
+        /// (danh sach rong) du khong doc property nay.
+        /// </summary>
+        public string LastError { get; private set; }
+
+        /// <summary>
         /// Lay danh sach cac muc hien co trong Recycle Bin, qua Shell32 COM
         /// automation (Shell.Application.NameSpace(10)). Tra ve danh sach
         /// RONG (khong nem Exception) neu khong the doc duoc Recycle Bin vi
         /// bat ky ly do gi - day la mot man hinh CHI XEM (read-only), khong
         /// nen lam RecycleBinForm bi loi mo khong duoc chi vi mot phien ban
-        /// Windows dac biet nao do tra ve COM loi.
+        /// Windows dac biet nao do tra ve COM loi. Loi cu the (neu co) duoc
+        /// luu lai vao LastError de chan doan sau nay, xem remarks tai do.
         /// </summary>
         public List<RecycleBinItemModel> GetRecycleBinItems()
         {
+            LastError = null;
             var result = new List<RecycleBinItemModel>();
             object shell = null;
 
@@ -226,10 +262,13 @@ namespace FileExplorerApp.Services
                     }
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
                 // Khong the truy cap Recycle Bin qua Shell32 automation - tra ve
-                // danh sach da co (co the rong) thay vi nem loi ra ngoai.
+                // danh sach da co (co the rong) thay vi nem loi ra ngoai, nhung
+                // luu lai thong tin loi vao LastError de chan doan (xem remarks
+                // cua LastError/GetRecycleBinItems).
+                LastError = ex.Message;
             }
             finally
             {

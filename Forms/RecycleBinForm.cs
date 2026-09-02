@@ -159,6 +159,18 @@ namespace FileExplorerApp.Forms
 
             _allItems = items;
             PopulateListView(_allItems);
+
+            // Danh sach rong CO THE la vi Thung rac thuc su dang rong (binh
+            // thuong), nhung CUNG CO THE la vi GetRecycleBinItems() gap loi
+            // COM ma tu nuot (theo thiet ke, xem RecycleBinService.GetRecycleBinItems) -
+            // hien LastError (neu co) de nguoi dung/nguoi ho tro biet chinh
+            // xac ly do, thay vi chi thay "0 mục" mac dinh gay nham la Thung
+            // rac dang rong that su.
+            if (_allItems.Count == 0 && _recycleBinService.LastError != null)
+            {
+                lblStatus.Text = $"Không đọc được Thùng rác (lỗi: {_recycleBinService.LastError})";
+            }
+
             SetBusyState(false);
         }
 
