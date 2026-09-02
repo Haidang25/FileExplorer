@@ -143,40 +143,6 @@ namespace FileExplorerApp.Forms
             ColorDepth = ColorDepth.Depth32Bit
         };
 
-        /// <summary>
-        /// GIAO DIEN MOI (Stage 1, kieu Win11 File Explorer) - TAO BANG CODE tu
-        /// InitializeRedesignedCommandUi, KHONG khai bao trong MainForm.Designer.cs
-        /// (cung ly do voi _imlIconsLarge/cmsCompressToZip o tren: Designer.cs dang
-        /// la WIP rieng, sua tay ngoai Designer de mat khi mo lai bang VS Designer).
-        /// mnsMain/tlsMain/pnlAddressBar CU van con nguyen (chi Visible = false).
-        /// </summary>
-        private ToolStrip commandBar;
-        private Panel breadcrumbBar;
-        private Button btnCmdBack;
-        private Button btnCmdForward;
-        private ToolStripDropDownButton tscbView;
-        private ToolStripDropDownButton tscbMore;
-
-        /// <summary>
-        /// STAGE 2 (breadcrumb dang tung doan bam duoc, xem RebuildBreadcrumb) -
-        /// chua danh sach nut (1 nut/thu muc trong duong dan) + nhan "›" ngan
-        /// cach, dat CUNG vi tri (Dock = Fill) voi txtPath trong breadcrumbBar.
-        /// Chi 1 trong 2 (pnlBreadcrumbSegments hoac txtPath) Visible = true tai
-        /// mot thoi diem - xem ShowBreadcrumbView/ShowPathTextBoxForEdit.
-        /// </summary>
-        private FlowLayoutPanel pnlBreadcrumbSegments;
-
-        /// <summary>
-        /// STAGE 3 (to mau/bo tron OwnerDraw cho lvwFiles, xem InitializeListViewOwnerDraw) -
-        /// ImageList "gia" CHI dung de ep chieu cao dong (Details view lay chieu
-        /// cao dong tu SmallImageList.ImageSize.Height, khong co thuoc tinh RowHeight
-        /// truc tiep) len 32px giong mockup - KHONG chua icon thuc su (icon thuc su
-        /// van lay tu imlIcons, ve tay trong lvwFiles_DrawSubItem). Tao rieng (khong
-        /// dung lai imlIcons) de KHONG lam doi chieu cao/kich thuoc icon cua trvFolders
-        /// (dang dung chung imlIcons).
-        /// </summary>
-        private ImageList _imlRowSpacer;
-
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
@@ -235,9 +201,6 @@ namespace FileExplorerApp.Forms
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             InitializeCompressionContextMenuItems();
-            InitializeRedesignedCommandUi();
-            InitializeListViewOwnerDraw();
-            InitializeTreeViewOwnerDraw();
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
@@ -284,512 +247,6 @@ namespace FileExplorerApp.Forms
             cmsListView.Items.Insert(insertIndex, cmsCompressToZip);
             cmsListView.Items.Insert(insertIndex + 1, cmsExtractHere);
             cmsListView.Items.Insert(insertIndex + 2, cmsCompressionSeparator);
-        }
-
-        /// <summary>
-        /// STAGE 1 cua redesign giao dien theo mau Win11 File Explorer (anh mockup
-        /// nguoi dung gui) - TAO HOAN TOAN BANG CODE (giong huong da dung cho
-        /// InitializeCompressionContextMenuItems/ApplyTheme/_imlIconsLarge o tren),
-        /// KHONG sua MainForm.Designer.cs: an (Visible = false) mnsMain/tlsMain/
-        /// pnlAddressBar cu (giu nguyen item/ShortcutKeys ben trong - WinForms van
-        /// xu ly ShortcutKeys tren MainMenuStrip ke ca khi Visible = false), CHUYEN
-        /// (Controls.Remove roi Controls.Add, KHONG tao ban sao) 6 control con cua
-        /// pnlAddressBar sang breadcrumbBar moi, va tao them commandBar (thanh lenh)
-        /// + 2 nut Back/Forward (btnCmdBack/btnCmdForward).
-        ///
-        /// TAT CA nut/menu moi deu goi lai DUNG handler cu da co san (mnuFileNewFolder_Click,
-        /// mnuEditCut_Click, mnuViewModeLargeIcon_Click, tsbBack_Click, ...) - KHONG
-        /// them logic nghiep vu moi, dung yeu cau "giữ nguyên phần chức năng".
-        ///
-        /// CHUA LAM trong Stage 1 nay (de lai cho cac giai doan sau, sau khi xac
-        /// nhan voi nguoi dung): breadcrumb dang la 1 o txtPath go tay (chua tach
-        /// tung doan duong dan bam duoc), khong co nut "Sắp xếp" rieng, chua
-        /// OwnerDraw bo tron dong chon/mau nen rieng cho trvFolders/lvwFiles theo
-        /// dung mockup, chua co phim tat Alt de bat/tat lai mnsMain.
-        /// </summary>
-        private void InitializeRedesignedCommandUi()
-        {
-            // 1) An 3 thanh cu - KHONG Remove khoi Controls (giu nguyen item/
-            // ShortcutKeys/Dock), chi Visible = false de khong con chiem layout.
-            mnsMain.Visible = false;
-            tlsMain.Visible = false;
-
-            Control[] addressBarControls = { txtSearch, cboFileTypeFilter, txtQuickFilter, btnGo, txtPath, btnUp };
-            foreach (Control control in addressBarControls)
-                pnlAddressBar.Controls.Remove(control);
-            pnlAddressBar.Visible = false;
-
-            // 2) breadcrumbBar: tai su dung LAI (khong tao ban sao) 6 control tren,
-            // them 2 nut Back/Forward moi (btnUp da co san tu Designer.cs, chi can
-            // chuyen qua). Thu tu Controls.Add duoi day da duoc kiem tra khop voi
-            // thu tu trai->phai nhu cu trong pnlAddressBar (Dock.Right: control them
-            // SAU cung nam gan vien phai nhat; Dock.Left: nguoc lai, control them
-            // SAU cung nam gan vien trai nhat) - vi vay btnCmdForward/btnCmdBack
-            // duoc them SAU btnUp, va them Back sau cung de Back nam ngoai cung
-            // ben trai (giong thu tu Back/Forward/Up trong anh mockup).
-            breadcrumbBar = new Panel
-            {
-                Dock = DockStyle.Top,
-                Height = pnlAddressBar.Height,
-                Padding = pnlAddressBar.Padding,
-            };
-
-            btnCmdBack = new Button
-            {
-                Dock = DockStyle.Left,
-                Width = 30,
-                Text = "←",
-                UseVisualStyleBackColor = true,
-            };
-            btnCmdBack.Click += tsbBack_Click;
-
-            btnCmdForward = new Button
-            {
-                Dock = DockStyle.Left,
-                Width = 30,
-                Text = "→",
-                UseVisualStyleBackColor = true,
-            };
-            btnCmdForward.Click += tsbForward_Click;
-
-            // Stage 2 - xem RebuildBreadcrumb/ShowBreadcrumbView/ShowPathTextBoxForEdit:
-            // pnlBreadcrumbSegments dat CUNG cho (Dock = Fill) voi txtPath - mac dinh
-            // hien pnlBreadcrumbSegments, txtPath chi hien lai khi nguoi dung bam vao
-            // vung trong cua breadcrumb de go tay duong dan (giong Windows Explorer).
-            pnlBreadcrumbSegments = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                AutoScroll = false,
-            };
-            pnlBreadcrumbSegments.Click += (s, e) => ShowPathTextBoxForEdit();
-
-            txtPath.Visible = false;
-            txtPath.Leave += (s, e) => ShowBreadcrumbView();
-
-            // QUAN TRONG - thu tu Controls.Add duoi day CO Y GIU DUNG vi tri tuong
-            // doi ma txtPath (Dock = Fill) tung nam trong pnlAddressBar goc (Right x4,
-            // roi Fill, roi Left) - Designer.cs goc da chung minh thu tu nay cho layout
-            // DUNG (txtPath tung lap day dung khoang giua). 2 control Dock = Fill
-            // (txtPath + pnlBreadcrumbSegments, chi 1 trong 2 Visible tai 1 thoi diem)
-            // duoc them CUNG vi tri do, TRUOC nhom Dock.Left (btnUp/btnCmdForward/
-            // btnCmdBack) - THU TU KHAC (VD them Fill sau nhom Left, nhu ban dau) da
-            // gay loi breadcrumb hien trong khong co chu/nut nao ca.
-            breadcrumbBar.Controls.Add(txtSearch);
-            breadcrumbBar.Controls.Add(cboFileTypeFilter);
-            breadcrumbBar.Controls.Add(txtQuickFilter);
-            breadcrumbBar.Controls.Add(btnGo);
-            breadcrumbBar.Controls.Add(txtPath);
-            breadcrumbBar.Controls.Add(pnlBreadcrumbSegments);
-            breadcrumbBar.Controls.Add(btnUp);
-            breadcrumbBar.Controls.Add(btnCmdForward);
-            breadcrumbBar.Controls.Add(btnCmdBack);
-
-            this.Controls.Add(breadcrumbBar);
-
-            // 3) commandBar: thay tlsMain, dung ToolStripButton/ToolStripDropDownButton
-            // hien Text (khong Image) - moi nut goi lai DUNG handler cu, khong logic moi.
-            commandBar = new ToolStrip
-            {
-                Dock = DockStyle.Top,
-                GripStyle = ToolStripGripStyle.Hidden,
-                ImageScalingSize = new Size(20, 20),
-            };
-
-            var tscbNew = new ToolStripDropDownButton("+ Mới") { DisplayStyle = ToolStripItemDisplayStyle.Text };
-            var tscbNewFolderItem = new ToolStripMenuItem("Thư mục mới");
-            tscbNewFolderItem.Click += mnuFileNewFolder_Click;
-            var tscbNewFileItem = new ToolStripMenuItem("File mới");
-            tscbNewFileItem.Click += mnuFileNewFile_Click;
-            tscbNew.DropDownItems.AddRange(new ToolStripItem[] { tscbNewFolderItem, tscbNewFileItem });
-
-            var tscbCut = CreateCommandButton("✂ Cắt", "Cắt (Ctrl+X)", mnuEditCut_Click);
-            var tscbCopy = CreateCommandButton("⧉ Sao chép", "Sao chép (Ctrl+C)", mnuEditCopy_Click);
-            var tscbPaste = CreateCommandButton("▤ Dán", "Dán (Ctrl+V)", mnuEditPaste_Click);
-            var tscbRename = CreateCommandButton("✎ Đổi tên", "Đổi tên (F2)", mnuEditRename_Click);
-            var tscbDelete = CreateCommandButton("✕ Xóa", "Xóa (Delete)", mnuEditDelete_Click);
-            var tscbRefresh = CreateCommandButton("⟳ Làm mới", "Làm mới (F5)", mnuViewRefresh_Click);
-
-            // Gan Tag = View tuong ung cho 4 muc mnuViewMode* CO SAN (Designer.cs
-            // khong gan Tag) de SetViewMode (xem ben duoi) dong bo Checked cho CA
-            // 2 noi (menu cu an + tscbView moi) bang 1 ham chung (SyncViewModeChecked).
-            mnuViewModeLargeIcon.Tag = View.LargeIcon;
-            mnuViewModeSmallIcon.Tag = View.SmallIcon;
-            mnuViewModeList.Tag = View.List;
-            mnuViewModeDetails.Tag = View.Details;
-
-            tscbView = new ToolStripDropDownButton("▦ Xem")
-            {
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
-                Alignment = ToolStripItemAlignment.Right,
-            };
-            tscbView.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                CreateViewModeItem("Biểu tượng lớn", View.LargeIcon, mnuViewModeLargeIcon_Click),
-                CreateViewModeItem("Biểu tượng nhỏ", View.SmallIcon, mnuViewModeSmallIcon_Click),
-                CreateViewModeItem("Danh sách", View.List, mnuViewModeList_Click),
-                CreateViewModeItem("Chi tiết", View.Details, mnuViewModeDetails_Click),
-            });
-
-            tscbMore = new ToolStripDropDownButton("••• Thêm")
-            {
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
-                Alignment = ToolStripItemAlignment.Right,
-            };
-            BuildOverflowMenu(tscbMore);
-
-            commandBar.Items.AddRange(new ToolStripItem[]
-            {
-                tscbNew, tscbCut, tscbCopy, tscbPaste, tscbRename, tscbDelete, tscbRefresh,
-                tscbView, tscbMore,
-            });
-
-            this.Controls.Add(commandBar);
-        }
-
-        /// <summary>Tao 1 ToolStripButton chi hien Text (khong Image) cho commandBar.</summary>
-        private ToolStripButton CreateCommandButton(string text, string tooltip, EventHandler handler)
-        {
-            var btn = new ToolStripButton(text)
-            {
-                DisplayStyle = ToolStripItemDisplayStyle.Text,
-                ToolTipText = tooltip,
-            };
-            btn.Click += handler;
-            return btn;
-        }
-
-        /// <summary>
-        /// Tao 1 muc che do xem (dung cho tscbView.DropDownItems) - Tag = mode de
-        /// SyncViewModeChecked dong bo Checked, Click goi lai DUNG handler cu
-        /// (mnuViewModeLargeIcon_Click...) - KHONG viet lai logic SetViewMode.
-        /// </summary>
-        private ToolStripMenuItem CreateViewModeItem(string text, View mode, EventHandler handler)
-        {
-            var item = new ToolStripMenuItem(text) { Tag = mode };
-            item.Click += handler;
-            return item;
-        }
-
-        /// <summary>
-        /// Xay noi dung menu "•••Thêm" (tscbMore) - gom nhom giong mockup (TỆP/
-        /// CHỈNH SỬA/XEM/CÔNG CỤ/TRỢ GIÚP). Cắt/Sao chép/Dán/Xóa/Đổi tên/Làm mới
-        /// DA CO rieng tren commandBar nen KHONG lap lai o day.
-        /// </summary>
-        private void BuildOverflowMenu(ToolStripDropDownItem menu)
-        {
-            AddOverflowHeader(menu, "TỆP");
-            AddOverflowItem(menu, "Tạo thư mục mới", mnuFileNewFolder_Click);
-            AddOverflowItem(menu, "Tạo file mới", mnuFileNewFile_Click);
-            menu.DropDownItems.Add(new ToolStripSeparator());
-
-            AddOverflowHeader(menu, "CHỈNH SỬA");
-            AddOverflowItem(menu, "Chọn tất cả", mnuEditSelectAll_Click);
-            AddOverflowItem(menu, "Thuộc tính", mnuEditProperties_Click);
-            menu.DropDownItems.Add(new ToolStripSeparator());
-
-            AddOverflowHeader(menu, "XEM");
-            var tsoShowHidden = new ToolStripMenuItem("Hiện file/thư mục ẩn");
-            // Uy quyen HOAN TOAN cho mnuViewShowHidden_Click (nguon logic duy nhat) -
-            // chi doi Checked cua mnuViewShowHidden (menu cu, an) roi goi lai handler
-            // cu, khong tu viet logic rieng cho muc nay.
-            tsoShowHidden.Click += (s, e) =>
-            {
-                mnuViewShowHidden.Checked = !mnuViewShowHidden.Checked;
-                mnuViewShowHidden_Click(mnuViewShowHidden, EventArgs.Empty);
-            };
-            menu.DropDownOpening += (s, e) => tsoShowHidden.Checked = mnuViewShowHidden.Checked;
-            menu.DropDownItems.Add(tsoShowHidden);
-            menu.DropDownItems.Add(new ToolStripSeparator());
-
-            AddOverflowHeader(menu, "CÔNG CỤ");
-            AddOverflowItem(menu, "Tìm kiếm...", mnuToolsSearch_Click);
-            AddOverflowItem(menu, "Tìm file trùng lặp...", mnuToolsFindDuplicates_Click);
-            AddOverflowItem(menu, "Đổi tên hàng loạt...", mnuToolsBatchRename_Click);
-            AddOverflowItem(menu, "Giám sát toàn vẹn thư mục này", mnuToolsIntegrityMonitor_Click);
-            AddOverflowItem(menu, "Thùng rác", mnuToolsRecycleBin_Click);
-            AddOverflowItem(menu, "Xem nhật ký hoạt động", mnuToolsLogs_Click);
-            AddOverflowItem(menu, "Cài đặt...", mnuToolsSettings_Click);
-            menu.DropDownItems.Add(new ToolStripSeparator());
-
-            AddOverflowHeader(menu, "TRỢ GIÚP");
-            AddOverflowItem(menu, "Giới thiệu...", mnuHelpAbout_Click);
-        }
-
-        private void AddOverflowHeader(ToolStripDropDownItem menu, string text)
-        {
-            menu.DropDownItems.Add(new ToolStripMenuItem(text)
-            {
-                Enabled = false,
-                Font = new Font(this.Font, FontStyle.Bold),
-            });
-        }
-
-        private void AddOverflowItem(ToolStripDropDownItem menu, string text, EventHandler handler)
-        {
-            var item = new ToolStripMenuItem(text);
-            item.Click += handler;
-            menu.DropDownItems.Add(item);
-        }
-
-        /// <summary>
-        /// STAGE 2 cua redesign - xay lai pnlBreadcrumbSegments thanh 1 chuoi nut
-        /// (1 nut/thu muc tren duong dan tu goc o dia toi path) + nhan "›" ngan
-        /// cach, giong breadcrumb cua Windows Explorer. Bam vao 1 nut se NavigateTo
-        /// dung thu muc do (BreadcrumbSegment_Click) - KHONG them logic dieu huong
-        /// moi, chi goi lai NavigateTo da co san.
-        /// </summary>
-        /// <param name="path">Duong dan hien tai (_currentPath) - goi tu mnuViewRefresh_Click.</param>
-        private void RebuildBreadcrumb(string path)
-        {
-            pnlBreadcrumbSegments.Controls.Clear();
-            if (string.IsNullOrEmpty(path))
-                return;
-
-            List<DirectoryInfo> chain = new List<DirectoryInfo>();
-            DirectoryInfo current;
-            try
-            {
-                current = new DirectoryInfo(path);
-            }
-            catch (Exception)
-            {
-                // Duong dan khong hop le (VD nguoi dung go tay sai) - khong ve
-                // breadcrumb, giu nguyen txtPath de nguoi dung tu sua.
-                return;
-            }
-
-            while (current != null)
-            {
-                chain.Insert(0, current);
-                current = current.Parent;
-            }
-
-            for (int i = 0; i < chain.Count; i++)
-            {
-                DirectoryInfo dir = chain[i];
-                var segmentButton = new Button
-                {
-                    Text = dir.Name,
-                    AutoSize = true,
-                    AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                    FlatStyle = FlatStyle.Flat,
-                    Margin = new Padding(0, 4, 0, 4),
-                    Padding = new Padding(4, 0, 4, 0),
-                    Tag = dir.FullName,
-                    // Dat mau tuong minh (khong de mac dinh SystemColors) - tranh
-                    // truong hop nut/chu bi lan vao nen (VD SystemColors.Control
-                    // trung/gan trung AppTheme.Surface) khien breadcrumb nhin nhu
-                    // trong khong co gi.
-                    BackColor = AppTheme.Surface,
-                    ForeColor = AppTheme.TextPrimary,
-                    UseVisualStyleBackColor = false,
-                };
-                segmentButton.FlatAppearance.BorderSize = 0;
-                segmentButton.FlatAppearance.MouseOverBackColor = AppTheme.Border;
-                segmentButton.Click += BreadcrumbSegment_Click;
-                pnlBreadcrumbSegments.Controls.Add(segmentButton);
-
-                if (i < chain.Count - 1)
-                {
-                    pnlBreadcrumbSegments.Controls.Add(new Label
-                    {
-                        Text = "›",
-                        AutoSize = true,
-                        Margin = new Padding(0, 8, 0, 0),
-                        ForeColor = AppTheme.TextSecondary,
-                        BackColor = Color.Transparent,
-                    });
-                }
-            }
-        }
-
-        /// <summary>Bam vao 1 doan breadcrumb - NavigateTo dung thu muc do (khong logic moi).</summary>
-        private void BreadcrumbSegment_Click(object sender, EventArgs e)
-        {
-            string path = (sender as Control)?.Tag as string;
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
-                NavigateTo(path);
-        }
-
-        /// <summary>An pnlBreadcrumbSegments, hien txtPath de nguoi dung go tay duong dan.</summary>
-        private void ShowPathTextBoxForEdit()
-        {
-            pnlBreadcrumbSegments.Visible = false;
-            txtPath.Visible = true;
-            txtPath.Focus();
-            txtPath.SelectAll();
-        }
-
-        /// <summary>An txtPath, hien lai breadcrumb dang danh sach nut (mac dinh).</summary>
-        private void ShowBreadcrumbView()
-        {
-            txtPath.Visible = false;
-            pnlBreadcrumbSegments.Visible = true;
-        }
-
-        /// <summary>
-        /// STAGE 3 cua redesign - OwnerDraw cho lvwFiles: dong cao 32px (qua
-        /// _imlRowSpacer, xem remarks tai khai bao) + dong dang chon duoc ve rieng
-        /// thanh hinh chu nhat bo tron 4px, mau AppTheme.SelectedRow - giong dung
-        /// mockup ("row height 32px, selected row #EDE9FE voi 4px rounding").
-        ///
-        /// QUYET DINH THIET KE: CHI OwnerDraw khi lvwFiles.View == View.Details
-        /// (xem lvwFiles_DrawItem) - DrawSubItem CHI duoc WinForms goi trong
-        /// Details view, nen neu OwnerDraw tu ve ca cac che do khac (Bieu tuong
-        /// lon/nho, Danh sach) ma khong co DrawSubItem, icon/chu se bien mat hoan
-        /// toan (mat luon tinh nang "Biểu tượng lớn" moi sua o phan truoc) - vi vay
-        /// cac che do do van duoc tra ve DrawDefault = true (ve nhu WinForms mac
-        /// dinh, khong doi gi).
-        ///
-        /// KHONG doi lvwFiles.SmallImageList thanh imlIcons nhu truoc (van la
-        /// _imlRowSpacer, chi de ep chieu cao) - icon THUC SU duoc ve tay trong
-        /// lvwFiles_DrawSubItem, doc truc tiep tu imlIcons.Images[ImageKey], hoan
-        /// toan doc lap voi SmallImageList dang gan.
-        /// </summary>
-        private void InitializeListViewOwnerDraw()
-        {
-            _imlRowSpacer = new ImageList
-            {
-                ImageSize = new Size(1, 32),
-                ColorDepth = ColorDepth.Depth32Bit,
-            };
-            _imlRowSpacer.Images.Add("spacer", new Bitmap(1, 32));
-            lvwFiles.SmallImageList = _imlRowSpacer;
-
-            // Bo GridLines - ke thang cua WinForms se cat ngang qua goc bo tron cua
-            // dong dang chon, nhin khong dep; Win11 File Explorer that cung khong
-            // hien ke o che do Chi tiet.
-            lvwFiles.GridLines = false;
-
-            lvwFiles.OwnerDraw = true;
-            lvwFiles.DrawColumnHeader += lvwFiles_DrawColumnHeader;
-            lvwFiles.DrawItem += lvwFiles_DrawItem;
-            lvwFiles.DrawSubItem += lvwFiles_DrawSubItem;
-        }
-
-        private void lvwFiles_DrawColumnHeader(object sender, DrawListViewColumnHeaderEventArgs e)
-        {
-            e.DrawDefault = true;
-        }
-
-        private void lvwFiles_DrawItem(object sender, DrawListViewItemEventArgs e)
-        {
-            if (lvwFiles.View != View.Details)
-            {
-                // Xem <remarks> tai InitializeListViewOwnerDraw - cac che do khac
-                // Details van phai ve mac dinh, khong co DrawSubItem ho tro.
-                e.DrawDefault = true;
-                return;
-            }
-
-            Rectangle rowBounds = e.Item.GetBounds(ItemBoundsPortion.Entire);
-            using (SolidBrush backgroundBrush = new SolidBrush(AppTheme.Surface))
-                e.Graphics.FillRectangle(backgroundBrush, rowBounds);
-
-            if (e.Item.Selected)
-            {
-                Rectangle highlightBounds = Rectangle.Inflate(rowBounds, -2, -1);
-                System.Drawing.Drawing2D.SmoothingMode oldMode = e.Graphics.SmoothingMode;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using (var path = CreateRoundedRectPath(highlightBounds, 4))
-                using (SolidBrush highlightBrush = new SolidBrush(AppTheme.SelectedRow))
-                {
-                    e.Graphics.FillPath(highlightBrush, path);
-                }
-                e.Graphics.SmoothingMode = oldMode;
-            }
-
-            e.DrawDefault = false;
-        }
-
-        private void lvwFiles_DrawSubItem(object sender, DrawListViewSubItemEventArgs e)
-        {
-            // Mau chu: giu NGUYEN mau da duoc gan san ngoai OwnerDraw (VD mo di
-            // khi item dang o trang thai Cut - xem noi gan ForeColor cho
-            // ListViewItem khi Cut/Copy) - khong tu quyet dinh mau rieng o day.
-            Color textColor = e.Item.ForeColor;
-            Rectangle bounds = e.Bounds;
-
-            if (e.ColumnIndex == 0)
-            {
-                Image icon = null;
-                if (!string.IsNullOrEmpty(e.Item.ImageKey) && imlIcons.Images.ContainsKey(e.Item.ImageKey))
-                    icon = imlIcons.Images[e.Item.ImageKey];
-
-                int textLeft = bounds.Left + 4;
-                if (icon != null)
-                {
-                    int iconTop = bounds.Top + (bounds.Height - icon.Height) / 2;
-                    e.Graphics.DrawImage(icon, bounds.Left + 4, iconTop, icon.Width, icon.Height);
-                    textLeft = bounds.Left + 4 + icon.Width + 6;
-                }
-
-                Rectangle textBounds = new Rectangle(textLeft, bounds.Top, Math.Max(bounds.Right - textLeft, 0), bounds.Height);
-                TextRenderer.DrawText(e.Graphics, e.Item.Text, lvwFiles.Font, textBounds, textColor,
-                    TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
-            }
-            else
-            {
-                TextFormatFlags flags = TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix;
-                flags |= e.Header.TextAlign == HorizontalAlignment.Right ? TextFormatFlags.Right : TextFormatFlags.Left;
-
-                Rectangle textBounds = new Rectangle(bounds.Left + 4, bounds.Top, Math.Max(bounds.Width - 8, 0), bounds.Height);
-                TextRenderer.DrawText(e.Graphics, e.SubItem.Text, lvwFiles.Font, textBounds, textColor, flags);
-            }
-        }
-
-        /// <summary>
-        /// STAGE 3 - OwnerDrawText cho trvFolders (bo tron dong dang chon, mau
-        /// AppTheme.SelectedRow, dong bo voi lvwFiles) - CHI ve rieng phan chu/nen
-        /// (DrawMode = OwnerDrawText), GIU NGUYEN icon/duong ke cay/nut +-/thu tu
-        /// thu do WinForms tu ve (khong OwnerDrawAll) de giam rui ro le/mat icon.
-        /// CHUA kiem tra truc quan tren Visual Studio thuc te - bao lai neu dong
-        /// chon bi lech/che mat icon de dieu chinh (VD do bounds/offset).
-        /// </summary>
-        private void InitializeTreeViewOwnerDraw()
-        {
-            trvFolders.DrawMode = TreeViewDrawMode.OwnerDrawText;
-            trvFolders.DrawNode += trvFolders_DrawNode;
-        }
-
-        private void trvFolders_DrawNode(object sender, DrawTreeNodeEventArgs e)
-        {
-            bool isSelected = (e.State & TreeNodeStates.Selected) != 0;
-            Rectangle bounds = e.Bounds;
-
-            using (SolidBrush backgroundBrush = new SolidBrush(AppTheme.Surface))
-                e.Graphics.FillRectangle(backgroundBrush, bounds);
-
-            if (isSelected)
-            {
-                Rectangle highlightBounds = Rectangle.Inflate(bounds, 2, -1);
-                System.Drawing.Drawing2D.SmoothingMode oldMode = e.Graphics.SmoothingMode;
-                e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                using (var path = CreateRoundedRectPath(highlightBounds, 4))
-                using (SolidBrush highlightBrush = new SolidBrush(AppTheme.SelectedRow))
-                {
-                    e.Graphics.FillPath(highlightBrush, path);
-                }
-                e.Graphics.SmoothingMode = oldMode;
-            }
-
-            TextRenderer.DrawText(e.Graphics, e.Node.Text, trvFolders.Font, bounds, AppTheme.TextPrimary,
-                TextFormatFlags.VerticalCenter | TextFormatFlags.Left | TextFormatFlags.NoPrefix);
-        }
-
-        /// <summary>Tao GraphicsPath hinh chu nhat bo tron 4 goc (dung cho dong dang chon cua lvwFiles).</summary>
-        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectPath(Rectangle bounds, int radius)
-        {
-            var path = new System.Drawing.Drawing2D.GraphicsPath();
-            int diameter = radius * 2;
-            path.AddArc(bounds.X, bounds.Y, diameter, diameter, 180, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Y, diameter, diameter, 270, 90);
-            path.AddArc(bounds.Right - diameter, bounds.Bottom - diameter, diameter, diameter, 0, 90);
-            path.AddArc(bounds.X, bounds.Bottom - diameter, diameter, diameter, 90, 90);
-            path.CloseFigure();
-            return path;
         }
 
         /// <summary>
@@ -1363,10 +820,6 @@ namespace FileExplorerApp.Forms
             // nhu imlIcons - giai phong thu cong tai day, giong cach lam voi
             // _watcherDebounceTimer/_fileMonitorService/_integrityService o tren.
             _imlIconsLarge.Dispose();
-
-            // _imlRowSpacer cung tao bang code (xem remarks tai khai bao) - giai
-            // phong thu cong giong _imlIconsLarge ngay tren.
-            _imlRowSpacer?.Dispose();
         }
 
         /// <summary>
@@ -1382,10 +835,24 @@ namespace FileExplorerApp.Forms
             mnuViewShowHidden.Checked = _showHiddenItems;
 
             View savedMode = (View)Settings.Default.DefaultViewMode;
-            if (savedMode != View.LargeIcon && savedMode != View.SmallIcon && savedMode != View.List)
-                savedMode = View.Details;
-
-            SetViewMode(savedMode);
+            ToolStripMenuItem selectedItem;
+            switch (savedMode)
+            {
+                case View.LargeIcon:
+                    selectedItem = mnuViewModeLargeIcon;
+                    break;
+                case View.SmallIcon:
+                    selectedItem = mnuViewModeSmallIcon;
+                    break;
+                case View.List:
+                    selectedItem = mnuViewModeList;
+                    break;
+                default:
+                    savedMode = View.Details;
+                    selectedItem = mnuViewModeDetails;
+                    break;
+            }
+            SetViewMode(savedMode, selectedItem);
         }
 
         /// <summary>
@@ -1412,26 +879,6 @@ namespace FileExplorerApp.Forms
             cmsListView.Renderer = renderer;
             cmsListView.BackColor = AppTheme.Surface;
             cmsListView.ForeColor = AppTheme.TextPrimary;
-
-            // commandBar/breadcrumbBar (thanh lenh + thanh dia chi kieu Win11 -
-            // xem InitializeRedesignedCommandUi) - dung CHUNG renderer/mau voi
-            // mnsMain/tlsMain/stsMain o tren de dong bo giao dien.
-            commandBar.Renderer = renderer;
-            commandBar.BackColor = AppTheme.Surface;
-            breadcrumbBar.BackColor = AppTheme.Surface;
-            pnlBreadcrumbSegments.BackColor = AppTheme.Surface;
-            // Ve lai breadcrumb de cac nut segment (mau dat luc tao trong
-            // RebuildBreadcrumb) cap nhat theo theme moi - xem chu thich tai
-            // segmentButton.BackColor/ForeColor.
-            RebuildBreadcrumb(_currentPath);
-            btnCmdBack.FlatStyle = FlatStyle.Flat;
-            btnCmdBack.FlatAppearance.BorderColor = AppTheme.Border;
-            btnCmdBack.BackColor = AppTheme.Surface;
-            btnCmdBack.ForeColor = AppTheme.TextPrimary;
-            btnCmdForward.FlatStyle = FlatStyle.Flat;
-            btnCmdForward.FlatAppearance.BorderColor = AppTheme.Border;
-            btnCmdForward.BackColor = AppTheme.Surface;
-            btnCmdForward.ForeColor = AppTheme.TextPrimary;
 
             // Thanh dia chi.
             pnlAddressBar.BackColor = AppTheme.Surface;
@@ -2763,15 +2210,6 @@ namespace FileExplorerApp.Forms
             // luon dung ke ca khi phan duyet noi dung ben duoi gap loi.
             txtPath.Text = _currentPath;
 
-            // Stage 2 redesign (xem InitializeRedesignedCommandUi/RebuildBreadcrumb):
-            // dong bo lai breadcrumb (danh sach nut theo tung doan duong dan) VA
-            // chuyen ve che do hien breadcrumb (khong con o go tay) - dung ngay tai
-            // day (diem dong bo duy nhat, giong txtPath.Text ngay tren) de MOI noi
-            // goi mnuViewRefresh_Click (NavigateTo/Back/Forward/Up/F5...) deu tu
-            // dong cap nhat breadcrumb, khong can sua rieng tung noi.
-            RebuildBreadcrumb(_currentPath);
-            ShowBreadcrumbView();
-
             // Moi lan noi dung duoc nap lai deu co the vi _currentPath VUA DOI
             // (NavigateTo/Back/Forward/Up deu goi mnuViewRefresh_Click ngay sau
             // khi gan _currentPath moi) - tro FileMonitorService sang thu muc
@@ -3987,19 +3425,13 @@ namespace FileExplorerApp.Forms
         /// 3 che do con lai (hanh xu nhu radio button) va luu vao _currentViewMode.
         /// </summary>
         /// <param name="mode">Che do hien thi vua duoc chon.</param>
-        /// <remarks>
-        /// DA SUA (Stage 1 redesign - xem InitializeRedesignedCommandUi): truoc day
-        /// nhan them tham so selectedItem va chi dong bo Checked cho mnuViewMode.
-        /// DropDownItems; nay dong bo Checked cho CA mnuViewMode.DropDownItems (menu
-        /// cu, an) VA tscbView.DropDownItems (menu moi tren commandBar) qua
-        /// SyncViewModeChecked, dua vao Tag = View da gan cho tung muc (khong con
-        /// so sanh theo tham chieu selectedItem).
-        /// </remarks>
-        private void SetViewMode(View mode)
+        /// <param name="selectedItem">Muc menu tuong ung voi mode (se duoc danh dau Checked).</param>
+        private void SetViewMode(View mode, ToolStripMenuItem selectedItem)
         {
-            SyncViewModeChecked(mnuViewMode.DropDownItems, mode);
-            if (tscbView != null)
-                SyncViewModeChecked(tscbView.DropDownItems, mode);
+            foreach (ToolStripMenuItem item in mnuViewMode.DropDownItems.OfType<ToolStripMenuItem>())
+            {
+                item.Checked = item == selectedItem;
+            }
 
             _currentViewMode = mode;
             lvwFiles.View = _currentViewMode;
@@ -4008,38 +3440,24 @@ namespace FileExplorerApp.Forms
             Settings.Default.Save();
         }
 
-        /// <summary>
-        /// Dong bo Checked cho 1 tap ToolStripMenuItem che do xem, dua vao Tag =
-        /// View da gan (xem InitializeRedesignedCommandUi) - dung chung cho ca menu
-        /// cu (mnuViewMode) va menu moi (tscbView) de 2 noi luon khop nhau.
-        /// </summary>
-        private void SyncViewModeChecked(ToolStripItemCollection items, View mode)
-        {
-            foreach (ToolStripMenuItem item in items.OfType<ToolStripMenuItem>())
-            {
-                if (item.Tag is View itemMode)
-                    item.Checked = itemMode == mode;
-            }
-        }
-
         private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.LargeIcon);
+            SetViewMode(View.LargeIcon, mnuViewModeLargeIcon);
         }
 
         private void mnuViewModeSmallIcon_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.SmallIcon);
+            SetViewMode(View.SmallIcon, mnuViewModeSmallIcon);
         }
 
         private void mnuViewModeList_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.List);
+            SetViewMode(View.List, mnuViewModeList);
         }
 
         private void mnuViewModeDetails_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.Details);
+            SetViewMode(View.Details, mnuViewModeDetails);
         }
 
         #endregion
