@@ -201,6 +201,10 @@ namespace FileExplorerApp.Forms
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             InitializeCompressionContextMenuItems();
+            // Phai goi TRUOC LoadIconImages - InitializeUiScaling doi imlIcons.
+            // ImageSize/_imlIconsLarge.ImageSize (AddIconPair doc gia tri nay khi
+            // ve icon), doi SAU se khong con tac dung vi ImageList da co anh.
+            InitializeUiScaling();
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
@@ -247,6 +251,31 @@ namespace FileExplorerApp.Forms
             cmsListView.Items.Insert(insertIndex, cmsCompressToZip);
             cmsListView.Items.Insert(insertIndex + 1, cmsExtractHere);
             cmsListView.Items.Insert(insertIndex + 2, cmsCompressionSeparator);
+        }
+
+        /// <summary>
+        /// Nguoi dung thay giao dien hoi nho - tang nhe (~15-20%) kich thuoc cua
+        /// so mac dinh/chu/icon. TAO BANG CODE (khong sua MainForm.Designer.cs):
+        /// - ClientSize/MinimumSize: doi lai property SAU InitializeComponent -
+        ///   khong anh huong logic resize/Dock hien co (cac panel/list/tree van
+        ///   Dock nhu cu, chi vung hien thi ban dau to hon).
+        /// - Font: doi Font cua Form (ke thua xuong moi control con CHUA tu dat
+        ///   Font rieng - VD txtPreview dang co Font Consolas rieng se KHONG doi,
+        ///   giu dung dung y "font code" cho phan xem truoc noi dung).
+        /// - imlIcons/_imlIconsLarge.ImageSize: tang tu 16/32 len 20/40 (dung ty
+        ///   le ~1.25x nhu ClientSize/Font) - PHAI dat TRUOC LoadIconImages (xem
+        ///   noi goi trong constructor) vi ImageList chi cho doi ImageSize khi
+        ///   con rong (chua co anh nao duoc them).
+        /// </summary>
+        private void InitializeUiScaling()
+        {
+            this.Font = new Font("Segoe UI", 10F);
+
+            this.ClientSize = new Size(1360, 800);
+            this.MinimumSize = new Size(800, 520);
+
+            imlIcons.ImageSize = new Size(20, 20);
+            _imlIconsLarge.ImageSize = new Size(40, 40);
         }
 
         /// <summary>
@@ -997,7 +1026,12 @@ namespace FileExplorerApp.Forms
         /// <param name="smallIcon">Bitmap 16x16 da ve san (VD tu CreateFolderIcon/CreateFileTypeIcon...).</param>
         private void AddIconPair(string key, Bitmap smallIcon)
         {
-            imlIcons.Images.Add(key, smallIcon);
+            // Phong to (hoac giu nguyen, neu ImageSize van la 16) ban smallIcon
+            // (luon ve san o 16x16) theo dung imlIcons.ImageSize hien tai - xem
+            // InitializeUiScaling (co the da tang len 20x20 theo yeu cau nguoi
+            // dung "tang kich co giao dien") - KHONG con Add thang smallIcon nhu
+            // truoc, tranh truong hop ImageSize != 16 ma anh van la 16x16 goc.
+            imlIcons.Images.Add(key, ScaleIcon(smallIcon, imlIcons.ImageSize.Width));
             _imlIconsLarge.Images.Add(key, ScaleIcon(smallIcon, _imlIconsLarge.ImageSize.Width));
         }
 
