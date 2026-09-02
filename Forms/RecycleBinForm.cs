@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,12 +42,21 @@ namespace FileExplorerApp.Forms
     public partial class RecycleBinForm : Form
     {
         private readonly RecycleBinService _recycleBinService = new RecycleBinService();
+        private readonly RecycleBinItemComparer _sorter = new RecycleBinItemComparer();
         private List<RecycleBinItemModel> _allItems = new List<RecycleBinItemModel>();
 
         public RecycleBinForm()
         {
             InitializeComponent();
             ApplyTheme();
+
+            // Gan ListViewItemSorter TRUOC khi nap du lieu - lvwItems se tu
+            // giu thu tu sap xep MOI LAN Items.Add duoc goi (WinForms tu lam
+            // dieu nay khi ListViewItemSorter da duoc gan, xem PopulateListView),
+            // khong can goi rieng lvwItems.Sort() sau khi nap, giong cach
+            // MainForm.LoadListViewFiles dang lam voi _listViewSorter.
+            lvwItems.ListViewItemSorter = _sorter;
+            UpdateColumnSortIndicators();
 
             // Fire-and-forget (khong await trong constructor - constructor
             // khong the la async) - Form se hien NGAY (do ShowDialog goi sau
@@ -56,6 +66,47 @@ namespace FileExplorerApp.Forms
             // rui ro "unobserved task exception" khi bo qua ket qua Task nhu
             // the nay.
             _ = LoadItemsAsync();
+        }
+
+        /// <summary>
+        /// Click vao header cot cua lvwItems: sap xep lai danh sach theo cot
+        /// do, click lai CUNG mot cot se doi chieu tang/giam - giong hanh vi
+        /// da dung cho lvwFiles cua MainForm (xem Helpers/ListViewItemComparer.cs),
+        /// nhung dung comparer RIENG (RecycleBinItemComparer, xem cuoi file) vi
+        /// cot cua RecycleBinForm hoan toan khac MainForm.
+        /// </summary>
+        private void lvwItems_ColumnClick(object sender, ColumnClickEventArgs e)
+        {
+            _sorter.SetSortColumn(e.Column);
+            lvwItems.Sort();
+            UpdateColumnSortIndicators();
+        }
+
+        /// <summary>
+        /// Ten goc (khong co mui ten) cua tung cot tren lvwItems - dung de
+        /// dung lai khi ve/xoa mui ten sap xep, giong quy uoc
+        /// MainForm.ColumnBaseNames.
+        /// </summary>
+        private static readonly string[] ColumnBaseNames = { "Tên", "Vị trí gốc", "Ngày xóa", "Kích thước", "Loại" };
+
+        /// <summary>
+        /// Cap nhat lai Text cua ca 5 ColumnHeader tren lvwItems de hien mui
+        /// ten chi chieu sap xep (▲ tang dan, ▼ giam dan) o cot dang duoc
+        /// dung de sap xep - xem giai thich chi tiet tai
+        /// MainForm.UpdateColumnSortIndicators (cung ly do/cach lam).
+        /// </summary>
+        private void UpdateColumnSortIndicators()
+        {
+            var columns = new[] { colName, colOriginalPath, colDeletedDate, colSize, colType };
+
+            for (int i = 0; i < columns.Length; i++)
+            {
+                string arrow = i == _sorter.SortColumn
+                    ? (_sorter.Descending ? " ▼" : " ▲")
+                    : string.Empty;
+
+                columns[i].Text = ColumnBaseNames[i] + arrow;
+            }
         }
 
         /// <summary>
@@ -369,6 +420,104 @@ namespace FileExplorerApp.Forms
         private void btnClose_Click(object sender, EventArgs e)
         {
             Close();
+        }
+
+        /// <summary>
+        /// IComparer dung cho lvwItems.ListViewItemSorter - sap xep theo cot
+        /// duoc click, ho tro doi chieu tang/giam khi click lai cung mot cot.
+        /// Viet RIENG cho RecycleBinForm (khong tai su dung
+        /// Helpers/ListViewItemComparer.cs cua MainForm) vi cot va quy uoc
+        /// hoan toan khac (5 cot: Tên/Vị trí gốc/Ngày xóa/Kích thước/Loại,
+        /// va KHONG can quy uoc "thư mục luôn trước" cua MainForm).
+        /// </summary>
+        /// <remarks>
+        /// QUYET DINH THIET KE - DOC GIA TRI GOC TU item.Tag (RecycleBinItemModel),
+        /// KHONG so sanh chuoi da dinh dang hien thi tren SubItems: neu so
+        /// sanh truc tiep chuoi "Ngày xóa" (dang "dd/MM/yyyy HH:mm" tu
+        /// FormatHelper.FormatDate) hoac "Kích thước" (dang "12.34 MB" tu
+        /// FormatHelper.FormatSize), thu tu sap xep se SAI hoan toan so voi
+        /// thoi gian/dung luong THAT (VD ngay "31/01/2026" bi xep TRUOC
+        /// "05/02/2026" vi so sanh chuoi thay ky tu '3' > '0'; "9 KB" bi xep
+        /// SAU "10 KB" vi ky tu '9' > '1') - day chinh la ly do can mot
+        /// comparer rieng thay vi de ListView tu sap xep chuoi mac dinh.
+        /// PopulateListView da luu san CA MODEL goc vao ListViewItem.Tag
+        /// (khong chi luu tung gia tri rieng vao SubItems[i].Tag nhu
+        /// ListViewItemComparer cua MainForm) nen doc lai truc tiep
+        /// DeletedDate/Size/IsDirectory tu do la du, khong can them Tag rieng
+        /// cho tung SubItem.
+        ///
+        /// Mac dinh sap xep theo Ngày xóa GIẢM DẦN (moi xoa gan day nhat len
+        /// dau) - giong thu tu Windows Explorer thuong hien trong Recycle Bin
+        /// thuc, thay vi de thu tu ngau nhien tuy Shell32 tra ve (Shell.Application.Items()
+        /// khong dam bao mot thu tu ro rang nao).
+        /// </remarks>
+        private class RecycleBinItemComparer : IComparer
+        {
+            /// <summary>Chi so cot dang duoc dung de sap xep (2 = Ngày xóa, mac dinh).</summary>
+            private int _sortColumn = 2;
+
+            /// <summary>True (mac dinh): sap xep giam dan; False: tang dan.</summary>
+            private bool _descending = true;
+
+            /// <summary>
+            /// Chon lai cot de sap xep - neu la CUNG cot vua sap xep truoc do
+            /// thi doi chieu (tang &lt;-&gt; giam), giong hanh vi click header
+            /// cua Windows Explorer; neu la cot KHAC thi luon bat dau lai tu
+            /// tang dan.
+            /// </summary>
+            public void SetSortColumn(int columnIndex)
+            {
+                if (_sortColumn == columnIndex)
+                {
+                    _descending = !_descending;
+                }
+                else
+                {
+                    _sortColumn = columnIndex;
+                    _descending = false;
+                }
+            }
+
+            /// <summary>Cot dang duoc dung de sap xep - dung cho RecycleBinForm ve lai mui ten chi huong sap xep tren header.</summary>
+            public int SortColumn => _sortColumn;
+
+            /// <summary>True neu dang sap xep giam dan - dung cho RecycleBinForm ve lai mui ten chi huong sap xep tren header.</summary>
+            public bool Descending => _descending;
+
+            public int Compare(object x, object y)
+            {
+                var modelX = (x as ListViewItem)?.Tag as RecycleBinItemModel;
+                var modelY = (y as ListViewItem)?.Tag as RecycleBinItemModel;
+                if (modelX == null || modelY == null)
+                    return 0;
+
+                int result;
+                switch (_sortColumn)
+                {
+                    case 1: // Vị trí gốc
+                        result = string.Compare(modelX.OriginalPath, modelY.OriginalPath, StringComparison.OrdinalIgnoreCase);
+                        break;
+
+                    case 2: // Ngày xóa - so sanh gia tri DateTime goc, KHONG phai chuoi da dinh dang.
+                        result = modelX.DeletedDate.CompareTo(modelY.DeletedDate);
+                        break;
+
+                    case 3: // Kích thước - so sanh gia tri long goc, KHONG phai chuoi da dinh dang.
+                        result = modelX.Size.CompareTo(modelY.Size);
+                        break;
+
+                    case 4: // Loại (Thư mục/Tệp)
+                        result = modelX.IsDirectory.CompareTo(modelY.IsDirectory);
+                        break;
+
+                    case 0: // Tên
+                    default:
+                        result = string.Compare(modelX.Name, modelY.Name, StringComparison.OrdinalIgnoreCase);
+                        break;
+                }
+
+                return _descending ? -result : result;
+            }
         }
     }
 }

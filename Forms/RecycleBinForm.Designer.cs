@@ -73,6 +73,7 @@ namespace FileExplorerApp.Forms
             this.lvwItems.TabIndex = 0;
             this.lvwItems.UseCompatibleStateImageBehavior = false;
             this.lvwItems.View = System.Windows.Forms.View.Details;
+            this.lvwItems.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lvwItems_ColumnClick);
             //
             // colName
             //
