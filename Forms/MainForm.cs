@@ -143,6 +143,20 @@ namespace FileExplorerApp.Forms
             ColorDepth = ColorDepth.Depth32Bit
         };
 
+        /// <summary>
+        /// GIAO DIEN MOI (Stage 1, kieu Win11 File Explorer) - TAO BANG CODE tu
+        /// InitializeRedesignedCommandUi, KHONG khai bao trong MainForm.Designer.cs
+        /// (cung ly do voi _imlIconsLarge/cmsCompressToZip o tren: Designer.cs dang
+        /// la WIP rieng, sua tay ngoai Designer de mat khi mo lai bang VS Designer).
+        /// mnsMain/tlsMain/pnlAddressBar CU van con nguyen (chi Visible = false).
+        /// </summary>
+        private ToolStrip commandBar;
+        private Panel breadcrumbBar;
+        private Button btnCmdBack;
+        private Button btnCmdForward;
+        private ToolStripDropDownButton tscbView;
+        private ToolStripDropDownButton tscbMore;
+
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
 
@@ -201,6 +215,7 @@ namespace FileExplorerApp.Forms
             this.Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
 
             InitializeCompressionContextMenuItems();
+            InitializeRedesignedCommandUi();
             ApplyTheme();
             LoadIconImages();
             LoadTreeViewFolders();
@@ -247,6 +262,228 @@ namespace FileExplorerApp.Forms
             cmsListView.Items.Insert(insertIndex, cmsCompressToZip);
             cmsListView.Items.Insert(insertIndex + 1, cmsExtractHere);
             cmsListView.Items.Insert(insertIndex + 2, cmsCompressionSeparator);
+        }
+
+        /// <summary>
+        /// STAGE 1 cua redesign giao dien theo mau Win11 File Explorer (anh mockup
+        /// nguoi dung gui) - TAO HOAN TOAN BANG CODE (giong huong da dung cho
+        /// InitializeCompressionContextMenuItems/ApplyTheme/_imlIconsLarge o tren),
+        /// KHONG sua MainForm.Designer.cs: an (Visible = false) mnsMain/tlsMain/
+        /// pnlAddressBar cu (giu nguyen item/ShortcutKeys ben trong - WinForms van
+        /// xu ly ShortcutKeys tren MainMenuStrip ke ca khi Visible = false), CHUYEN
+        /// (Controls.Remove roi Controls.Add, KHONG tao ban sao) 6 control con cua
+        /// pnlAddressBar sang breadcrumbBar moi, va tao them commandBar (thanh lenh)
+        /// + 2 nut Back/Forward (btnCmdBack/btnCmdForward).
+        ///
+        /// TAT CA nut/menu moi deu goi lai DUNG handler cu da co san (mnuFileNewFolder_Click,
+        /// mnuEditCut_Click, mnuViewModeLargeIcon_Click, tsbBack_Click, ...) - KHONG
+        /// them logic nghiep vu moi, dung yeu cau "giữ nguyên phần chức năng".
+        ///
+        /// CHUA LAM trong Stage 1 nay (de lai cho cac giai doan sau, sau khi xac
+        /// nhan voi nguoi dung): breadcrumb dang la 1 o txtPath go tay (chua tach
+        /// tung doan duong dan bam duoc), khong co nut "Sắp xếp" rieng, chua
+        /// OwnerDraw bo tron dong chon/mau nen rieng cho trvFolders/lvwFiles theo
+        /// dung mockup, chua co phim tat Alt de bat/tat lai mnsMain.
+        /// </summary>
+        private void InitializeRedesignedCommandUi()
+        {
+            // 1) An 3 thanh cu - KHONG Remove khoi Controls (giu nguyen item/
+            // ShortcutKeys/Dock), chi Visible = false de khong con chiem layout.
+            mnsMain.Visible = false;
+            tlsMain.Visible = false;
+
+            Control[] addressBarControls = { txtSearch, cboFileTypeFilter, txtQuickFilter, btnGo, txtPath, btnUp };
+            foreach (Control control in addressBarControls)
+                pnlAddressBar.Controls.Remove(control);
+            pnlAddressBar.Visible = false;
+
+            // 2) breadcrumbBar: tai su dung LAI (khong tao ban sao) 6 control tren,
+            // them 2 nut Back/Forward moi (btnUp da co san tu Designer.cs, chi can
+            // chuyen qua). Thu tu Controls.Add duoi day da duoc kiem tra khop voi
+            // thu tu trai->phai nhu cu trong pnlAddressBar (Dock.Right: control them
+            // SAU cung nam gan vien phai nhat; Dock.Left: nguoc lai, control them
+            // SAU cung nam gan vien trai nhat) - vi vay btnCmdForward/btnCmdBack
+            // duoc them SAU btnUp, va them Back sau cung de Back nam ngoai cung
+            // ben trai (giong thu tu Back/Forward/Up trong anh mockup).
+            breadcrumbBar = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = pnlAddressBar.Height,
+                Padding = pnlAddressBar.Padding,
+            };
+
+            btnCmdBack = new Button
+            {
+                Dock = DockStyle.Left,
+                Width = 30,
+                Text = "←",
+                UseVisualStyleBackColor = true,
+            };
+            btnCmdBack.Click += tsbBack_Click;
+
+            btnCmdForward = new Button
+            {
+                Dock = DockStyle.Left,
+                Width = 30,
+                Text = "→",
+                UseVisualStyleBackColor = true,
+            };
+            btnCmdForward.Click += tsbForward_Click;
+
+            breadcrumbBar.Controls.Add(txtSearch);
+            breadcrumbBar.Controls.Add(cboFileTypeFilter);
+            breadcrumbBar.Controls.Add(txtQuickFilter);
+            breadcrumbBar.Controls.Add(btnGo);
+            breadcrumbBar.Controls.Add(txtPath);
+            breadcrumbBar.Controls.Add(btnUp);
+            breadcrumbBar.Controls.Add(btnCmdForward);
+            breadcrumbBar.Controls.Add(btnCmdBack);
+
+            this.Controls.Add(breadcrumbBar);
+
+            // 3) commandBar: thay tlsMain, dung ToolStripButton/ToolStripDropDownButton
+            // hien Text (khong Image) - moi nut goi lai DUNG handler cu, khong logic moi.
+            commandBar = new ToolStrip
+            {
+                Dock = DockStyle.Top,
+                GripStyle = ToolStripGripStyle.Hidden,
+                ImageScalingSize = new Size(20, 20),
+            };
+
+            var tscbNew = new ToolStripDropDownButton("+ Mới") { DisplayStyle = ToolStripItemDisplayStyle.Text };
+            var tscbNewFolderItem = new ToolStripMenuItem("Thư mục mới");
+            tscbNewFolderItem.Click += mnuFileNewFolder_Click;
+            var tscbNewFileItem = new ToolStripMenuItem("File mới");
+            tscbNewFileItem.Click += mnuFileNewFile_Click;
+            tscbNew.DropDownItems.AddRange(new ToolStripItem[] { tscbNewFolderItem, tscbNewFileItem });
+
+            var tscbCut = CreateCommandButton("✂ Cắt", "Cắt (Ctrl+X)", mnuEditCut_Click);
+            var tscbCopy = CreateCommandButton("⧉ Sao chép", "Sao chép (Ctrl+C)", mnuEditCopy_Click);
+            var tscbPaste = CreateCommandButton("▤ Dán", "Dán (Ctrl+V)", mnuEditPaste_Click);
+            var tscbRename = CreateCommandButton("✎ Đổi tên", "Đổi tên (F2)", mnuEditRename_Click);
+            var tscbDelete = CreateCommandButton("✕ Xóa", "Xóa (Delete)", mnuEditDelete_Click);
+            var tscbRefresh = CreateCommandButton("⟳ Làm mới", "Làm mới (F5)", mnuViewRefresh_Click);
+
+            // Gan Tag = View tuong ung cho 4 muc mnuViewMode* CO SAN (Designer.cs
+            // khong gan Tag) de SetViewMode (xem ben duoi) dong bo Checked cho CA
+            // 2 noi (menu cu an + tscbView moi) bang 1 ham chung (SyncViewModeChecked).
+            mnuViewModeLargeIcon.Tag = View.LargeIcon;
+            mnuViewModeSmallIcon.Tag = View.SmallIcon;
+            mnuViewModeList.Tag = View.List;
+            mnuViewModeDetails.Tag = View.Details;
+
+            tscbView = new ToolStripDropDownButton("▦ Xem")
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                Alignment = ToolStripItemAlignment.Right,
+            };
+            tscbView.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                CreateViewModeItem("Biểu tượng lớn", View.LargeIcon, mnuViewModeLargeIcon_Click),
+                CreateViewModeItem("Biểu tượng nhỏ", View.SmallIcon, mnuViewModeSmallIcon_Click),
+                CreateViewModeItem("Danh sách", View.List, mnuViewModeList_Click),
+                CreateViewModeItem("Chi tiết", View.Details, mnuViewModeDetails_Click),
+            });
+
+            tscbMore = new ToolStripDropDownButton("••• Thêm")
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                Alignment = ToolStripItemAlignment.Right,
+            };
+            BuildOverflowMenu(tscbMore);
+
+            commandBar.Items.AddRange(new ToolStripItem[]
+            {
+                tscbNew, tscbCut, tscbCopy, tscbPaste, tscbRename, tscbDelete, tscbRefresh,
+                tscbView, tscbMore,
+            });
+
+            this.Controls.Add(commandBar);
+        }
+
+        /// <summary>Tao 1 ToolStripButton chi hien Text (khong Image) cho commandBar.</summary>
+        private ToolStripButton CreateCommandButton(string text, string tooltip, EventHandler handler)
+        {
+            var btn = new ToolStripButton(text)
+            {
+                DisplayStyle = ToolStripItemDisplayStyle.Text,
+                ToolTipText = tooltip,
+            };
+            btn.Click += handler;
+            return btn;
+        }
+
+        /// <summary>
+        /// Tao 1 muc che do xem (dung cho tscbView.DropDownItems) - Tag = mode de
+        /// SyncViewModeChecked dong bo Checked, Click goi lai DUNG handler cu
+        /// (mnuViewModeLargeIcon_Click...) - KHONG viet lai logic SetViewMode.
+        /// </summary>
+        private ToolStripMenuItem CreateViewModeItem(string text, View mode, EventHandler handler)
+        {
+            var item = new ToolStripMenuItem(text) { Tag = mode };
+            item.Click += handler;
+            return item;
+        }
+
+        /// <summary>
+        /// Xay noi dung menu "•••Thêm" (tscbMore) - gom nhom giong mockup (TỆP/
+        /// CHỈNH SỬA/XEM/CÔNG CỤ/TRỢ GIÚP). Cắt/Sao chép/Dán/Xóa/Đổi tên/Làm mới
+        /// DA CO rieng tren commandBar nen KHONG lap lai o day.
+        /// </summary>
+        private void BuildOverflowMenu(ToolStripDropDownItem menu)
+        {
+            AddOverflowHeader(menu, "TỆP");
+            AddOverflowItem(menu, "Tạo thư mục mới", mnuFileNewFolder_Click);
+            AddOverflowItem(menu, "Tạo file mới", mnuFileNewFile_Click);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+
+            AddOverflowHeader(menu, "CHỈNH SỬA");
+            AddOverflowItem(menu, "Chọn tất cả", mnuEditSelectAll_Click);
+            AddOverflowItem(menu, "Thuộc tính", mnuEditProperties_Click);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+
+            AddOverflowHeader(menu, "XEM");
+            var tsoShowHidden = new ToolStripMenuItem("Hiện file/thư mục ẩn");
+            // Uy quyen HOAN TOAN cho mnuViewShowHidden_Click (nguon logic duy nhat) -
+            // chi doi Checked cua mnuViewShowHidden (menu cu, an) roi goi lai handler
+            // cu, khong tu viet logic rieng cho muc nay.
+            tsoShowHidden.Click += (s, e) =>
+            {
+                mnuViewShowHidden.Checked = !mnuViewShowHidden.Checked;
+                mnuViewShowHidden_Click(mnuViewShowHidden, EventArgs.Empty);
+            };
+            menu.DropDownOpening += (s, e) => tsoShowHidden.Checked = mnuViewShowHidden.Checked;
+            menu.DropDownItems.Add(tsoShowHidden);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+
+            AddOverflowHeader(menu, "CÔNG CỤ");
+            AddOverflowItem(menu, "Tìm kiếm...", mnuToolsSearch_Click);
+            AddOverflowItem(menu, "Tìm file trùng lặp...", mnuToolsFindDuplicates_Click);
+            AddOverflowItem(menu, "Đổi tên hàng loạt...", mnuToolsBatchRename_Click);
+            AddOverflowItem(menu, "Giám sát toàn vẹn thư mục này", mnuToolsIntegrityMonitor_Click);
+            AddOverflowItem(menu, "Thùng rác", mnuToolsRecycleBin_Click);
+            AddOverflowItem(menu, "Xem nhật ký hoạt động", mnuToolsLogs_Click);
+            AddOverflowItem(menu, "Cài đặt...", mnuToolsSettings_Click);
+            menu.DropDownItems.Add(new ToolStripSeparator());
+
+            AddOverflowHeader(menu, "TRỢ GIÚP");
+            AddOverflowItem(menu, "Giới thiệu...", mnuHelpAbout_Click);
+        }
+
+        private void AddOverflowHeader(ToolStripDropDownItem menu, string text)
+        {
+            menu.DropDownItems.Add(new ToolStripMenuItem(text)
+            {
+                Enabled = false,
+                Font = new Font(this.Font, FontStyle.Bold),
+            });
+        }
+
+        private void AddOverflowItem(ToolStripDropDownItem menu, string text, EventHandler handler)
+        {
+            var item = new ToolStripMenuItem(text);
+            item.Click += handler;
+            menu.DropDownItems.Add(item);
         }
 
         /// <summary>
@@ -835,24 +1072,10 @@ namespace FileExplorerApp.Forms
             mnuViewShowHidden.Checked = _showHiddenItems;
 
             View savedMode = (View)Settings.Default.DefaultViewMode;
-            ToolStripMenuItem selectedItem;
-            switch (savedMode)
-            {
-                case View.LargeIcon:
-                    selectedItem = mnuViewModeLargeIcon;
-                    break;
-                case View.SmallIcon:
-                    selectedItem = mnuViewModeSmallIcon;
-                    break;
-                case View.List:
-                    selectedItem = mnuViewModeList;
-                    break;
-                default:
-                    savedMode = View.Details;
-                    selectedItem = mnuViewModeDetails;
-                    break;
-            }
-            SetViewMode(savedMode, selectedItem);
+            if (savedMode != View.LargeIcon && savedMode != View.SmallIcon && savedMode != View.List)
+                savedMode = View.Details;
+
+            SetViewMode(savedMode);
         }
 
         /// <summary>
@@ -879,6 +1102,21 @@ namespace FileExplorerApp.Forms
             cmsListView.Renderer = renderer;
             cmsListView.BackColor = AppTheme.Surface;
             cmsListView.ForeColor = AppTheme.TextPrimary;
+
+            // commandBar/breadcrumbBar (thanh lenh + thanh dia chi kieu Win11 -
+            // xem InitializeRedesignedCommandUi) - dung CHUNG renderer/mau voi
+            // mnsMain/tlsMain/stsMain o tren de dong bo giao dien.
+            commandBar.Renderer = renderer;
+            commandBar.BackColor = AppTheme.Surface;
+            breadcrumbBar.BackColor = AppTheme.Surface;
+            btnCmdBack.FlatStyle = FlatStyle.Flat;
+            btnCmdBack.FlatAppearance.BorderColor = AppTheme.Border;
+            btnCmdBack.BackColor = AppTheme.Surface;
+            btnCmdBack.ForeColor = AppTheme.TextPrimary;
+            btnCmdForward.FlatStyle = FlatStyle.Flat;
+            btnCmdForward.FlatAppearance.BorderColor = AppTheme.Border;
+            btnCmdForward.BackColor = AppTheme.Surface;
+            btnCmdForward.ForeColor = AppTheme.TextPrimary;
 
             // Thanh dia chi.
             pnlAddressBar.BackColor = AppTheme.Surface;
@@ -3425,13 +3663,19 @@ namespace FileExplorerApp.Forms
         /// 3 che do con lai (hanh xu nhu radio button) va luu vao _currentViewMode.
         /// </summary>
         /// <param name="mode">Che do hien thi vua duoc chon.</param>
-        /// <param name="selectedItem">Muc menu tuong ung voi mode (se duoc danh dau Checked).</param>
-        private void SetViewMode(View mode, ToolStripMenuItem selectedItem)
+        /// <remarks>
+        /// DA SUA (Stage 1 redesign - xem InitializeRedesignedCommandUi): truoc day
+        /// nhan them tham so selectedItem va chi dong bo Checked cho mnuViewMode.
+        /// DropDownItems; nay dong bo Checked cho CA mnuViewMode.DropDownItems (menu
+        /// cu, an) VA tscbView.DropDownItems (menu moi tren commandBar) qua
+        /// SyncViewModeChecked, dua vao Tag = View da gan cho tung muc (khong con
+        /// so sanh theo tham chieu selectedItem).
+        /// </remarks>
+        private void SetViewMode(View mode)
         {
-            foreach (ToolStripMenuItem item in mnuViewMode.DropDownItems.OfType<ToolStripMenuItem>())
-            {
-                item.Checked = item == selectedItem;
-            }
+            SyncViewModeChecked(mnuViewMode.DropDownItems, mode);
+            if (tscbView != null)
+                SyncViewModeChecked(tscbView.DropDownItems, mode);
 
             _currentViewMode = mode;
             lvwFiles.View = _currentViewMode;
@@ -3440,24 +3684,38 @@ namespace FileExplorerApp.Forms
             Settings.Default.Save();
         }
 
+        /// <summary>
+        /// Dong bo Checked cho 1 tap ToolStripMenuItem che do xem, dua vao Tag =
+        /// View da gan (xem InitializeRedesignedCommandUi) - dung chung cho ca menu
+        /// cu (mnuViewMode) va menu moi (tscbView) de 2 noi luon khop nhau.
+        /// </summary>
+        private void SyncViewModeChecked(ToolStripItemCollection items, View mode)
+        {
+            foreach (ToolStripMenuItem item in items.OfType<ToolStripMenuItem>())
+            {
+                if (item.Tag is View itemMode)
+                    item.Checked = itemMode == mode;
+            }
+        }
+
         private void mnuViewModeLargeIcon_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.LargeIcon, mnuViewModeLargeIcon);
+            SetViewMode(View.LargeIcon);
         }
 
         private void mnuViewModeSmallIcon_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.SmallIcon, mnuViewModeSmallIcon);
+            SetViewMode(View.SmallIcon);
         }
 
         private void mnuViewModeList_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.List, mnuViewModeList);
+            SetViewMode(View.List);
         }
 
         private void mnuViewModeDetails_Click(object sender, EventArgs e)
         {
-            SetViewMode(View.Details, mnuViewModeDetails);
+            SetViewMode(View.Details);
         }
 
         #endregion
