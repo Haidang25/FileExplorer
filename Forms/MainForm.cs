@@ -3435,7 +3435,10 @@ namespace FileExplorerApp.Forms
 
         private void mnuToolsRecycleBin_Click(object sender, EventArgs e)
         {
-            // TODO: mo man hinh xem noi dung Thung rac, dung RecycleBinService.GetRecycleBinItems.
+            using (var recycleBinForm = new RecycleBinForm())
+            {
+                recycleBinForm.ShowDialog(this);
+            }
         }
 
         private void mnuToolsLogs_Click(object sender, EventArgs e)
