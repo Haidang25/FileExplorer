@@ -2502,16 +2502,52 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            // Chi kiem tra lai voi includeHidden: true khi thuc su can (danh sach dang
-            // hien la rong) - tranh goi GetItems() 2 lan cho truong hop thong thuong
-            // (co noi dung) vi ham nay duyet dia moi lan goi.
-            bool hasHiddenItemsOnly = !_showHiddenItems
-                && _fileService.GetItems(_currentPath, includeHidden: true).Count > 0;
+            // Chi kiem tra lai khi thuc su can (danh sach dang hien la rong). TRUOC DAY
+            // goi lai _fileService.GetItems(includeHidden: true) - ham nay duyet lai TOAN
+            // BO thu muc (ke ca goi GetSubFolders() de tinh HasSubFolders cho tung thu
+            // muc con) chi de biet "co hay khong", rat lang phi va la 1 trong nhung nguyen
+            // nhan khien thao tac tren o dia rong/cham (VD: TC002 - bam vao o dia rong) bi
+            // nhan doi thoi gian truy xuat dia. Thay bang HasAnyHiddenOrSystemEntry(): chi
+            // duyet nhe (EnumerateFileSystemEntries), dung lai NGAY khi gap muc an/he thong
+            // dau tien thay vi doc/dung het toan bo thu muc.
+            bool hasHiddenItemsOnly = !_showHiddenItems && HasAnyHiddenOrSystemEntry(_currentPath);
 
             lblEmptyFolder.Text = hasHiddenItemsOnly
                 ? "Thư mục này chỉ chứa các mục đang ẩn.\nBật \"Hiện file/thư mục ẩn\" trong menu Xem để xem."
                 : "Thư mục này trống";
             lblEmptyFolder.Visible = true;
+        }
+
+        /// <summary>
+        /// Kiem tra nhe (khong dung FileService/FolderService - tranh duyet lai toan bo
+        /// thu muc) xem trong <paramref name="path"/> co it nhat MOT muc (file hoac thu
+        /// muc con) mang thuoc tinh Hidden/System hay khong. Dung lai (early-exit) ngay
+        /// khi tim thay muc dau tien thoa dieu kien, chi dung cho UpdateEmptyFolderMessage
+        /// khi danh sach hien thi dang rong.
+        /// </summary>
+        private static bool HasAnyHiddenOrSystemEntry(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                return false;
+
+            try
+            {
+                foreach (string entryPath in Directory.EnumerateFileSystemEntries(path))
+                {
+                    try
+                    {
+                        FileAttributes attributes = File.GetAttributes(entryPath);
+                        if (attributes.HasFlag(FileAttributes.Hidden) || attributes.HasFlag(FileAttributes.System))
+                            return true;
+                    }
+                    catch (UnauthorizedAccessException) { /* Khong doc duoc thuoc tinh muc nay - bo qua rieng no. */ }
+                    catch (IOException) { /* VD: muc dang bi khoa/thao ra giua chung - bo qua rieng no. */ }
+                }
+            }
+            catch (UnauthorizedAccessException) { /* Khong co quyen liet ke thu muc. */ }
+            catch (IOException) { /* O dia thao ra, duong dan mang bi ngat... */ }
+
+            return false;
         }
 
         /// <summary>
@@ -4098,7 +4134,7 @@ namespace FileExplorerApp.Forms
         /// Khi nguoi dung chon mot node tren cay thu muc, dieu huong ung dung den
         /// thu muc tuong ung (dung chung NavigateTo voi txtPath/Back/Up).
         /// </summary>
-        private void trvFolders_AfterSelect(object sender, TreeViewEventArgs e)
+        private async void trvFolders_AfterSelect(object sender, TreeViewEventArgs e)
         {
             if (_isSyncingTreeView)
                 return; // Dang tu dong chon lai node do NavigateTo goi, khong can dieu huong lai.
@@ -4113,9 +4149,39 @@ namespace FileExplorerApp.Forms
             }
 
             string path = e.Node.Tag as string;
-            if (!string.IsNullOrEmpty(path) && Directory.Exists(path))
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            // Directory.Exists() tren mot o dia "san sang" tren giay to (IsReady = true)
+            // nhung thuc chat can quay/khoi dong lai (VD: o dia rong vua duoc cam vao,
+            // the nho USB...) van co the mat vai giay va lam DONG BANG toan bo UI vi day
+            // la mot lenh dong bo goi truc tiep tren luong giao dien (Testcase TC002: bam
+            // vao o dia rong bi do). Chuyen rieng phep kiem tra nay sang luong nen bang
+            // Task.Run - UI van phan hoi (con tro cho, TreeView tam khoa) trong luc cho,
+            // thay vi "đơ" hoan toan. Phan con lai (NavigateTo/LoadListViewFiles...) van
+            // giu NGUYEN dang dong bo tren luong giao dien nhu truoc, vi cac ham do dung
+            // truc tiep cac control WinForms (khong an toan khi goi tu luong khac).
+            Cursor previousCursor = this.Cursor;
+            this.Cursor = Cursors.WaitCursor;
+            trvFolders.Enabled = false;
+            tsslStatus.Text = "Đang kiểm tra ổ đĩa...";
+            try
             {
-                NavigateTo(path);
+                bool exists = await Task.Run(() => Directory.Exists(path));
+                if (exists)
+                {
+                    NavigateTo(path);
+                }
+            }
+            finally
+            {
+                trvFolders.Enabled = true;
+                this.Cursor = previousCursor;
+                // Neu NavigateTo() da chay o tren, dong nay chi ghi de lai cung mot gia
+                // tri "Sẵn sàng" ma LoadListViewFiles vua dat (vo hai) - neu duong dan hoa
+                // ra khong con ton tai (VD: rut o dia dung luc dang kiem tra), dong nay
+                // dam bao thanh trang thai khong bi ket lai o "Đang kiểm tra ổ đĩa...".
+                tsslStatus.Text = "Sẵn sàng";
             }
         }
 
