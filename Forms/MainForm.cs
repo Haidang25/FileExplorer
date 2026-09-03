@@ -4172,6 +4172,30 @@ namespace FileExplorerApp.Forms
                 {
                     NavigateTo(path);
                 }
+                else
+                {
+                    // Duong dan khong (hoac khong con) ton tai - VD: o dia rong/chua co
+                    // dia luc kiem tra (Directory.Exists tra ve false, khong nem loi),
+                    // hoac o dia/duong dan mang vua bi rut/mat ket noi ngay trong luc
+                    // dang kiem tra. Bao cho nguoi dung biet bang thong bao, GIONG het
+                    // thong bao "o dia chua san sang" o tren, thay vi im lang khong lam
+                    // gi (truoc day) khien nguoi dung khong hieu vi sao bam khong co
+                    // phan hoi.
+                    MessageBox.Show($"{Path.GetPathRoot(path) ?? path}\nỔ đĩa hiện chưa sẵn sàng (chưa có đĩa, hoặc mất kết nối).",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+            {
+                // O dia bi rut/mat ket noi hoac tu choi truy cap NGAY GIUA luc dang kiem
+                // tra/dieu huong (VD: Directory.Exists tra ve true nhung ngay sau do
+                // NavigateTo/LoadListViewFiles doc phai loi vi o dia da bi rut ra) - bao
+                // thong bao cho nguoi dung thay vi de loi thoat ra ngoai async void va
+                // lam SUP DO toan bo ung dung (async void KHONG the bat boi try/catch
+                // ben ngoai ham goi, exception se duoc nem lai tren vong lap thong diep
+                // UI ngay khi khong co try/catch o day).
+                MessageBox.Show($"{Path.GetPathRoot(path) ?? path}\nỔ đĩa hiện chưa sẵn sàng (chưa có đĩa, hoặc mất kết nối).",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             finally
             {
