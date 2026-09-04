@@ -4458,7 +4458,29 @@ namespace FileExplorerApp.Forms
             tsslStatus.Text = "Đang kiểm tra ổ đĩa...";
             try
             {
-                bool exists = await Task.Run(() => Directory.Exists(path));
+                // Task.WhenAny + Task.Delay lam "timeout" cho phep kiem tra nay - NEU
+                // KHONG co timeout, mot o dia/duong dan mang bi treo hoan toan (VD:
+                // rut giua chung nhung Windows chua kip bao ERROR, hoac o mang mat
+                // ket noi ma khong tra ve loi ro rang) se lam Directory.Exists() KHONG
+                // BAO GIO tra ve - ham nay se mai mai "cho" o day, khong bao gio chay
+                // den finally o duoi, nen con tro cho (WaitCursor) se bi KET MAI KHONG
+                // TU HET (dung bug nguoi dung bao). Sau 5 giay khong co ket qua, coi
+                // nhu that bai va tra lai quyen dieu khien cho nguoi dung, thay vi cho
+                // vo han.
+                Task<bool> existsCheckTask = Task.Run(() => Directory.Exists(path));
+                Task firstCompletedTask = await Task.WhenAny(existsCheckTask, Task.Delay(5000));
+
+                if (firstCompletedTask != existsCheckTask)
+                {
+                    MessageBox.Show($"{Path.GetPathRoot(path) ?? path}\nKhông thể truy cập ổ đĩa này (phản hồi quá lâu, có thể do mất kết nối).",
+                        "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+
+                // existsCheckTask da chac chan hoan tat (khong con phai cho) - await lai
+                // o day de lay ket qua/nem lai exception (neu co) mot cach an toan, KHONG
+                // lam UI phai cho them lan nao nua.
+                bool exists = await existsCheckTask;
                 if (exists)
                 {
                     NavigateTo(path);
