@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -16,9 +15,11 @@ namespace FileExplorerApp.Forms
     /// goi SearchService.SearchAsync() (async IAsyncEnumerable) qua "await foreach"
     /// de nhan ket qua NGAY khi tim thay, khong lam treo UI ma cung khong can tach
     /// luong nen (Task.Run) rieng - ho tro Huy giua chung qua CancellationTokenSource,
-    /// cung mau voi CopyProgressForm/mnuEditPaste_Click da lam voi thao tac Copy. Ket
-    /// qua duoc GOM THEO LO (xem ResultBatchSize/FlushResultBatch) truoc khi do vao
-    /// lvwResults, thay vi them tung dong mot, de giam so lan ve lai ListView.
+    /// cung mau voi CopyProgressForm/mnuEditPaste_Click da lam voi thao tac Copy. Moi
+    /// ket qua duoc THEM NGAY vao lvwResults (xem AddResultItem()) tai dung thoi diem
+    /// tim thay, KHONG doi gom du 1 lo/toan bo moi hien - de nguoi dung thay ket qua
+    /// "chay" ra dan tren man hinh giong Windows Explorer, thay vi man hinh dung im
+    /// roi ket qua hien ra tat ca cung luc khi quet xong.
     /// </summary>
     public partial class SearchForm : Form
     {
@@ -101,30 +102,29 @@ namespace FileExplorerApp.Forms
                 // hien kem so ket qua trong lblStatus, xem FormatElapsed() ben duoi.
                 var stopwatch = Stopwatch.StartNew();
 
-                // Buffer tich luy ket qua giua cac lan do vao lvwResults - xem
-                // ResultBatchSize va FlushResultBatch() ben duoi.
-                var batch = new List<FileItemModel>(ResultBatchSize);
-
                 try
                 {
                     // SearchService.SearchAsync() la async iterator (IAsyncEnumerable) -
                     // "await foreach" nhan tung ket qua NGAY khi tim thay, ngay trong
                     // luc dang await (khac voi Search() dong bo cu, phai boc ca ham
                     // bang Task.Run va doi den khi xong toan bo moi co ket qua dau
-                    // tien). Van giu duoc loi ich "thay ket qua dan" do, nhung thay vi
-                    // do tung dong mot vao lvwResults (nhieu lan cap nhat UI lien tiep,
-                    // co the giat/nhap nhay khi ket qua ra rat nhanh), ta gom lai theo
-                    // LO (ResultBatchSize muc/lan) va chi do vao ListView khi du 1 lo -
-                    // xem FlushResultBatch(). Khong dung .WithCancellation(token) o day
-                    // (extension do thuoc package System.Linq.Async, chua duoc cai) -
-                    // CancellationToken da duoc truyen thang vao SearchAsync() lam
-                    // tham so cuoi (co [EnumeratorCancellation]) nen viec huy van hoat
-                    // dong dung, chi khac ve cu phap goi.
+                    // tien). Moi item nhan duoc o day duoc them THANG vao lvwResults
+                    // ngay trong vong lap (xem AddResultItem()) - khong gom lo nua -
+                    // de ket qua hien ra NGAY luc tim thay, dung nhu yeu cau. Khong
+                    // dung .WithCancellation(token) o day (extension do thuoc package
+                    // System.Linq.Async, chua duoc cai) - CancellationToken da duoc
+                    // truyen thang vao SearchAsync() lam tham so cuoi (co
+                    // [EnumeratorCancellation]) nen viec huy van hoat dong dung, chi
+                    // khac ve cu phap goi. Nut Huy (btnCancelSearch_Click) van bam
+                    // duoc BINH THUONG trong luc dang quet, vi SearchRecursiveAsync
+                    // van nhuong dieu khien (await Task.Yield()) dinh ky cho vong lap
+                    // thong diep UI kip xu ly click chuot, khong bi chan boi vong lap
+                    // await foreach o day.
                     // onItemsScanned: goi dinh ky ngay ca khi CHUA tim thay ket qua khop
-                    // nao (foundCount van = 0) - truoc day lblStatus chi doi den khi du
-                    // 1 lo (ResultBatchSize = 50) ket qua moi cap nhat, nen khi quet mot
-                    // cay lon (VD: ca o C:) ma khong khop gi ca, man hinh dung im hoan
-                    // toan tu luc bam Tim kiem - de nguoi dung nham la ung dung bi treo,
+                    // nao (foundCount van = 0) - vi lblStatus chi duoc AddResultItem()
+                    // cap nhat khi CO ket qua khop, nen khi quet mot cay lon (VD: ca o
+                    // C:) ma khong khop gi ca, man hinh dung im hoan toan tu luc bam Tim
+                    // kiem neu khong co callback nay - de nguoi dung nham la ung dung bi treo,
                     // du thuc te van dang quet binh thuong. Bien scannedCount duoi day
                     // duoc doc lai trong lblStatus ca o cac cho khac (sau khi hoan tat/
                     // bi huy) de con so cuoi hien thi luon khop voi lan bao cao gan nhat.
@@ -139,18 +139,11 @@ namespace FileExplorerApp.Forms
                                 lblStatus.Text = $"Đang quét... đã kiểm tra {scannedCount:N0} mục, chưa thấy kết quả ({FormatElapsed(stopwatch.Elapsed)}).";
                         }))
                     {
-                        batch.Add(item);
                         foundCount++;
-
-                        if (batch.Count >= ResultBatchSize)
-                        {
-                            FlushResultBatch(batch);
-                            lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục ({FormatElapsed(stopwatch.Elapsed)}).";
-                        }
+                        AddResultItem(item);
+                        lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục ({FormatElapsed(stopwatch.Elapsed)}).";
                     }
 
-                    // Do het phan con lai trong buffer (chua du 1 lo) sau khi quet xong.
-                    FlushResultBatch(batch);
                     stopwatch.Stop();
 
                     // Truong hop khong tim thay gi (foundCount == 0): thong bao rieng,
@@ -173,9 +166,9 @@ namespace FileExplorerApp.Forms
                 }
                 catch (OperationCanceledException)
                 {
-                    // Van do het nhung ket qua da tich luy duoc truoc khi bi huy,
-                    // khong de mat phan con lai trong buffer.
-                    FlushResultBatch(batch);
+                    // Cac ket qua da tim thay TRUOC khi bi huy da duoc them thang vao
+                    // lvwResults ngay luc tim thay (AddResultItem() trong vong lap
+                    // await foreach o tren) - khong mat gi ca, chi can bao trang thai.
                     stopwatch.Stop();
                     lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục sau {FormatElapsed(stopwatch.Elapsed)}).";
                 }
@@ -187,14 +180,6 @@ namespace FileExplorerApp.Forms
                 }
             }
         }
-
-        /// <summary>
-        /// So ket qua toi da tich luy truoc khi do mot lo vao lvwResults - can bang
-        /// giua "thay ket qua dan" (so nho hon thi do thuong xuyen hon, gan giong
-        /// tung dong mot) va giam so lan cap nhat UI (so lon hon thi it giat/nhap
-        /// nhay hon, nhung phai doi lau hon moi thay lo dau tien).
-        /// </summary>
-        private const int ResultBatchSize = 50;
 
         /// <summary>
         /// Dinh dang mot khoang thoi gian (TimeSpan tu Stopwatch) thanh chuoi ngan
@@ -218,35 +203,18 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Do toan bo ket qua dang co trong batch vao lvwResults theo MOT LO (dung
-        /// BeginUpdate/EndUpdate de ListView chi ve lai 1 lan cho ca lo, thay vi ve
-        /// lai sau moi dong nhu khi them tung muc mot), roi xoa buffer de tiep tuc
-        /// tich luy lo tiep theo. Khong lam gi ca (khong goi BeginUpdate/EndUpdate)
-        /// neu batch dang rong - tranh ve lai ListView vo ich khi khong co gi moi.
+        /// Them MOT ket qua duy nhat vao lvwResults NGAY luc tim thay (goi truc tiep
+        /// tu vong lap await foreach trong btnSearch_Click) - KHONG gom lo/doi tim
+        /// xong moi hien nhu truoc, de nguoi dung thay ket qua hien ra dan tung
+        /// dong mot ngay trong luc dang quet, giong cach Windows Explorer lam.
         /// </summary>
-        private void FlushResultBatch(List<FileItemModel> batch)
+        private void AddResultItem(FileItemModel item)
         {
-            if (batch.Count == 0)
-                return;
-
-            lvwResults.BeginUpdate();
-            try
-            {
-                foreach (FileItemModel item in batch)
-                {
-                    var listItem = new ListViewItem(item.Name) { Tag = item.FullPath };
-                    listItem.SubItems.Add(item.ParentPath);
-                    listItem.SubItems.Add(item.IsDirectory ? string.Empty : item.SizeFormatted);
-                    listItem.SubItems.Add(FormatHelper.FormatDate(item.ModifiedDate));
-                    lvwResults.Items.Add(listItem);
-                }
-            }
-            finally
-            {
-                lvwResults.EndUpdate();
-            }
-
-            batch.Clear();
+            var listItem = new ListViewItem(item.Name) { Tag = item.FullPath };
+            listItem.SubItems.Add(item.ParentPath);
+            listItem.SubItems.Add(item.IsDirectory ? string.Empty : item.SizeFormatted);
+            listItem.SubItems.Add(FormatHelper.FormatDate(item.ModifiedDate));
+            lvwResults.Items.Add(listItem);
         }
 
         /// <summary>
