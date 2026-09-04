@@ -242,6 +242,47 @@ namespace FileExplorerApp.Forms
             // "vung lvwFiles hien xam trong, khong ve lai noi dung" khi Form
             // vua duoc mo len lan dau.
             this.Shown += MainForm_Shown;
+
+            // Tu dong gian cot "Tên" (colName) de lap day khoang trang con thua
+            // ben phai cot cuoi cung (colModified) - xem AutoSizeNameColumn().
+            // Goi 1 lan ngay tai day de co kich thuoc dung ngay tu dau (truoc ca
+            // khi nguoi dung resize cua so lan dau), roi dang ky Resize de tu
+            // dong tinh lai moi khi nguoi dung doi kich thuoc cua so/keo splitter.
+            AutoSizeNameColumn();
+            lvwFiles.Resize += (s, e) => AutoSizeNameColumn();
+        }
+
+        /// <summary>
+        /// Gian rong cot "Tên" (colName) de lap day toan bo khoang trang con
+        /// thua ben phai cot cuoi cung (colModified) trong lvwFiles - giong hanh
+        /// vi quen thuoc cua Windows Explorer (cot Ten luon gian ra vua khit
+        /// chieu rong cua so, khong de lai mang trang tach biet, ky la). 3 cot
+        /// con lai (colSize/colType/colModified) giu nguyen chieu rong co dinh -
+        /// chi rieng colName (chua ten file/thu muc, do dai thay doi nhieu nhat)
+        /// la ung vien hop ly nhat de "hap thu" phan khong gian con lai.
+        ///
+        /// Tru di SystemInformation.VerticalScrollBarWidth khi lvwFiles dang
+        /// hien thanh cuon doc (nhieu muc hon chieu cao hien co) - neu khong tru,
+        /// tong 4 cot se rong hon vung hien thi thuc te (bi thanh cuon che mat),
+        /// lam xuat hien thanh cuon NGANG khong can thiet.
+        ///
+        /// Dat gia tri toi thieu (MinNameColumnWidth) de cot Ten khong bi bop
+        /// qua nho/am khi cua so bi thu rat hep (MinimumSize cua Form van cho
+        /// phep spcFilesPreview co chieu rong nho hon tong 3 cot con lai).
+        /// </summary>
+        private const int MinNameColumnWidth = 120;
+
+        private void AutoSizeNameColumn()
+        {
+            int otherColumnsWidth = colSize.Width + colType.Width + colModified.Width;
+
+            bool hasVerticalScrollBar = lvwFiles.Items.Count > 0
+                && lvwFiles.ClientSize.Height < lvwFiles.Items[lvwFiles.Items.Count - 1].Bounds.Bottom;
+            int scrollBarWidth = hasVerticalScrollBar ? SystemInformation.VerticalScrollBarWidth : 0;
+
+            int newNameWidth = lvwFiles.ClientSize.Width - otherColumnsWidth - scrollBarWidth;
+
+            colName.Width = Math.Max(newNameWidth, MinNameColumnWidth);
         }
 
         /// <summary>
@@ -2659,6 +2700,13 @@ namespace FileExplorerApp.Forms
             }
 
             UpdateEmptyFolderMessage(itemCount);
+
+            // So muc/hien thi thanh cuon doc co the doi sau moi lan nap lai (VD
+            // chuyen tu thu muc it muc sang thu muc nhieu muc) - tinh lai chieu
+            // rong cot "Tên" de luon lap day khoang trang con thua, khong chi
+            // dua vao su kien Resize cua lvwFiles (kich thuoc control khong doi
+            // nhung noi dung/thanh cuon co the da doi).
+            AutoSizeNameColumn();
 
             tsslItemCount.Text = $"{itemCount} mục";
             tsslTotalSize.Text = FormatHelper.FormatSize(totalSize);
