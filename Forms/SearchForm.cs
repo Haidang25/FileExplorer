@@ -120,8 +120,24 @@ namespace FileExplorerApp.Forms
                     // CancellationToken da duoc truyen thang vao SearchAsync() lam
                     // tham so cuoi (co [EnumeratorCancellation]) nen viec huy van hoat
                     // dong dung, chi khac ve cu phap goi.
+                    // onItemsScanned: goi dinh ky ngay ca khi CHUA tim thay ket qua khop
+                    // nao (foundCount van = 0) - truoc day lblStatus chi doi den khi du
+                    // 1 lo (ResultBatchSize = 50) ket qua moi cap nhat, nen khi quet mot
+                    // cay lon (VD: ca o C:) ma khong khop gi ca, man hinh dung im hoan
+                    // toan tu luc bam Tim kiem - de nguoi dung nham la ung dung bi treo,
+                    // du thuc te van dang quet binh thuong. Bien scannedCount duoi day
+                    // duoc doc lai trong lblStatus ca o cac cho khac (sau khi hoan tat/
+                    // bi huy) de con so cuoi hien thi luon khop voi lan bao cao gan nhat.
+                    int scannedCount = 0;
+
                     await foreach (FileItemModel item in _searchService.SearchAsync(
-                        rootFolder, keyword, recursive, includeHidden, token))
+                        rootFolder, keyword, recursive, includeHidden, token,
+                        onItemsScanned: count =>
+                        {
+                            scannedCount = count;
+                            if (foundCount == 0)
+                                lblStatus.Text = $"Đang quét... đã kiểm tra {scannedCount:N0} mục, chưa thấy kết quả ({FormatElapsed(stopwatch.Elapsed)}).";
+                        }))
                     {
                         batch.Add(item);
                         foundCount++;

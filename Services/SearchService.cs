@@ -157,6 +157,19 @@ namespace FileExplorerApp.Services
         /// <param name="recursive">True: tim ca trong thu muc con (de quy). False: chi tim truc tiep trong rootPath.</param>
         /// <param name="includeHidden">True: tim ca trong cac muc an/he thong (Hidden/System).</param>
         /// <param name="cancellationToken">Token cho phep huy qua trinh tim kiem giua chung.</param>
+        /// <param name="onItemsScanned">
+        /// Callback TUY CHON, duoc goi dinh ky (khong phai moi muc mot - xem
+        /// ScannedProgressReportInterval) voi TONG SO muc da XEM QUA (ca khop VA
+        /// khong khop, KHAC voi so ket qua tim thay) tinh tu luc bat dau tim. Dung de
+        /// noi goi (VD: SearchForm) hien tien do "van dang chay" cho nguoi dung THAY
+        /// vi de man hinh dung im khong co gi thay doi hang chuc giay khi dang quet
+        /// mot cay rat lon (VD: ca o C:) nhung chua tim thay ket qua khop nao - de
+        /// tranh nham tuong ung dung bi treo trong khi thuc ra van dang chay binh
+        /// thuong, chi la chua tim thay gi. Goi TRUC TIEP (khong qua Invoke/BeginInvoke)
+        /// vi ham nay chi "nhuong" (Task.Yield) cho SynchronizationContext hien tai,
+        /// khong tach luong rieng - an toan cap nhat control WinForms truc tiep tu day
+        /// giong cach yield return item ben ngoai dang lam.
+        /// </param>
         /// <returns>
         /// IAsyncEnumerable FileItemModel, dung voi "await foreach (var item in
         /// SearchAsync(...))" - tra ve tung ket qua ngay khi tim thay. Enumerable
@@ -164,16 +177,28 @@ namespace FileExplorerApp.Services
         /// </returns>
         public async IAsyncEnumerable<FileItemModel> SearchAsync(
             string rootPath, string keyword, bool recursive, bool includeHidden,
-            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+            [EnumeratorCancellation] CancellationToken cancellationToken = default,
+            Action<int> onItemsScanned = null)
         {
             if (string.IsNullOrWhiteSpace(rootPath) || !Directory.Exists(rootPath) || string.IsNullOrWhiteSpace(keyword))
                 yield break;
 
-            await foreach (FileItemModel item in SearchRecursiveAsync(rootPath, keyword, recursive, includeHidden, cancellationToken))
+            await foreach (FileItemModel item in SearchRecursiveAsync(rootPath, keyword, recursive, includeHidden, cancellationToken, onItemsScanned))
             {
                 yield return item;
             }
         }
+
+        /// <summary>
+        /// So muc duoc "xem qua" giua 2 lan goi onItemsScanned lien tiep (xem tham
+        /// so onItemsScanned cua SearchAsync) - CHON RIENG, KHAC voi YieldEveryNItems,
+        /// vi day la tan suat CAP NHAT GIAO DIEN (nguoi dung can thay tien do TUONG
+        /// DOI thuong xuyen de tin ung dung van chay), khong lien quan den tan suat
+        /// nhuong luong cho UI (co the can nhuong THUONG XUYEN HON de UI phan hoi
+        /// nhanh, nhung khong can CAP NHAT TRANG THAI HIEN THI thuong xuyen bang, vi
+        /// ve lai Text cua mot Label/ToolStripStatusLabel cung co chi phi rieng).
+        /// </summary>
+        private const int ScannedProgressReportInterval = 500;
 
         /// <summary>
         /// Duyet de quy (neu recursive) mot thu muc, TRA VE NGAY (yield return) tung
@@ -298,12 +323,20 @@ namespace FileExplorerApp.Services
         /// </summary>
         private static async IAsyncEnumerable<FileItemModel> SearchRecursiveAsync(
             string rootFolderPath, string keyword, bool recursive, bool includeHidden,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+            [EnumeratorCancellation] CancellationToken cancellationToken,
+            Action<int> onItemsScanned = null)
         {
             var pendingFolders = new Stack<string>();
             pendingFolders.Push(rootFolderPath);
 
             int itemsSinceLastYield = 0;
+
+            // Tong so muc DA XEM QUA tu dau (ca khop VA khong khop) - KHAC voi so ket
+            // qua tim thay (do SearchForm tu dem rieng qua foundCount) - dung de bao
+            // tien do qua onItemsScanned (xem giai thich tai do), giup nguoi dung
+            // thay ung dung VAN DANG CHAY du chua tim thay ket qua khop nao, thay vi
+            // man hinh dung im tao cam giac treo.
+            int totalItemsScanned = 0;
 
             while (pendingFolders.Count > 0)
             {
@@ -330,6 +363,8 @@ namespace FileExplorerApp.Services
                     cancellationToken.ThrowIfCancellationRequested();
 
                     itemsSinceLastYield++;
+                    totalItemsScanned++;
+
                     if (itemsSinceLastYield >= YieldEveryNItems)
                     {
                         itemsSinceLastYield = 0;
@@ -340,6 +375,9 @@ namespace FileExplorerApp.Services
                         // (khong Task.Run).
                         await Task.Yield();
                     }
+
+                    if (onItemsScanned != null && totalItemsScanned % ScannedProgressReportInterval == 0)
+                        onItemsScanned(totalItemsScanned);
 
                     FileAttributes attributes;
                     try
