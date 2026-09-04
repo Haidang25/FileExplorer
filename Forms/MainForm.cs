@@ -2421,16 +2421,16 @@ namespace FileExplorerApp.Forms
             // Testcase TC0004 (duyet thu muc khong co quyen): phai hien THONG BAO
             // rieng cho nguoi dung biet ro nguyen nhan, ung dung van tiep tuc chay
             // binh thuong (khong duoc coi la thu muc trong, khong duoc crash).
-            if (!CanAccessDirectory(_currentPath))
+            if (!CanAccessDirectory(_currentPath, out string accessErrorMessage))
             {
                 lvwFiles.Items.Clear();
-                lblEmptyFolder.Text = "Bạn không có quyền truy cập vào thư mục này.";
+                lblEmptyFolder.Text = accessErrorMessage;
                 lblEmptyFolder.Visible = true;
                 tsslItemCount.Text = "0 mục";
                 tsslTotalSize.Text = FormatHelper.FormatSize(0);
                 tsslStatus.Text = "Sẵn sàng";
 
-                MessageBox.Show("Bạn không có quyền truy cập vào thư mục này.",
+                MessageBox.Show(accessErrorMessage,
                     "Không có quyền truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -2555,18 +2555,30 @@ namespace FileExplorerApp.Forms
         /// dung cua <paramref name="path"/> hay khong - Directory.Exists() CHI xac
         /// nhan thu muc co ton tai, KHONG dam bao doc duoc noi dung ben trong (VD:
         /// mot so thu muc he thong nhu "System Volume Information", "$RECYCLE.BIN"
-        /// o o dia... ton tai nhung tu choi quyen doc voi nguoi dung thong thuong).
-        /// Phai goi enumerator.MoveNext() (khong chi lay ve IEnumerable) vi loi quyen
-        /// CHI nem ra khi thuc su bat dau doc, chua nem ngay luc goi
-        /// EnumerateFileSystemEntries().
+        /// o o dia..., hoac thu muc bi icacls /deny thu cong - xem TC0004) ton tai
+        /// nhung tu choi quyen doc voi nguoi dung thong thuong. Phai goi
+        /// enumerator.MoveNext() (khong chi lay ve IEnumerable) vi loi quyen CHI nem
+        /// ra khi thuc su bat dau doc, chua nem ngay luc goi EnumerateFileSystemEntries().
         ///
-        /// Chi coi la "khong co quyen" (tra ve false) khi that su la
-        /// UnauthorizedAccessException - cac loi dia khac (IOException, VD o dia thao
-        /// ra) tra ve true de nguyen luong xu ly cu (GetItems/GetFiles tu bat rieng)
-        /// tiep tuc, tranh bao nham thanh "khong co quyen truy cap".
+        /// Bat RONG (catch Exception, khong chi UnauthorizedAccessException): tren
+        /// Windows, loi quyen truy cap khong luon duoc .NET nem ra dung kieu
+        /// UnauthorizedAccessException - thuc te khi tu deny quyen bang icacls, loi
+        /// xay ra GIUA luc doc (khong phai luc mo dau) lai duoc nem ra duoi dang
+        /// IOException voi thong diep khac ("Error reading the ... directory"). Truoc
+        /// day ham nay chi coi IOException la "van doc duoc" (de GetItems() tu xu ly)
+        /// nen loi nay thoat thang ra ngoai, vuot qua ca try/catch cua
+        /// trvFolders_AfterSelect, roi bi handler loi toan cuc trong Program.cs bat lai
+        /// va hien thong bao chung chung thay vi thong bao "khong co quyen truy cap"
+        /// dung TC0004 yeu cau.
         /// </summary>
-        private static bool CanAccessDirectory(string path)
+        /// <param name="errorMessage">
+        /// Thong bao phu hop de hien cho nguoi dung neu tra ve false; null neu doc
+        /// duoc binh thuong (tra ve true).
+        /// </param>
+        private static bool CanAccessDirectory(string path, out string errorMessage)
         {
+            errorMessage = null;
+
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 return true;
 
@@ -2580,11 +2592,16 @@ namespace FileExplorerApp.Forms
             }
             catch (UnauthorizedAccessException)
             {
+                errorMessage = "Bạn không có quyền truy cập vào thư mục này.";
                 return false;
             }
-            catch (IOException)
+            catch (Exception)
             {
-                return true;
+                // Bat het cac truong hop khac (IOException voi thong diep khac,...) -
+                // uu tien hien mot thong bao ro rang cho nguoi dung hon la de loi thoat
+                // ra ngoai va roi vao handler loi toan cuc chung (xem chu thich tren).
+                errorMessage = "Không thể đọc nội dung thư mục này (có thể do quyền truy cập hoặc ổ đĩa gặp lỗi).";
+                return false;
             }
         }
 
