@@ -238,10 +238,13 @@ namespace FileExplorerApp.Forms
             // de bi mat khi mo lai bang Visual Studio Designer).
             this.FormClosed += MainForm_FormClosed;
 
-            // Xem chu thich chi tiet tai MainForm_Shown() ben duoi: sua loi
-            // "vung lvwFiles hien xam trong, khong ve lai noi dung" khi Form
-            // vua duoc mo len lan dau.
+            // Xem chu thich chi tiet tai MainForm_Shown()/FixStaleNestedDockLayout()
+            // ben duoi: sua loi "control Dock=Fill long sau SplitContainer bi
+            // ket kich thuoc cu" (VD vung lvwFiles/trvFolders hien xam trong,
+            // khong lap day het khung chua no) khi Form vua hien ra lan dau VA
+            // moi khi Form doi kich thuoc ve sau (Maximize/Restore/keo vien).
             this.Shown += MainForm_Shown;
+            this.Resize += MainForm_Resize;
 
             // Tu dong gian cot "Tên" (colName) de lap day khoang trang con thua
             // ben phai cot cuoi cung (colModified) - xem AutoSizeNameColumn().
@@ -316,43 +319,62 @@ namespace FileExplorerApp.Forms
             spcFilesPreview.PerformLayout();
             spcMain.Invalidate(true);
 
-            // Loi RIENG khac, xac dinh CHINH XAC qua so do chan doan thuc te (in
-            // kich thuoc len tieu de cua so, nguoi dung chup lai): spcFilesPreview
-            // (Dock=Fill BEN TRONG spcMain.Panel2) TU NO da tinh dung kich thuoc
-            // (957px, khop hoan toan voi spcMain.Panel2) - nhung lvwFiles (Dock=
-            // Fill BEN TRONG spcFilesPreview.Panel1, ban than Panel1 cung dung
-            // 957px do Panel2Collapsed=true) lai bi KET o mot kich thuoc CU nho
-            // hon (784px) tu truoc do, khong duoc WinForms tu dong cap nhat lai
-            // theo dung kich thuoc THUC TE cua Panel1 chua no - de lo mau nen
-            // cua spcMain (AppTheme.Border, #D8DAE3) o khoang trong con lai ben
-            // phai lvwFiles (957-784=173px, khop voi dai mau xam trong anh chup).
-            //
-            // Ep tinh lai DUNG kich thuoc cho ca 2 tang (spcFilesPreview VA
-            // lvwFiles) bang toggle Dock (None -> Fill) cho tung control - lam
-            // rieng tung tang thay vi chi lam o tang ngoai, vi PerformLayout()/
-            // toggle Dock o MOT control KHONG tu dong cascade xuong ep tinh lai
-            // kich thuoc cho CON CUA NO khi con do cung dang bi ket kich thuoc cu.
+            FixStaleNestedDockLayout();
+        }
+
+        /// <summary>
+        /// Sua loi CHUNG (khong chi rieng 1 lan): mot so control con Dock=Fill
+        /// LONG SAU 2-3 tang SplitContainer (trvFolders ben trong spcMain.Panel1,
+        /// lvwFiles ben trong spcFilesPreview.Panel1, spcFilesPreview ben trong
+        /// spcMain.Panel2) thinh thoang bi KET o kich thuoc CU, khong tu dong
+        /// cap nhat theo dung kich thuoc THUC TE cua Panel chua no - xac dinh
+        /// qua so do chan doan thuc te (in kich thuoc len tieu de cua so, nguoi
+        /// dung chup lai): lan dau lvwFiles bi ket 784px thay vi 957px cua
+        /// Panel1 (de lo mau nen AppTheme.Border ben phai) - sua xong lan do thi
+        /// lai phat sinh CUNG LOAI loi nhung cho trvFolders (bi ket kich thuoc cu
+        /// theo chieu CAO khi nguoi dung bam Maximize cua so SAU KHI Form da
+        /// hien ra, de lai khoang trong o duoi TreeView).
+        ///
+        /// Vi loi nay co the tai dien voi BAT KY control Dock=Fill long sau
+        /// SplitContainer nao, VA co the phat sinh lai bat ky luc nao cua so
+        /// doi kich thuoc (khong chi lan hien dau tien) - goi ham nay tu CA
+        /// MainForm_Shown (lan hien dau tien) LAN MainForm_Resize (Maximize/
+        /// Restore/keo vien cua so tay) de dam bao layout luon dung, khong chi
+        /// dung mot lan roi hong lai ve sau.
+        /// </summary>
+        private void FixStaleNestedDockLayout()
+        {
             spcFilesPreview.Dock = DockStyle.None;
             spcFilesPreview.Dock = DockStyle.Fill;
 
             lvwFiles.Dock = DockStyle.None;
             lvwFiles.Dock = DockStyle.Fill;
-
-            // Luoi an toan cuoi cung: neu vi ly do nao khac lvwFiles van chua
-            // khop kich thuoc voi Panel1 chua no (VD mot phien ban .NET/theme
-            // Windows cu the nao do van khong ap dung Dock=Fill dung ngay lap
-            // tuc), GAN THANG Size/Location bang tay theo dung ClientSize hien
-            // tai cua Panel1 - dam bao 100% khong con khoang trong du ra bat ke
-            // co che Dock co hoat dong dung hay khong.
+            // Luoi an toan: gan thang Size/Location bang tay theo dung
+            // ClientSize hien tai cua Panel1 chua no - dam bao khong con khoang
+            // trong du ra bat ke co che Dock co hoat dong dung hay khong.
             lvwFiles.Location = System.Drawing.Point.Empty;
             lvwFiles.Size = spcFilesPreview.Panel1.ClientSize;
 
+            trvFolders.Dock = DockStyle.None;
+            trvFolders.Dock = DockStyle.Fill;
+            trvFolders.Location = System.Drawing.Point.Empty;
+            trvFolders.Size = spcMain.Panel1.ClientSize;
+
             // Tinh lai chieu rong cot "Tên" (xem AutoSizeNameColumn()) SAU CUNG,
-            // luc lvwFiles chac chan da co kich thuoc dung - goi lai o day (thay
-            // vi chi luc constructor, khi Form CHUA co Handle/kich thuoc that,
-            // xem chu thich cu hon o cac commit truoc) de co ket qua dung ngay
-            // tu lan hien dau tien, khong can doi nguoi dung tu resize cua so.
+            // luc lvwFiles chac chan da co kich thuoc dung.
             AutoSizeNameColumn();
+        }
+
+        /// <summary>
+        /// Goi lai FixStaleNestedDockLayout() moi khi Form doi kich thuoc (bam
+        /// Maximize/Restore, hoac nguoi dung tu keo vien cua so) - xem chu
+        /// thich chi tiet tai FixStaleNestedDockLayout(): loi "control Dock=Fill
+        /// long sau SplitContainer bi ket kich thuoc cu" co the tai dien o BAT
+        /// KY thoi diem doi kich thuoc nao, khong chi lan Form hien ra dau tien.
+        /// </summary>
+        private void MainForm_Resize(object sender, EventArgs e)
+        {
+            FixStaleNestedDockLayout();
         }
 
         /// <summary>
