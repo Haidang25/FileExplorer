@@ -103,6 +103,19 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private readonly System.Windows.Forms.Timer _watcherDebounceTimer = new System.Windows.Forms.Timer();
 
+        /// <summary>
+        /// Debounce rieng cho WM_DEVICECHANGE (xem WndProc) - Windows co the gui LIEN
+        /// TIEP nhieu thong bao WM_DEVICECHANGE cho MOT lan cam/rut thiet bi (VD: mot
+        /// USB co nhieu phan vung, hoac card reader co nhieu khe) - gop lai thanh MOT
+        /// lan RefreshDriveNodes() duy nhat sau khi ngung nhan them thong bao trong
+        /// mot khoang ngan, thay vi doc lai DriveInfo.GetDrives() ngay moi lan (co the
+        /// mat vai chuc ms cho tung o dia can kiem tra IsReady).
+        /// </summary>
+        private readonly System.Windows.Forms.Timer _driveChangeDebounceTimer = new System.Windows.Forms.Timer
+        {
+            Interval = 500
+        };
+
         // TODO: thay bang duong dan dang duoc chon tren TreeView/ListView khi da co
         // giao dien dieu huong thuc te. Tam thoi mac dinh la Desktop de New Folder/New File
         // co noi de tao.
@@ -211,6 +224,7 @@ namespace FileExplorerApp.Forms
             LoadTreeViewFolders();
             LoadDisplaySettings();
             InitializeFolderMonitoring();
+            InitializeDriveChangeMonitoring();
             RegisterIntegrityServiceEvents();
             // mnuViewRefresh_Click dong bo txtPath VA nap noi dung lvwFiles cho
             // _currentPath mac dinh (Desktop), nen khong can gan txtPath.Text rieng nua.
@@ -561,6 +575,24 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Cau hinh timer debounce cho WM_DEVICECHANGE (xem WndProc/_driveChangeDebounceTimer) -
+        /// yeu cau "Cập nhật ổ đĩa khi cắm USB": danh sach o dia tren trvFolders (goc
+        /// cay thu muc) truoc day CHI duoc nap MOT LAN duy nhat luc khoi dong
+        /// (LoadTreeViewFolders trong constructor) - cam/rut USB/the nho sau do KHONG
+        /// duoc phat hien, nguoi dung phai tu dong lai ung dung moi thay o dia moi.
+        /// </summary>
+        private void InitializeDriveChangeMonitoring()
+        {
+            _driveChangeDebounceTimer.Tick += DriveChangeDebounceTimer_Tick;
+        }
+
+        private void DriveChangeDebounceTimer_Tick(object sender, EventArgs e)
+        {
+            _driveChangeDebounceTimer.Stop();
+            RefreshDriveNodes();
+        }
+
+        /// <summary>
         /// Dang ky su kien IntegrityViolationDetected cua _integrityService -
         /// tach RIENG khoi InitializeFolderMonitoring() du ca hai deu la dang
         /// ky su kien cho mot FileMonitorService (IntegrityService KE THUA
@@ -864,6 +896,8 @@ namespace FileExplorerApp.Forms
         {
             _watcherDebounceTimer.Stop();
             _watcherDebounceTimer.Dispose();
+            _driveChangeDebounceTimer.Stop();
+            _driveChangeDebounceTimer.Dispose();
             _fileMonitorService.Dispose();
             _integrityService.Dispose();
             pbxPreview.Image?.Dispose();
@@ -1157,6 +1191,50 @@ namespace FileExplorerApp.Forms
                     _imlIconsLarge.Images.Add(key, ScaleIcon(largeSource, _imlIconsLarge.ImageSize.Width));
                 }
             }
+        }
+
+        #endregion
+
+        #region Cap nhat danh sach o dia khi cam/rut USB (WM_DEVICECHANGE)
+
+        // Ma thong bao Windows WM_DEVICECHANGE - Windows gui thong bao nay den TAT
+        // CA cua so cap 1 (top-level) dang chay khi co thay doi ve thiet bi luu tru
+        // (VD: cam/rut USB, the nho...). Day la CACH DUY NHAT de WinForms biet duoc
+        // su kien nay theo thoi gian thuc - khong co event/SystemEvents nao co san
+        // san trong .NET Framework cho rieng "o dia thay doi", nen phai tu bat thong
+        // bao Windows nay bang cach override WndProc.
+        private const int WM_DEVICECHANGE = 0x0219;
+
+        // wParam cua WM_DEVICECHANGE - chi 2 gia tri nay thuc su lien quan den viec
+        // o dia xuat hien/bien mat (cam/rut xong HOAN TOAN); cac gia tri khac (VD:
+        // DBT_DEVICEQUERYREMOVE luc nguoi dung bam "Safely Remove" nhung chua rut)
+        // khong can xu ly rieng cho yeu cau nay.
+        private const int DBT_DEVICEARRIVAL = 0x8000;
+        private const int DBT_DEVICEREMOVECOMPLETE = 0x8004;
+
+        /// <summary>
+        /// Bat thong bao WM_DEVICECHANGE cua Windows de tu dong cap nhat lai danh
+        /// sach o dia tren trvFolders ngay khi nguoi dung cam/rut USB (hoac the
+        /// nho, o dia mang...) - khong can nguoi dung phai tu bam nut Refresh hay
+        /// khoi dong lai ung dung.
+        /// </summary>
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+
+            if (m.Msg != WM_DEVICECHANGE)
+                return;
+
+            int deviceEvent = m.WParam.ToInt32();
+            if (deviceEvent != DBT_DEVICEARRIVAL && deviceEvent != DBT_DEVICEREMOVECOMPLETE)
+                return;
+
+            // Debounce: Windows co the gui lien tiep NHIEU thong bao cho MOT lan
+            // cam/rut (xem _driveChangeDebounceTimer) - (re)start lai timer thay vi
+            // goi RefreshDriveNodes() ngay, giong cach _watcherDebounceTimer dang
+            // gop nhieu su kien FileSystemWatcher lai.
+            _driveChangeDebounceTimer.Stop();
+            _driveChangeDebounceTimer.Start();
         }
 
         #endregion
@@ -4143,25 +4221,126 @@ namespace FileExplorerApp.Forms
 
                 foreach (FolderItemModel drive in _folderService.GetDrives())
                 {
-                    var driveNode = new TreeNode(drive.Name);
-                    string driveImageKey = GetDriveImageKey(drive);
-                    driveNode.ImageKey = driveImageKey;
-                    driveNode.SelectedImageKey = driveImageKey;
+                    var driveNode = new TreeNode();
+                    UpdateDriveNode(driveNode, drive);
+                    trvFolders.Nodes.Add(driveNode);
+                }
+            }
+            finally
+            {
+                trvFolders.EndUpdate();
+            }
+        }
 
-                    if (drive.IsReady)
+        /// <summary>
+        /// Gan/cap nhat toan bo thong tin hien thi (Text, icon, Tag, ForeColor, node
+        /// "gia" de mo rong) cho MOT node o dia dua tren FolderItemModel moi nhat -
+        /// dung chung boi LoadTreeViewFolders (nap toan bo luc khoi dong/refresh thu
+        /// cong) va RefreshDriveNodes (cap nhat khi cam/rut USB - xem WndProc) de
+        /// tranh viet lap logic o 2 noi de bi lech nhau ve sau.
+        /// </summary>
+        private void UpdateDriveNode(TreeNode driveNode, FolderItemModel drive)
+        {
+            driveNode.Text = drive.Name;
+
+            string driveImageKey = GetDriveImageKey(drive);
+            driveNode.ImageKey = driveImageKey;
+            driveNode.SelectedImageKey = driveImageKey;
+
+            if (drive.IsReady)
+            {
+                driveNode.Tag = drive.FullPath;
+                // AppTheme.TextPrimary: mau chu binh thuong (giong mac dinh cua
+                // trvFolders trong ApplyTheme) - can dat lai RO vi node nay co the
+                // TRUOC DAY dang o trang thai "chua san sang" (AppTheme.TextSecondary,
+                // VD: o dia rong vua duoc cam dia/the vao).
+                driveNode.ForeColor = AppTheme.TextPrimary;
+                if (driveNode.Nodes.Count == 0)
+                    driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+            }
+            else
+            {
+                // Khong gan duong dan string vao Tag de tsbBack/AfterSelect/
+                // BeforeExpand khong the vo tinh coi day la mot thu muc dieu huong
+                // duoc - gan ca FolderItemModel lam dau hieu "o chua san sang".
+                driveNode.Tag = drive;
+                driveNode.ForeColor = AppTheme.TextSecondary;
+                // O dia vua CHUYEN sang chua san sang (VD: vua rut the nho ra) - bo
+                // het node con/placeholder cu, khong con gi de mo rong nua.
+                driveNode.Nodes.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Chuan hoa duong dan goc cua o dia (VD: "D:\", "d:") ve mot dang duy nhat
+        /// de so sanh - dung lam "khoa" nhan dien MOT o dia vat ly/logic xuyen suot
+        /// nhieu lan goi GetDrives() (khac voi Name/label co the doi theo dung luong
+        /// con trong hoac trang thai san sang).
+        /// </summary>
+        private static string NormalizeDriveKey(string driveFullPath)
+        {
+            return (driveFullPath ?? string.Empty).TrimEnd('\\').ToUpperInvariant();
+        }
+
+        /// <summary>Lay "khoa" o dia (xem NormalizeDriveKey) tu Tag cua mot node o dia hien co.</summary>
+        private static string GetDriveNodeKey(TreeNode node)
+        {
+            if (node.Tag is string readyDrivePath)
+                return NormalizeDriveKey(readyDrivePath);
+
+            if (node.Tag is FolderItemModel notReadyDrive)
+                return NormalizeDriveKey(notReadyDrive.FullPath);
+
+            return null;
+        }
+
+        /// <summary>
+        /// Cap nhat danh sach node o dia tren trvFolders theo kieu SO SANH (diff) voi
+        /// danh sach o dia MOI nhat, thay vi xoa-nap-lai toan bo nhu LoadTreeViewFolders -
+        /// dung khi he thong bao co thay doi o dia (cam/rut USB, the nho... - xem
+        /// WndProc bat WM_DEVICECHANGE) de KHONG lam mat trang thai da mo rong cua cac
+        /// node o dia KHAC khong lien quan (VD: nguoi dung dang duyet sau trong o C:,
+        /// cam USB vao thi o C: van giu nguyen cac node da mo, chi them rieng node o
+        /// dia USB moi).
+        /// </summary>
+        private void RefreshDriveNodes()
+        {
+            List<FolderItemModel> currentDrives = _folderService.GetDrives();
+
+            trvFolders.BeginUpdate();
+            try
+            {
+                // Duyet NGUOC de RemoveAt an toan giua luc dang lap qua Nodes.
+                for (int i = trvFolders.Nodes.Count - 1; i >= 0; i--)
+                {
+                    TreeNode existingNode = trvFolders.Nodes[i];
+                    string existingKey = GetDriveNodeKey(existingNode);
+
+                    FolderItemModel matchingDrive = existingKey == null
+                        ? null
+                        : currentDrives.FirstOrDefault(d => NormalizeDriveKey(d.FullPath) == existingKey);
+
+                    if (matchingDrive == null)
                     {
-                        driveNode.Tag = drive.FullPath;
-                        driveNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
-                    }
-                    else
-                    {
-                        // Khong gan duong dan string vao Tag de tsbBack/AfterSelect/
-                        // BeforeExpand khong the vo tinh coi day la mot thu muc dieu
-                        // huong duoc - gan ca FolderItemModel lam dau hieu "o chua san sang".
-                        driveNode.Tag = drive;
-                        driveNode.ForeColor = AppTheme.TextSecondary;
+                        // O dia tuong ung khong con trong danh sach moi nhat - vua bi
+                        // rut ra, xoa node nay.
+                        trvFolders.Nodes.RemoveAt(i);
+                        continue;
                     }
 
+                    // Van con - cap nhat lai icon/Tag/trang thai san sang (co the doi,
+                    // VD: o dia rong vua duoc cam dia/the vao), roi bo khoi danh sach
+                    // "con lai" de phan biet voi o dia MOI xuat hien ben duoi.
+                    UpdateDriveNode(existingNode, matchingDrive);
+                    currentDrives.Remove(matchingDrive);
+                }
+
+                // Nhung gi con lai trong currentDrives la o dia MOI xuat hien (VD: USB
+                // vua cam vao) - them node moi cho tung o, noi CUOI danh sach.
+                foreach (FolderItemModel newDrive in currentDrives)
+                {
+                    var driveNode = new TreeNode();
+                    UpdateDriveNode(driveNode, newDrive);
                     trvFolders.Nodes.Add(driveNode);
                 }
             }
