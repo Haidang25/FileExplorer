@@ -55,6 +55,23 @@ namespace FileExplorerApp.Models
         /// nguon (VD: tai lai tu nguon khac) chu khong phai o thu muc dich/quyen
         /// truy cap.
         /// </summary>
-        CorruptedArchive
+        CorruptedArchive,
+
+        /// <summary>
+        /// Duong dan day du (thu muc/file dich, sau khi ket hop ten moi/vi tri dich)
+        /// vuot qua gioi han do dai duong dan cua Windows (MAX_PATH = 260 ky tu -
+        /// xem FileHelper.MaxPathLength) - cac ham he thong file cua .NET Framework
+        /// (Directory.CreateDirectory, File.Move, Directory.Move...) nem
+        /// PathTooLongException (mot lop con cua IOException) trong truong hop nay.
+        /// Tach rieng voi Failed/AccessDenied de bao thong bao cu the ("đường dẫn
+        /// quá dài") - truoc day PathTooLongException bi cac catch (IOException)
+        /// chung dang co san "nuot" thanh Failed chung chung (hoac te hon, bi
+        /// PermissionHelper.CanWriteByTest hieu SAI thanh AccessDenied, vi ham do tu
+        /// tao mot file tam voi ten dai ben trong thu muc dich de kiem tra quyen
+        /// ghi, va chinh file tam do lai la thu vuot qua 260 ky tu truoc ca khi thao
+        /// tac thuc su duoc goi) - nguoi dung khong biet duoc nguyen nhan THAT SU la
+        /// do do dai duong dan, khong phai do quyen truy cap.
+        /// </summary>
+        PathTooLong
     }
 }

@@ -161,6 +161,13 @@ namespace FileExplorerApp.Services
 
             string fullPath = Path.Combine(parentPath, fileName);
 
+            // Kiem tra do dai duong dan TRUOC KHI lam bat ky dieu gi khac - xem giai
+            // thich chi tiet tai FolderService.CreateFolder (cung ky thuat, tranh
+            // PermissionHelper.HasWritePermission() bao nham AccessDenied do chinh
+            // file tam kiem tra quyen ghi cua no cung vuot MAX_PATH).
+            if (FileHelper.IsPathTooLong(fullPath))
+                return OperationResult.PathTooLong;
+
             if (File.Exists(fullPath) || Directory.Exists(fullPath))
                 return OperationResult.Skipped; // Da ton tai muc trung ten.
 
@@ -178,6 +185,10 @@ namespace FileExplorerApp.Services
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (PathTooLongException)
+            {
+                return OperationResult.PathTooLong;
             }
             catch (IOException)
             {
@@ -227,6 +238,12 @@ namespace FileExplorerApp.Services
             string directory = Path.GetDirectoryName(filePath);
             string newPath = Path.Combine(directory ?? string.Empty, newName);
 
+            // Xem chu thich tuong tu tai FolderService.CreateFolder - kiem tra do
+            // dai TRUOC PermissionHelper.HasWritePermission() de tranh bao nham
+            // AccessDenied.
+            if (FileHelper.IsPathTooLong(newPath))
+                return OperationResult.PathTooLong;
+
             if (File.Exists(newPath) || Directory.Exists(newPath))
                 return OperationResult.Skipped; // Da co muc trung ten moi.
 
@@ -241,6 +258,10 @@ namespace FileExplorerApp.Services
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (PathTooLongException)
+            {
+                return OperationResult.PathTooLong;
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
@@ -574,6 +595,12 @@ namespace FileExplorerApp.Services
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
                 return OperationResult.NotFound;
 
+            // Xem chu thich tuong tu tai FolderService.CreateFolder - kiem tra do
+            // dai TRUOC PermissionHelper.HasWritePermission() de tranh bao nham
+            // AccessDenied.
+            if (FileHelper.IsPathTooLong(destinationPath))
+                return OperationResult.PathTooLong;
+
             if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
                 return OperationResult.Skipped; // Da co muc trung ten tai dich.
 
@@ -598,6 +625,10 @@ namespace FileExplorerApp.Services
                 catch (UnauthorizedAccessException)
                 {
                     return OperationResult.AccessDenied;
+                }
+                catch (PathTooLongException)
+                {
+                    return OperationResult.PathTooLong;
                 }
                 catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
                 {
@@ -631,6 +662,10 @@ namespace FileExplorerApp.Services
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (PathTooLongException)
+            {
+                return OperationResult.PathTooLong;
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {
@@ -699,6 +734,12 @@ namespace FileExplorerApp.Services
             if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
                 return OperationResult.NotFound;
 
+            // Xem chu thich tuong tu tai FolderService.CreateFolder - kiem tra do
+            // dai TRUOC PermissionHelper.HasWritePermission() de tranh bao nham
+            // AccessDenied.
+            if (FileHelper.IsPathTooLong(destinationPath))
+                return OperationResult.PathTooLong;
+
             if (!overwrite && (File.Exists(destinationPath) || Directory.Exists(destinationPath)))
                 return OperationResult.Skipped; // Da co muc trung ten tai dich.
 
@@ -761,6 +802,10 @@ namespace FileExplorerApp.Services
             catch (UnauthorizedAccessException)
             {
                 return OperationResult.AccessDenied;
+            }
+            catch (PathTooLongException)
+            {
+                return OperationResult.PathTooLong;
             }
             catch (IOException ex) when (FileHelper.IsSharingViolation(ex))
             {

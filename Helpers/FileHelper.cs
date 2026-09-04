@@ -94,6 +94,31 @@ namespace FileExplorerApp.Helpers
             return Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         }
 
+        /// <summary>
+        /// Gioi han MAX_PATH cua Windows/.NET Framework (khi chua bat Long Path -
+        /// ung dung nay KHONG bat, xem App.config) - mot duong dan (thu muc HOAC
+        /// file, ke ca ten file/o dia o dau) dai hon so nay se lam cac ham he
+        /// thong file cua .NET (Directory.CreateDirectory, File.Move, Directory.Move,
+        /// File.Create...) nem PathTooLongException.
+        /// </summary>
+        public const int MaxPathLength = 260;
+
+        /// <summary>
+        /// Kiem tra mot duong dan day du (thu muc/file dich, VD sau khi
+        /// Path.Combine ten moi vao thu muc cha) co VUOT QUA gioi han MAX_PATH hay
+        /// khong - dung de PHAT HIEN SOM (truoc khi goi Directory.CreateDirectory/
+        /// File.Move...) va bao thong bao "đường dẫn quá dài" RO RANG cho nguoi
+        /// dung, thay vi de PathTooLongException nem ra giua thao tac roi bi cac
+        /// catch (IOException) chung "nuot" thanh loi chung chung (Failed), hoac te
+        /// hon, bi PermissionHelper.CanWriteByTest hieu SAI thanh AccessDenied (xem
+        /// giai thich tai OperationResult.PathTooLong).
+        /// </summary>
+        /// <param name="path">Duong dan day du can kiem tra do dai.</param>
+        public static bool IsPathTooLong(string path)
+        {
+            return !string.IsNullOrEmpty(path) && path.Length > MaxPathLength;
+        }
+
         /// <summary>Cac ten bi Windows gioi han khong duoc dat cho file/thu muc.</summary>
         private static readonly string[] ReservedNames =
         {

@@ -1796,6 +1796,11 @@ namespace FileExplorerApp.Forms
                     icon = MessageBoxIcon.Error;
                     break;
 
+                case OperationResult.PathTooLong:
+                    caption = "Đường dẫn quá dài";
+                    icon = MessageBoxIcon.Error;
+                    break;
+
                 case OperationResult.PartialSuccess:
                     caption = "Hoàn tất một phần";
                     icon = MessageBoxIcon.Warning;
@@ -1862,6 +1867,11 @@ namespace FileExplorerApp.Forms
                 case OperationResult.CorruptedArchive:
                     return $"Không thể {actionDescription}: tệp .zip bị hỏng hoặc không đúng định dạng " +
                         "Zip. Vui lòng kiểm tra lại tệp nguồn (VD: tải lại từ nơi khác) rồi thử lại.";
+
+                case OperationResult.PathTooLong:
+                    return $"Không thể {actionDescription}: đường dẫn kết quả sẽ vượt quá " +
+                        $"{FileHelper.MaxPathLength} ký tự (giới hạn của Windows). " +
+                        "Hãy đặt tên ngắn hơn hoặc chọn vị trí có đường dẫn ngắn hơn rồi thử lại.";
 
                 case OperationResult.PartialSuccess:
                     return $"Đã {actionDescription} sang vị trí mới, nhưng không xóa được bản gốc " +
@@ -2682,7 +2692,25 @@ namespace FileExplorerApp.Forms
         {
             errorMessage = null;
 
-            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            if (string.IsNullOrWhiteSpace(path))
+                return true;
+
+            // Kiem tra do dai duong dan TRUOC Directory.Exists() - Directory.Exists()
+            // (va nhieu ham he thong file khac cua .NET Framework) tu "nuot" rieng
+            // PathTooLongException (lop con cua IOException) va tra ve false, khien
+            // mot duong dan vuot qua MAX_PATH (260 ky tu - xem FileHelper.MaxPathLength)
+            // trong THUC TE VAN TON TAI tren dia lai bi coi nhu "khong ton tai" (return
+            // true o dong ngay duoi day, bo qua kiem tra) - nguoi dung sau do se thay
+            // NavigateTo()/btnGo_Click im lang khong lam gi hoac bao "không tìm thấy
+            // thư mục" SAI, thay vi thong bao dung nguyen nhan la duong dan qua dai.
+            if (FileHelper.IsPathTooLong(path))
+            {
+                errorMessage = $"Đường dẫn này quá dài (vượt quá {FileHelper.MaxPathLength} ký tự) " +
+                    "nên Windows không thể truy cập được.";
+                return false;
+            }
+
+            if (!Directory.Exists(path))
                 return true;
 
             try
@@ -4002,24 +4030,38 @@ namespace FileExplorerApp.Forms
         /// <param name="path">Duong dan thu muc can di chuyen den.</param>
         private void NavigateTo(string path)
         {
-            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+            if (string.IsNullOrWhiteSpace(path))
                 return;
 
-            // Kiem tra quyen truy cap TRUOC khi thuc su doi _currentPath (Testcase
-            // TC0004). TRUOC DAY viec kiem tra nay chi nam trong LoadListViewFiles -
-            // goi SAU khi _currentPath/breadcrumb da doi sang thu muc bi chan quyen,
-            // nen dù co hien thong bao, nguoi dung van thay ung dung nhu da "vao
-            // duoc" thu muc do (thanh dia chi doi, chi ListView rong+thong bao). Kiem
-            // tra o day - diem dieu huong DUY NHAT dung chung cho TreeView/ListView/
-            // dia chi/breadcrumb - de dam bao KHONG doi _currentPath/history/breadcrumb
-            // khi khong co quyen, nguoi dung van dung yen o thu muc cu, chi thay
-            // thong bao loi.
+            // Kiem tra quyen truy cap (bao gom ca do dai duong dan - xem
+            // FileHelper.IsPathTooLong ben trong CanAccessDirectory) TRUOC khi
+            // thuc su doi _currentPath (Testcase TC0004). TRUOC DAY viec kiem tra
+            // nay chi nam trong LoadListViewFiles - goi SAU khi _currentPath/
+            // breadcrumb da doi sang thu muc bi chan quyen, nen dù co hien thong
+            // bao, nguoi dung van thay ung dung nhu da "vao duoc" thu muc do (thanh
+            // dia chi doi, chi ListView rong+thong bao). Kiem tra o day - diem dieu
+            // huong DUY NHAT dung chung cho TreeView/ListView/dia chi/breadcrumb -
+            // de dam bao KHONG doi _currentPath/history/breadcrumb khi khong co
+            // quyen (hoac duong dan qua dai), nguoi dung van dung yen o thu muc cu,
+            // chi thay thong bao loi.
+            //
+            // QUAN TRONG - goi CanAccessDirectory() TRUOC ca !Directory.Exists(path):
+            // ban truoc day kiem tra !Directory.Exists(path) TRUOC, nhung
+            // Directory.Exists() tu "nuot" rieng PathTooLongException va tra ve
+            // false cho mot duong dan vuot MAX_PATH (260 ky tu) - khien ham nay
+            // return NGAY, KHONG BAO GIO chay den CanAccessDirectory ben duoi, nen
+            // nguoi dung khong thay thong bao gi ca (VD: click vao mot thu muc con
+            // ma duong dan gop lai vuot 260 ky tu - ung dung "im lang khong lam
+            // gi", de nham la loi/treo).
             if (!CanAccessDirectory(path, out string navigateErrorMessage))
             {
                 MessageBox.Show(navigateErrorMessage,
                     "Không có quyền truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            if (!Directory.Exists(path))
+                return;
 
             _backHistory.Push(_currentPath);
             // Dieu huong toi mot thu muc moi (khong phai qua tsbForward_Click) se lam
@@ -4104,6 +4146,23 @@ namespace FileExplorerApp.Forms
 
             if (string.IsNullOrWhiteSpace(path))
                 return;
+
+            // Kiem tra do dai duong dan TRUOC Directory.Exists() - xem giai thich
+            // chi tiet tai CanAccessDirectory/NavigateTo (Directory.Exists() tu
+            // "nuot" rieng PathTooLongException va tra ve false cho mot duong dan
+            // vuot MAX_PATH). Neu khong kiem tra rieng o day, nguoi dung go/dan
+            // mot duong dan qua dai vao thanh dia chi se thay thong bao SAI
+            // "Không tìm thấy thư mục" (nhanh ben duoi), du thu muc do THUC TE co
+            // the van ton tai tren dia - chi la .NET Framework khong the kiem tra
+            // duoc do vuot gioi han.
+            if (FileHelper.IsPathTooLong(path))
+            {
+                ErrorHandler.Show(this,
+                    $"Đường dẫn này quá dài (vượt quá {FileHelper.MaxPathLength} ký tự) nên Windows " +
+                    $"không thể truy cập được:\n{path}");
+                txtPath.Text = _currentPath; // Khoi phuc lai duong dan cu tren thanh dia chi.
+                return;
+            }
 
             if (!Directory.Exists(path))
             {
@@ -4458,6 +4517,23 @@ namespace FileExplorerApp.Forms
             string path = e.Node.Tag as string;
             if (string.IsNullOrEmpty(path))
                 return;
+
+            // Kiem tra do dai duong dan NGAY tai day, TRUOC ca Task.Run ben duoi -
+            // xem giai thich chi tiet tai CanAccessDirectory/NavigateTo:
+            // Directory.Exists() (duoc goi ben trong Task.Run ngay sau day) tu
+            // "nuot" rieng PathTooLongException va tra ve false cho mot duong dan
+            // vuot MAX_PATH, khien nhanh "else" ben duoi hien SAI thong bao "Ổ đĩa
+            // hiện chưa sẵn sàng" thay vi ly do THAT SU la duong dan qua dai (VD:
+            // bam vao mot thu muc con da duoc load san trong TreeView ma duong dan
+            // gop lai vuot 260 ky tu).
+            if (FileHelper.IsPathTooLong(path))
+            {
+                MessageBox.Show(
+                    $"{path}\nĐường dẫn này quá dài (vượt quá {FileHelper.MaxPathLength} ký tự) " +
+                    "nên Windows không thể truy cập được.",
+                    "Đường dẫn quá dài", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             // Directory.Exists() tren mot o dia "san sang" tren giay to (IsReady = true)
             // nhung thuc chat can quay/khoi dong lai (VD: o dia rong vua duoc cam vao,
