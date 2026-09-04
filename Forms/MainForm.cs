@@ -240,6 +240,22 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
+        /// Xu ly su kien Load cua Form (dang duoc MainForm.Designer.cs dang ky qua
+        /// "this.Load += new System.EventHandler(this.MainForm_Load);" - tu Visual
+        /// Studio Designer). HIEN TAI DE RONG CO Y: toan bo khoi tao can thiet (icon,
+        /// theme, TreeView/ListView, folder monitoring, dieu huong den _currentPath
+        /// mac dinh...) da duoc thuc hien xong trong constructor cua MainForm ngay
+        /// TRUOC khi Form duoc hien ra (xem cuoi constructor o tren) - chua co yeu
+        /// cau nghiep vu nao can chay dung vao thoi diem Load (VD: sau khi Form da
+        /// co Handle/kich thuoc thuc te). Giu lai stub rong nay CHI de khop voi khai
+        /// bao ben Designer.cs (neu xoa han se gay loi CS1061 "does not contain a
+        /// definition for 'MainForm_Load'" luc build).
+        /// </summary>
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+        }
+
+        /// <summary>
         /// Tao 3 ToolStripItem (cmsCompressToZip/cmsExtractHere/cmsCompressionSeparator)
         /// bang code va chen vao cmsListView.Items, ngay TRUOC cmsProperties (muc
         /// cuoi cung) - xem <see cref="cmsCompressToZip"/> ve ly do KHONG khai bao
