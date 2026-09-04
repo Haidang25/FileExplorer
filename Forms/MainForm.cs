@@ -237,6 +237,43 @@ namespace FileExplorerApp.Forms
             // MainForm.Designer.cs (file do Designer tu sinh lai, sua tay o do
             // de bi mat khi mo lai bang Visual Studio Designer).
             this.FormClosed += MainForm_FormClosed;
+
+            // Xem chu thich chi tiet tai MainForm_Shown() ben duoi: sua loi
+            // "vung lvwFiles hien xam trong, khong ve lai noi dung" khi Form
+            // vua duoc mo len lan dau.
+            this.Shown += MainForm_Shown;
+        }
+
+        /// <summary>
+        /// Sua loi da xac nhan: sau khi Form vua hien ra lan dau, vung lvwFiles
+        /// (ben trong spcFilesPreview, LONG BEN TRONG spcMain) hien mot khoang
+        /// xam/trong dac, KE CA khi _currentPath (Desktop, xem constructor) co
+        /// san file/thu muc ben trong (item van duoc them dung vao lvwFiles.Items -
+        /// tsslItemCount van dem dung - chi la KHONG duoc VE ra man hinh).
+        ///
+        /// Nguyen nhan: constructor doi ClientSize/Font cua Form (xem
+        /// InitializeUiScaling(), goi TRUOC khi Form thuc su co Handle/duoc
+        /// Windows ve len man hinh lan dau) RIENG cho MOT SplitContainer LONG
+        /// BEN TRONG SplitContainer khac (spcFilesPreview nam trong
+        /// spcMain.Panel2) - day la loi da biet cua WinForms: khi kich thuoc/
+        /// font Form doi TRUOC luc Handle duoc tao, SplitContainer LONG BEN
+        /// TRONG co the tinh xong layout (dung toa do/kich thuoc) nhung Windows
+        /// lai KHONG danh dau dung vung can ve lai (invalidate) cho cac control
+        /// con nam sau ben trong no, nen lan ve dau tien bi "bo sot" mot vung -
+        /// hien ra y het "mot phan du/xam" nhu nguoi dung mo ta, cho den khi co
+        /// tac dong ve lai (VD nguoi dung tu resize cua so bang tay).
+        ///
+        /// Cach sua: ep tinh lai layout (PerformLayout) VA ve lai toan bo
+        /// (Invalidate(true) - true de bao gom ca control con) cho ca 2
+        /// SplitContainer NGAY SAU KHI Form da thuc su hien ra (su kien Shown,
+        /// luc nay Handle chac chan da ton tai) - chi anh huong phan VE lai tren
+        /// man hinh, khong doi bat ky du lieu/logic nao cua ung dung.
+        /// </summary>
+        private void MainForm_Shown(object sender, EventArgs e)
+        {
+            spcMain.PerformLayout();
+            spcFilesPreview.PerformLayout();
+            spcMain.Invalidate(true);
         }
 
         /// <summary>
