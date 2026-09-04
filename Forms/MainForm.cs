@@ -316,6 +316,27 @@ namespace FileExplorerApp.Forms
             spcFilesPreview.PerformLayout();
             spcMain.Invalidate(true);
 
+            // Loi RIENG khac, sau khi kiem tra bang anh chup thuc te (do tung
+            // pixel): spcFilesPreview (dat Dock=Fill BEN TRONG spcMain.Panel2)
+            // KHONG duoc tinh lai DUNG KICH THUOC (khong chi la khong duoc ve
+            // lai) sau lan Form hien ra dau tien - PerformLayout() tren spcMain
+            // o TREN chi dam bao dung vi tri/kich thuoc cho CAC CON TRUC TIEP
+            // cua spcMain (chinh Panel1/Panel2 cua no), KHONG cascade xuong
+            // toi con CUA Panel2 (tuc spcFilesPreview) - nen spcFilesPreview
+            // van giu kich thuoc "cu" nho hon Panel2 thuc te, de lo mau nen
+            // cua spcMain (AppTheme.Border, #D8DAE3) thanh mot dai xam/xanh
+            // nhat o phia ben phai lvwFiles - dung y het mau da do duoc tu anh
+            // chup cua nguoi dung (216,218,227 = #D8DAE3).
+            //
+            // Cach sua chac chan nhat cho loai loi nay: TAT roi BAT LAI thuoc
+            // tinh Dock (None -> Fill) cua chinh spcFilesPreview - thao tac nay
+            // ep WinForms tinh lai Bounds cua no theo DisplayRectangle HIEN TAI
+            // cua Panel2 NGAY LAP TUC, khong phu thuoc viec Layout co duoc
+            // cascade dung tang hay khong (khac voi PerformLayout() o tren, chi
+            // xu ly dung MOT tang).
+            spcFilesPreview.Dock = DockStyle.None;
+            spcFilesPreview.Dock = DockStyle.Fill;
+
             // Tinh lai chieu rong cot "Tên" (xem AutoSizeNameColumn()) TAI DAY,
             // KHONG CHI luc constructor: goi trong constructor (truoc khi Form
             // co Handle/duoc Windows ve len man hinh lan dau) doc duoc
