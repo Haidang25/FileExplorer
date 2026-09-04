@@ -253,79 +253,134 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// So muc (entry) duoc xu ly giua 2 lan await Task.Yield() lien tiep trong
+        /// SearchRecursiveAsync - xem giai thich chi tiet tai do. So qua NHO (VD: 1,
+        /// tuc la Task.Yield() moi entry) lam ngap hang doi thong diep Windows khi
+        /// quet cay lon (VD: o C: voi hang tram nghin file); so qua LON lam nut Huy/
+        /// giao dien phan hoi cham hon giua 2 lan nhuong. 64 la diem can bang duoc
+        /// chon.
+        /// </summary>
+        private const int YieldEveryNItems = 64;
+
+        /// <summary>
         /// Ban bat dong bo (async) cua SearchRecursive() - dung cho SearchAsync().
-        /// Logic giong het SearchRecursive (xem doc phia tren), chi khac: (1) khai
-        /// bao "async IAsyncEnumerable" + "await foreach" khi de quy vao thu muc con
-        /// (thay vi "IEnumerable" + "foreach" thuong); (2) chen await Task.Yield()
-        /// truoc khi xu ly moi entry - buoc nay KHONG chuyen sang luong khac (khac
-        /// Task.Run), ma chi tra dieu khien lai cho SynchronizationContext hien tai
-        /// (VD: UI thread cua SearchForm) giua cac buoc, giup UI van ve/xu ly duoc
-        /// cac thong diep khac (VD: nut Huy, keo cua so) ngay trong luc dang duyet,
-        /// khong can tach luong nen rieng (Task.Run) nhu SearchForm dang lam voi
-        /// Search() dong bo.
+        /// Logic tim kiem/loc GIONG HET SearchRecursive (xem doc phia tren), nhung
+        /// duyet KHONG DE QUY - dung mot Stack&lt;string&gt; lam "ngan xep" thu muc
+        /// can tham thay cho viec ham nay await-foreach GOI LAI CHINH NO cho moi thu
+        /// muc con (nhu ban truoc day va ban SearchRecursive dong bo van dang lam).
+        ///
+        /// LY DO DOI SANG DUYET KHONG DE QUY (thay the ban truoc day - da gay ra bao
+        /// cao "App bị treo khi tìm kiếm trong ổ C, không hiện con chỏ chuột để thực
+        /// hiện dừng"):
+        /// 1) HIEU NANG: ban de quy TRUOC DAY khien MOI ket qua yield return (va MOI
+        ///    lan await Task.Yield()) phai "noi bong" qua TOAN BO cac tang async
+        ///    iterator dang long nhau (tu thu muc sau nhat len den goc, cang sau
+        ///    cang nhieu tang) - voi mot cay rat sau/rong (VD: quet ca o C:, hang
+        ///    tram nghin file/thu muc), chi phi nay tich luy CUC LON, la nguyen
+        ///    nhan chinh gay treo thuc su, khong chi la van de UI ve lai cham.
+        /// 2) await Task.Yield() TRUOC DAY duoc goi cho TUNG MOT muc mot, o TUNG
+        ///    TANG de quy rieng cua no - qua nhieu lan "nhuong" (moi lan la mot
+        ///    round-trip qua hang doi thong diep Windows) lam NGAP hang doi thong
+        ///    diep voi hang tram nghin muc "Post" callback dang cho xu ly THEO DUNG
+        ///    THU TU (FIFO) - click chuot vao nut Huy (mot thong diep Windows khac)
+        ///    phai doi den luot GIUA hang tram nghin muc do, nen co CAM GIAC treo
+        ///    hoan toan, khong bam Huy duoc, du ve ky thuat UI van "dang chay".
+        /// Duyet khong de quy giai quyet CA HAI: (1) tat ca ket qua deu di qua CHI
+        /// MOT vong lap "while" duy nhat (khong con nhieu tang long nhau); (2)
+        /// await Task.Yield() gio chi goi 1 LAN moi YieldEveryNItems muc (xem hang
+        /// so o tren) - vua giam manh so lan "nhuong" (giam ap luc len hang doi
+        /// thong diep) vua van du thuong xuyen de nut Huy/giao dien phan hoi kip.
+        ///
+        /// Danh sach thu muc con o MOI cap duoc thu vao mot List RIENG roi day
+        /// (Push) NGUOC THU TU vao Stack chung - day la ky thuat chuan de mot Stack
+        /// tai tao DUNG thu tu duyet truoc-sau (pre-order) tu-trai-qua-phai giong
+        /// ban de quy goc, khong lam doi thu tu ket qua hien ra so voi truoc day.
         /// </summary>
         private static async IAsyncEnumerable<FileItemModel> SearchRecursiveAsync(
-            string folderPath, string keyword, bool recursive, bool includeHidden,
+            string rootFolderPath, string keyword, bool recursive, bool includeHidden,
             [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var pendingFolders = new Stack<string>();
+            pendingFolders.Push(rootFolderPath);
 
-            IEnumerable<string> entryPaths;
-            try
-            {
-                entryPaths = Directory.EnumerateFileSystemEntries(folderPath);
-            }
-            catch (UnauthorizedAccessException) { yield break; } // Khong co quyen liet ke thu muc nay - bo qua rieng nhanh nay.
-            catch (IOException) { yield break; } // VD: thu muc nam tren o dia vua thao ra.
+            int itemsSinceLastYield = 0;
 
-            foreach (string entryPath in entryPaths)
+            while (pendingFolders.Count > 0)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                // Nhuong lai dieu khien cho cac thong diep khac (VD: nut Huy tren
-                // SearchForm) truoc khi xu ly moi muc - de UI khong bi "treo" cam
-                // giac trong luc duyet mot thu muc rat nhieu muc, du van chay tren
-                // cung mot luong (khong Task.Run).
-                await Task.Yield();
+                string folderPath = pendingFolders.Pop();
 
-                FileAttributes attributes;
+                IEnumerable<string> entryPaths;
                 try
                 {
-                    attributes = File.GetAttributes(entryPath);
+                    entryPaths = Directory.EnumerateFileSystemEntries(folderPath);
                 }
-                catch (UnauthorizedAccessException) { continue; } // Khong doc duoc thuoc tinh muc nay - bo qua rieng no.
-                catch (IOException) { continue; } // VD: shortcut/junction hong.
+                catch (UnauthorizedAccessException) { continue; } // Khong co quyen liet ke thu muc nay - bo qua rieng nhanh nay, tiep tuc voi thu muc khac dang cho trong Stack.
+                catch (IOException) { continue; } // VD: thu muc nam tren o dia vua thao ra.
 
-                if (!includeHidden)
-                {
-                    bool isHiddenOrSystem = attributes.HasFlag(FileAttributes.Hidden) || attributes.HasFlag(FileAttributes.System);
-                    if (isHiddenOrSystem)
-                        continue; // Bo qua hoan toan - ca khoi ket qua lan khong de quy vao ben trong (neu la thu muc).
-                }
+                // Thu rieng cac thu muc con tim thay o cap NAY (khong day thang vao
+                // Stack chung ngay) - de co the day nguoc thu tu vao Stack SAU KHI da
+                // duyet het entries cua thu muc hien tai, giu dung thu tu duyet
+                // truoc-sau tu-trai-qua-phai (xem giai thich o doc phia tren).
+                List<string> childFolders = recursive ? new List<string>() : null;
 
-                string name = Path.GetFileName(entryPath);
-                if (IsNameMatch(name, keyword))
+                foreach (string entryPath in entryPaths)
                 {
-                    FileItemModel matchedItem = null;
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    itemsSinceLastYield++;
+                    if (itemsSinceLastYield >= YieldEveryNItems)
+                    {
+                        itemsSinceLastYield = 0;
+
+                        // Nhuong lai dieu khien cho cac thong diep khac (VD: nut Huy
+                        // tren SearchForm) sau moi YieldEveryNItems muc - de UI khong
+                        // bi treo/khong phan hoi, du van chay tren cung mot luong
+                        // (khong Task.Run).
+                        await Task.Yield();
+                    }
+
+                    FileAttributes attributes;
                     try
                     {
-                        matchedItem = FileItemModel.FromPath(entryPath);
+                        attributes = File.GetAttributes(entryPath);
                     }
-                    catch (UnauthorizedAccessException) { /* Khop ten nhung khong doc them duoc thong tin chi tiet - bo qua rieng muc nay. */ }
-                    catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua rieng, phai dat TRUOC IOException vi la lop con cua no. */ }
-                    catch (IOException) { /* Tuong tu FileNotFoundException. */ }
+                    catch (UnauthorizedAccessException) { continue; } // Khong doc duoc thuoc tinh muc nay - bo qua rieng no.
+                    catch (IOException) { continue; } // VD: shortcut/junction hong.
 
-                    if (matchedItem != null)
-                        yield return matchedItem;
+                    if (!includeHidden)
+                    {
+                        bool isHiddenOrSystem = attributes.HasFlag(FileAttributes.Hidden) || attributes.HasFlag(FileAttributes.System);
+                        if (isHiddenOrSystem)
+                            continue; // Bo qua hoan toan - ca khoi ket qua lan khong de quy vao ben trong (neu la thu muc).
+                    }
+
+                    string name = Path.GetFileName(entryPath);
+                    if (IsNameMatch(name, keyword))
+                    {
+                        FileItemModel matchedItem = null;
+                        try
+                        {
+                            matchedItem = FileItemModel.FromPath(entryPath);
+                        }
+                        catch (UnauthorizedAccessException) { /* Khop ten nhung khong doc them duoc thong tin chi tiet - bo qua rieng muc nay. */ }
+                        catch (FileNotFoundException) { /* Muc vua bi xoa giua luc quet - bo qua rieng, phai dat TRUOC IOException vi la lop con cua no. */ }
+                        catch (IOException) { /* Tuong tu FileNotFoundException. */ }
+
+                        if (matchedItem != null)
+                            yield return matchedItem;
+                    }
+
+                    bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
+                    if (isDirectory && recursive)
+                        childFolders.Add(entryPath);
                 }
 
-                bool isDirectory = attributes.HasFlag(FileAttributes.Directory);
-                if (isDirectory && recursive)
+                if (childFolders != null)
                 {
-                    await foreach (FileItemModel childItem in SearchRecursiveAsync(entryPath, keyword, recursive, includeHidden, cancellationToken))
-                    {
-                        yield return childItem;
-                    }
+                    for (int i = childFolders.Count - 1; i >= 0; i--)
+                        pendingFolders.Push(childFolders[i]);
                 }
             }
         }
