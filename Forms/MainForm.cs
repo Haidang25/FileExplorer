@@ -315,6 +315,21 @@ namespace FileExplorerApp.Forms
             spcMain.PerformLayout();
             spcFilesPreview.PerformLayout();
             spcMain.Invalidate(true);
+
+            // Tinh lai chieu rong cot "Tên" (xem AutoSizeNameColumn()) TAI DAY,
+            // KHONG CHI luc constructor: goi trong constructor (truoc khi Form
+            // co Handle/duoc Windows ve len man hinh lan dau) doc duoc
+            // lvwFiles.ClientSize.Width theo kich thuoc "ao" luc thiet ke (896,
+            // xem MainForm.Designer.cs), CHUA phai kich thuoc thuc te sau khi
+            // ClientSize cua Form da duoc InitializeUiScaling() phong to len
+            // 1280x680 va cac SplitContainer long nhau tinh lai layout that su -
+            // ket qua la cot Tên bi tinh HUT (VD ~436px thay vi ~600px), de lai
+            // dung mot khoang trang o giua cot cuoi va panel xem truoc, dung
+            // NHU NGUOI DUNG DA CHUP ANH BAO CAO. Goi lai lan nua o day (sau
+            // PerformLayout ben tren, luc Form chac chan da co Handle va kich
+            // thuoc thuc) de co ket qua dung ngay tu lan hien dau tien, khong
+            // can doi nguoi dung tu resize cua so thu cong.
+            AutoSizeNameColumn();
         }
 
         /// <summary>
