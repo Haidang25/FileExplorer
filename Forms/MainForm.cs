@@ -316,40 +316,42 @@ namespace FileExplorerApp.Forms
             spcFilesPreview.PerformLayout();
             spcMain.Invalidate(true);
 
-            // Loi RIENG khac, sau khi kiem tra bang anh chup thuc te (do tung
-            // pixel): spcFilesPreview (dat Dock=Fill BEN TRONG spcMain.Panel2)
-            // KHONG duoc tinh lai DUNG KICH THUOC (khong chi la khong duoc ve
-            // lai) sau lan Form hien ra dau tien - PerformLayout() tren spcMain
-            // o TREN chi dam bao dung vi tri/kich thuoc cho CAC CON TRUC TIEP
-            // cua spcMain (chinh Panel1/Panel2 cua no), KHONG cascade xuong
-            // toi con CUA Panel2 (tuc spcFilesPreview) - nen spcFilesPreview
-            // van giu kich thuoc "cu" nho hon Panel2 thuc te, de lo mau nen
-            // cua spcMain (AppTheme.Border, #D8DAE3) thanh mot dai xam/xanh
-            // nhat o phia ben phai lvwFiles - dung y het mau da do duoc tu anh
-            // chup cua nguoi dung (216,218,227 = #D8DAE3).
+            // Loi RIENG khac, xac dinh CHINH XAC qua so do chan doan thuc te (in
+            // kich thuoc len tieu de cua so, nguoi dung chup lai): spcFilesPreview
+            // (Dock=Fill BEN TRONG spcMain.Panel2) TU NO da tinh dung kich thuoc
+            // (957px, khop hoan toan voi spcMain.Panel2) - nhung lvwFiles (Dock=
+            // Fill BEN TRONG spcFilesPreview.Panel1, ban than Panel1 cung dung
+            // 957px do Panel2Collapsed=true) lai bi KET o mot kich thuoc CU nho
+            // hon (784px) tu truoc do, khong duoc WinForms tu dong cap nhat lai
+            // theo dung kich thuoc THUC TE cua Panel1 chua no - de lo mau nen
+            // cua spcMain (AppTheme.Border, #D8DAE3) o khoang trong con lai ben
+            // phai lvwFiles (957-784=173px, khop voi dai mau xam trong anh chup).
             //
-            // Cach sua chac chan nhat cho loai loi nay: TAT roi BAT LAI thuoc
-            // tinh Dock (None -> Fill) cua chinh spcFilesPreview - thao tac nay
-            // ep WinForms tinh lai Bounds cua no theo DisplayRectangle HIEN TAI
-            // cua Panel2 NGAY LAP TUC, khong phu thuoc viec Layout co duoc
-            // cascade dung tang hay khong (khac voi PerformLayout() o tren, chi
-            // xu ly dung MOT tang).
+            // Ep tinh lai DUNG kich thuoc cho ca 2 tang (spcFilesPreview VA
+            // lvwFiles) bang toggle Dock (None -> Fill) cho tung control - lam
+            // rieng tung tang thay vi chi lam o tang ngoai, vi PerformLayout()/
+            // toggle Dock o MOT control KHONG tu dong cascade xuong ep tinh lai
+            // kich thuoc cho CON CUA NO khi con do cung dang bi ket kich thuoc cu.
             spcFilesPreview.Dock = DockStyle.None;
             spcFilesPreview.Dock = DockStyle.Fill;
 
-            // Tinh lai chieu rong cot "Tên" (xem AutoSizeNameColumn()) TAI DAY,
-            // KHONG CHI luc constructor: goi trong constructor (truoc khi Form
-            // co Handle/duoc Windows ve len man hinh lan dau) doc duoc
-            // lvwFiles.ClientSize.Width theo kich thuoc "ao" luc thiet ke (896,
-            // xem MainForm.Designer.cs), CHUA phai kich thuoc thuc te sau khi
-            // ClientSize cua Form da duoc InitializeUiScaling() phong to len
-            // 1280x680 va cac SplitContainer long nhau tinh lai layout that su -
-            // ket qua la cot Tên bi tinh HUT (VD ~436px thay vi ~600px), de lai
-            // dung mot khoang trang o giua cot cuoi va panel xem truoc, dung
-            // NHU NGUOI DUNG DA CHUP ANH BAO CAO. Goi lai lan nua o day (sau
-            // PerformLayout ben tren, luc Form chac chan da co Handle va kich
-            // thuoc thuc) de co ket qua dung ngay tu lan hien dau tien, khong
-            // can doi nguoi dung tu resize cua so thu cong.
+            lvwFiles.Dock = DockStyle.None;
+            lvwFiles.Dock = DockStyle.Fill;
+
+            // Luoi an toan cuoi cung: neu vi ly do nao khac lvwFiles van chua
+            // khop kich thuoc voi Panel1 chua no (VD mot phien ban .NET/theme
+            // Windows cu the nao do van khong ap dung Dock=Fill dung ngay lap
+            // tuc), GAN THANG Size/Location bang tay theo dung ClientSize hien
+            // tai cua Panel1 - dam bao 100% khong con khoang trong du ra bat ke
+            // co che Dock co hoat dong dung hay khong.
+            lvwFiles.Location = System.Drawing.Point.Empty;
+            lvwFiles.Size = spcFilesPreview.Panel1.ClientSize;
+
+            // Tinh lai chieu rong cot "Tên" (xem AutoSizeNameColumn()) SAU CUNG,
+            // luc lvwFiles chac chan da co kich thuoc dung - goi lai o day (thay
+            // vi chi luc constructor, khi Form CHUA co Handle/kich thuoc that,
+            // xem chu thich cu hon o cac commit truoc) de co ket qua dung ngay
+            // tu lan hien dau tien, khong can doi nguoi dung tu resize cua so.
             AutoSizeNameColumn();
         }
 
