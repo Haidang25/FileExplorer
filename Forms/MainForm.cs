@@ -840,6 +840,15 @@ namespace FileExplorerApp.Forms
                 // LoadListViewFiles() (goi ngay sau do trong mnuViewRefresh_Click)
                 // se tu bao loi phu hop cho nguoi dung, khong can bao trung o day.
             }
+            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is System.ComponentModel.Win32Exception)
+            {
+                // FileSystemWatcher nem loi rieng (thuong la Win32Exception "Access
+                // denied") khi _currentPath ton tai nhung khong co quyen doc noi dung
+                // (Testcase TC0004) - bo qua tuong tu ArgumentException o tren, de
+                // LoadListViewFiles() (goi ngay sau do) tu hien thong bao "khong co
+                // quyen truy cap" phu hop, tranh loi thoat ra ngoai lam gian doan/crash
+                // ung dung.
+            }
         }
 
         private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
@@ -2403,6 +2412,29 @@ namespace FileExplorerApp.Forms
 
         private void LoadListViewFiles()
         {
+            // Kiem tra QUYEN TRUY CAP thuc su vao _currentPath TRUOC khi liet ke -
+            // FileService.GetItems/FolderService.GetSubFolders vo tinh "nuot" rieng
+            // UnauthorizedAccessException va tra ve danh sach RONG (thiet ke ban dau
+            // la de mot muc con loi quyen KHONG lam mat ca danh sach) - nen MainForm
+            // truoc day khong the phan biet "thu muc thuc su trong" voi "khong co
+            // quyen doc thu muc nay", ca hai deu hien "Thư mục này trống" giong nhau.
+            // Testcase TC0004 (duyet thu muc khong co quyen): phai hien THONG BAO
+            // rieng cho nguoi dung biet ro nguyen nhan, ung dung van tiep tuc chay
+            // binh thuong (khong duoc coi la thu muc trong, khong duoc crash).
+            if (!CanAccessDirectory(_currentPath))
+            {
+                lvwFiles.Items.Clear();
+                lblEmptyFolder.Text = "Bạn không có quyền truy cập vào thư mục này.";
+                lblEmptyFolder.Visible = true;
+                tsslItemCount.Text = "0 mục";
+                tsslTotalSize.Text = FormatHelper.FormatSize(0);
+                tsslStatus.Text = "Sẵn sàng";
+
+                MessageBox.Show("Bạn không có quyền truy cập vào thư mục này.",
+                    "Không có quyền truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             lvwFiles.BeginUpdate();
             lvwFiles.Items.Clear();
 
@@ -2516,6 +2548,44 @@ namespace FileExplorerApp.Forms
                 ? "Thư mục này chỉ chứa các mục đang ẩn.\nBật \"Hiện file/thư mục ẩn\" trong menu Xem để xem."
                 : "Thư mục này trống";
             lblEmptyFolder.Visible = true;
+        }
+
+        /// <summary>
+        /// Kiem tra THUC SU xem nguoi dung dang chay ung dung co quyen LIET KE noi
+        /// dung cua <paramref name="path"/> hay khong - Directory.Exists() CHI xac
+        /// nhan thu muc co ton tai, KHONG dam bao doc duoc noi dung ben trong (VD:
+        /// mot so thu muc he thong nhu "System Volume Information", "$RECYCLE.BIN"
+        /// o o dia... ton tai nhung tu choi quyen doc voi nguoi dung thong thuong).
+        /// Phai goi enumerator.MoveNext() (khong chi lay ve IEnumerable) vi loi quyen
+        /// CHI nem ra khi thuc su bat dau doc, chua nem ngay luc goi
+        /// EnumerateFileSystemEntries().
+        ///
+        /// Chi coi la "khong co quyen" (tra ve false) khi that su la
+        /// UnauthorizedAccessException - cac loi dia khac (IOException, VD o dia thao
+        /// ra) tra ve true de nguyen luong xu ly cu (GetItems/GetFiles tu bat rieng)
+        /// tiep tuc, tranh bao nham thanh "khong co quyen truy cap".
+        /// </summary>
+        private static bool CanAccessDirectory(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
+                return true;
+
+            try
+            {
+                using (IEnumerator<string> enumerator = Directory.EnumerateFileSystemEntries(path).GetEnumerator())
+                {
+                    enumerator.MoveNext();
+                }
+                return true;
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return false;
+            }
+            catch (IOException)
+            {
+                return true;
+            }
         }
 
         /// <summary>
