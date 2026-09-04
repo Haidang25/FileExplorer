@@ -3911,6 +3911,22 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(path) || !Directory.Exists(path))
                 return;
 
+            // Kiem tra quyen truy cap TRUOC khi thuc su doi _currentPath (Testcase
+            // TC0004). TRUOC DAY viec kiem tra nay chi nam trong LoadListViewFiles -
+            // goi SAU khi _currentPath/breadcrumb da doi sang thu muc bi chan quyen,
+            // nen dù co hien thong bao, nguoi dung van thay ung dung nhu da "vao
+            // duoc" thu muc do (thanh dia chi doi, chi ListView rong+thong bao). Kiem
+            // tra o day - diem dieu huong DUY NHAT dung chung cho TreeView/ListView/
+            // dia chi/breadcrumb - de dam bao KHONG doi _currentPath/history/breadcrumb
+            // khi khong co quyen, nguoi dung van dung yen o thu muc cu, chi thay
+            // thong bao loi.
+            if (!CanAccessDirectory(path, out string navigateErrorMessage))
+            {
+                MessageBox.Show(navigateErrorMessage,
+                    "Không có quyền truy cập", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             _backHistory.Push(_currentPath);
             // Dieu huong toi mot thu muc moi (khong phai qua tsbForward_Click) se lam
             // "gay" nhanh history tien, giong hanh vi trinh duyet/Explorer thong thuong.
