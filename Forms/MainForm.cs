@@ -4477,26 +4477,64 @@ namespace FileExplorerApp.Forms
                 // Task.WhenAny + Task.Delay lam "timeout" cho phep kiem tra nay - NEU
                 // KHONG co timeout, mot o dia/duong dan mang bi treo hoan toan (VD:
                 // rut giua chung nhung Windows chua kip bao ERROR, hoac o mang mat
-                // ket noi ma khong tra ve loi ro rang) se lam Directory.Exists() KHONG
-                // BAO GIO tra ve - ham nay se mai mai "cho" o day, khong bao gio chay
-                // den finally o duoi, nen con tro cho (WaitCursor) se bi KET MAI KHONG
-                // TU HET (dung bug nguoi dung bao). Sau 5 giay khong co ket qua, coi
-                // nhu that bai va tra lai quyen dieu khien cho nguoi dung, thay vi cho
-                // vo han.
-                Task<bool> existsCheckTask = Task.Run(() => Directory.Exists(path));
-                Task firstCompletedTask = await Task.WhenAny(existsCheckTask, Task.Delay(5000));
+                // ket noi ma khong tra ve loi ro rang) se lam viec kiem tra KHONG BAO
+                // GIO tra ve - ham nay se mai mai "cho" o day, khong bao gio chay den
+                // finally o duoi, nen con tro cho (WaitCursor) se bi KET MAI KHONG TU
+                // HET (dung bug nguoi dung bao - "Con chỏ chuột bị dính thuộc tính Wait
+                // Cursor"). Sau 5 giay khong co ket qua, coi nhu that bai va tra lai
+                // quyen dieu khien cho nguoi dung, thay vi cho vo han.
+                //
+                // QUAN TRONG - khong chi Directory.Exists(): ban truoc day CHI kiem
+                // tra rieng Directory.Exists() trong Task.Run nay, nen van con "lo"
+                // mot truong hop khien con tro cho van bi ket lai - NavigateTo(path)
+                // duoc goi NGAY SAU DAY (dong bo, KHONG co timeout, vi no dung truc
+                // tiep control WinForms) se lam LoadListViewFiles doc noi dung o
+                // dia/thu muc do (FileService.GetItems) - neu chinh THAO TAC DOC NOI
+                // DUNG nay moi la cho bi treo (VD: o dia/duong dan mang phan hoi cham
+                // luc doc danh sach file, khong phai luc kiem tra ton tai) thi van se
+                // ket cung mot cach nhu truoc, chi khac vi tri. Vi vay o day kiem tra
+                // THEM ca kha nang doc duoc MUC DAU TIEN ben trong (mo phong dung
+                // cong viec GetItems() se lam ngay sau do) - phat hien som cung mot
+                // luc, trong CUNG mot khoang timeout 5 giay nay, TRUOC KHI goi
+                // NavigateTo() dong bo khong co timeout ben duoi.
+                Task<bool> accessCheckTask = Task.Run(() =>
+                {
+                    if (!Directory.Exists(path))
+                        return false;
 
-                if (firstCompletedTask != existsCheckTask)
+                    try
+                    {
+                        using (IEnumerator<string> enumerator = Directory.EnumerateFileSystemEntries(path).GetEnumerator())
+                        {
+                            enumerator.MoveNext();
+                        }
+                    }
+                    catch
+                    {
+                        // Loi cu the (quyen, IO...) da duoc CanAccessDirectory/
+                        // LoadListViewFiles xu ly rieng, dung thong bao phu hop, ngay
+                        // sau khi NavigateTo() duoc goi ben duoi - o day CHI quan tam
+                        // duy nhat MOT dieu: viec doc co "phan hoi" (tra ve, du la ket
+                        // qua hay loi) trong 5 giay hay khong, khong can phan biet loai
+                        // loi.
+                    }
+
+                    return true;
+                });
+
+                Task firstCompletedTask = await Task.WhenAny(accessCheckTask, Task.Delay(5000));
+
+                if (firstCompletedTask != accessCheckTask)
                 {
                     MessageBox.Show($"{Path.GetPathRoot(path) ?? path}\nKhông thể truy cập ổ đĩa này (phản hồi quá lâu, có thể do mất kết nối).",
                         "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
 
-                // existsCheckTask da chac chan hoan tat (khong con phai cho) - await lai
-                // o day de lay ket qua/nem lai exception (neu co) mot cach an toan, KHONG
-                // lam UI phai cho them lan nao nua.
-                bool exists = await existsCheckTask;
+                // accessCheckTask da chac chan hoan tat (khong con phai cho) - await
+                // lai o day de lay ket qua mot cach an toan, KHONG lam UI phai cho
+                // them lan nao nua.
+                bool exists = await accessCheckTask;
                 if (exists)
                 {
                     NavigateTo(path);
