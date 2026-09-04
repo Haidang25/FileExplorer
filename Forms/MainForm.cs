@@ -840,14 +840,23 @@ namespace FileExplorerApp.Forms
                 // LoadListViewFiles() (goi ngay sau do trong mnuViewRefresh_Click)
                 // se tu bao loi phu hop cho nguoi dung, khong can bao trung o day.
             }
-            catch (Exception ex) when (ex is UnauthorizedAccessException || ex is System.ComponentModel.Win32Exception)
+            catch (Exception ex) when (ex is UnauthorizedAccessException
+                || ex is System.ComponentModel.Win32Exception
+                || ex is FileNotFoundException)
             {
-                // FileSystemWatcher nem loi rieng (thuong la Win32Exception "Access
-                // denied") khi _currentPath ton tai nhung khong co quyen doc noi dung
-                // (Testcase TC0004) - bo qua tuong tu ArgumentException o tren, de
-                // LoadListViewFiles() (goi ngay sau do) tu hien thong bao "khong co
-                // quyen truy cap" phu hop, tranh loi thoat ra ngoai lam gian doan/crash
-                // ung dung.
+                // FileSystemWatcher.EnableRaisingEvents = true (ben trong
+                // StartMonitoring) tu goi Win32 CreateFile() de mo handle theo doi
+                // _currentPath - khi KHONG co quyen doc thu muc (Testcase TC0004,
+                // VD tu deny bang icacls), CreateFile that bai voi ERROR_ACCESS_DENIED
+                // nhung .NET Framework KHONG nem UnauthorizedAccessException nhu ky
+                // vong thong thuong, ma nem FileNotFoundException voi thong diep co
+                // dinh tu resource noi bo "FSW_IOError" = "Error reading the '{0}'
+                // directory." (da xac nhan qua anh chup thuc te tu nguoi dung - day
+                // chinh la nguyen nhan loi truoc day thoat ra ngoai toi handler loi
+                // toan cuc thay vi thong bao "khong co quyen truy cap" mong muon).
+                // Bo qua tuong tu ArgumentException o tren, de LoadListViewFiles()
+                // (goi ngay sau do trong mnuViewRefresh_Click) tu hien thong bao phu
+                // hop qua CanAccessDirectory(), khong can bao trung o day.
             }
         }
 
