@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using FileExplorerApp.Helpers;
 using FileExplorerApp.Models;
@@ -12,14 +13,22 @@ namespace FileExplorerApp.Forms
     /// <summary>
     /// Man hinh tim kiem file/thu muc (menu Cong cu > Tim kiem..., hoac Enter tren o
     /// tim kiem cua thanh cong cu MainForm). Nhap tu khoa + thu muc goc + tuy chon,
-    /// goi SearchService.SearchAsync() (async IAsyncEnumerable) qua "await foreach"
-    /// de nhan ket qua NGAY khi tim thay, khong lam treo UI ma cung khong can tach
-    /// luong nen (Task.Run) rieng - ho tro Huy giua chung qua CancellationTokenSource,
-    /// cung mau voi CopyProgressForm/mnuEditPaste_Click da lam voi thao tac Copy. Moi
-    /// ket qua duoc THEM NGAY vao lvwResults (xem AddResultItem()) tai dung thoi diem
-    /// tim thay, KHONG doi gom du 1 lo/toan bo moi hien - de nguoi dung thay ket qua
-    /// "chay" ra dan tren man hinh giong Windows Explorer, thay vi man hinh dung im
-    /// roi ket qua hien ra tat ca cung luc khi quet xong.
+    /// goi SearchService.SearchAsync() - ham nay chay TOAN BO qua trinh quet tren
+    /// mot luong ThreadPool rieng (Task.Run BEN TRONG SearchService, khong phai o
+    /// day), roi bao ket qua/tien do ve UI qua Progress&lt;T&gt; (xem onFoundProgress/
+    /// onScannedProgress ben duoi) - CHU DICH la de UI thread (chuot, ban phim, ve
+    /// lai man hinh) KHONG BAO GIO bi chiem dung boi cong viec quet, du dang quet
+    /// mot cay rat lon (VD: ca o C:). Truoc day (da BO - xem SearchService.SearchAsync
+    /// de biet chi tiet ly do) ham nay la mot async iterator chay bang await
+    /// Task.Yield() tren CHINH UI thread - ve ky thuat "khong chan" nhung tren thuc
+    /// te van chiem dung UI thread hau het thoi gian, khien Windows hien con tro
+    /// "khong phan hoi" (khong con la mui ten binh thuong nua) va nut Huy khong an
+    /// duoc kip - day la nguyen nhan thuc su cua bao cao "không hiện con chỏ chuột
+    /// để ấn dừng". Ho tro Huy giua chung qua CancellationTokenSource, cung mau voi
+    /// CopyProgressForm/mnuEditPaste_Click da lam voi thao tac Copy. Moi ket qua
+    /// duoc THEM NGAY vao lvwResults (xem AddResultItem()) tai dung thoi diem tim
+    /// thay, khong doi gom lo/toan bo moi hien - de nguoi dung thay ket qua "chay"
+    /// ra dan tren man hinh giong Windows Explorer.
     /// </summary>
     public partial class SearchForm : Form
     {
@@ -104,45 +113,55 @@ namespace FileExplorerApp.Forms
 
                 try
                 {
-                    // SearchService.SearchAsync() la async iterator (IAsyncEnumerable) -
-                    // "await foreach" nhan tung ket qua NGAY khi tim thay, ngay trong
-                    // luc dang await (khac voi Search() dong bo cu, phai boc ca ham
-                    // bang Task.Run va doi den khi xong toan bo moi co ket qua dau
-                    // tien). Moi item nhan duoc o day duoc them THANG vao lvwResults
-                    // ngay trong vong lap (xem AddResultItem()) - khong gom lo nua -
-                    // de ket qua hien ra NGAY luc tim thay, dung nhu yeu cau. Khong
-                    // dung .WithCancellation(token) o day (extension do thuoc package
-                    // System.Linq.Async, chua duoc cai) - CancellationToken da duoc
-                    // truyen thang vao SearchAsync() lam tham so cuoi (co
-                    // [EnumeratorCancellation]) nen viec huy van hoat dong dung, chi
-                    // khac ve cu phap goi. Nut Huy (btnCancelSearch_Click) van bam
-                    // duoc BINH THUONG trong luc dang quet, vi SearchRecursiveAsync
-                    // van nhuong dieu khien (await Task.Yield()) dinh ky cho vong lap
-                    // thong diep UI kip xu ly click chuot, khong bi chan boi vong lap
-                    // await foreach o day.
-                    // onItemsScanned: goi dinh ky ngay ca khi CHUA tim thay ket qua khop
-                    // nao (foundCount van = 0) - vi lblStatus chi duoc AddResultItem()
-                    // cap nhat khi CO ket qua khop, nen khi quet mot cay lon (VD: ca o
-                    // C:) ma khong khop gi ca, man hinh dung im hoan toan tu luc bam Tim
-                    // kiem neu khong co callback nay - de nguoi dung nham la ung dung bi treo,
-                    // du thuc te van dang quet binh thuong. Bien scannedCount duoi day
-                    // duoc doc lai trong lblStatus ca o cac cho khac (sau khi hoan tat/
-                    // bi huy) de con so cuoi hien thi luon khop voi lan bao cao gan nhat.
-                    int scannedCount = 0;
-
-                    await foreach (FileItemModel item in _searchService.SearchAsync(
-                        rootFolder, keyword, recursive, includeHidden, token,
-                        onItemsScanned: count =>
-                        {
-                            scannedCount = count;
-                            if (foundCount == 0)
-                                lblStatus.Text = $"Đang quét... đã kiểm tra {scannedCount:N0} mục, chưa thấy kết quả ({FormatElapsed(stopwatch.Elapsed)}).";
-                        }))
+                    // Ca hai IProgress<T> duoi day duoc TAO NGAY TAI DAY, tren UI
+                    // thread (trong ham async void nay, TRUOC khi await Task.Run ben
+                    // trong SearchService.SearchAsync() bat dau chay tren luong nen) -
+                    // theo dung co che cua Progress<T>: no tu chup (capture)
+                    // SynchronizationContext.Current NGAY LUC KHOI TAO, nen du
+                    // .Report() sau nay duoc goi tu MOT LUONG THREADPOOL KHAC HAN
+                    // (ben trong SearchCore cua SearchService), callback truyen vao
+                    // constructor luon duoc Post() ve DUNG UI thread nay de thuc thi -
+                    // an toan cap nhat lvwResults/lblStatus truc tiep, khong can
+                    // Invoke/BeginInvoke thu cong, giong CACH pasteProgress da lam
+                    // trong MainForm.mnuEditPaste_Click.
+                    //
+                    // onFoundProgress: moi ket qua khop duoc them NGAY vao lvwResults
+                    // (AddResultItem) tai dung thoi diem tim thay.
+                    var onFoundProgress = new Progress<FileItemModel>(item =>
                     {
                         foundCount++;
                         AddResultItem(item);
                         lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục ({FormatElapsed(stopwatch.Elapsed)}).";
-                    }
+                    });
+
+                    // onScannedProgress: goi dinh ky ngay ca khi CHUA tim thay ket qua
+                    // khop nao (foundCount van = 0) - vi lblStatus chi duoc
+                    // onFoundProgress cap nhat khi CO ket qua khop, nen khi quet mot
+                    // cay lon (VD: ca o C:) ma khong khop gi ca, man hinh dung im hoan
+                    // toan tu luc bam Tim kiem neu khong co callback nay - de nguoi
+                    // dung nham la ung dung bi treo, du thuc te van dang quet binh
+                    // thuong tren luong nen.
+                    var onScannedProgress = new Progress<int>(scannedCount =>
+                    {
+                        if (foundCount == 0)
+                            lblStatus.Text = $"Đang quét... đã kiểm tra {scannedCount:N0} mục, chưa thấy kết quả ({FormatElapsed(stopwatch.Elapsed)}).";
+                    });
+
+                    // await - toan bo qua trinh quet (Directory.EnumerateFileSystemEntries,
+                    // File.GetAttributes...) da chay HOAN TOAN tren mot luong ThreadPool
+                    // rieng (Task.Run ben trong SearchService), nen UI thread cua
+                    // SearchForm nay TU DO xu ly moi thong diep dau vao (chuot/ban
+                    // phim/ve lai) trong suot qua trinh cho, chi duoc "lam phien"
+                    // trong chop nhoang moi khi co Report() qua onFoundProgress/
+                    // onScannedProgress o tren. Khong can dung gia tri Task<int> tra
+                    // ve - foundCount da duoc dem chinh xac qua onFoundProgress (cac
+                    // Report() do CHAC CHAN duoc UI thread xu ly xong TRUOC khi await
+                    // nay hoan tat, vi ca Report() lan tin hieu hoan tat Task deu duoc
+                    // "Post" tu CUNG mot luong nen theo dung thu tu chuong trinh, nen
+                    // hang doi thong diep UI xu ly dung thu tu FIFO do).
+                    await _searchService.SearchAsync(
+                        rootFolder, keyword, recursive, includeHidden,
+                        onFoundProgress, onScannedProgress, token);
 
                     stopwatch.Stop();
 
@@ -167,8 +186,8 @@ namespace FileExplorerApp.Forms
                 catch (OperationCanceledException)
                 {
                     // Cac ket qua da tim thay TRUOC khi bi huy da duoc them thang vao
-                    // lvwResults ngay luc tim thay (AddResultItem() trong vong lap
-                    // await foreach o tren) - khong mat gi ca, chi can bao trang thai.
+                    // lvwResults ngay luc tim thay (AddResultItem() trong onFoundProgress
+                    // o tren) - khong mat gi ca, chi can bao trang thai.
                     stopwatch.Stop();
                     lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục sau {FormatElapsed(stopwatch.Elapsed)}).";
                 }
@@ -204,8 +223,8 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Them MOT ket qua duy nhat vao lvwResults NGAY luc tim thay (goi truc tiep
-        /// tu vong lap await foreach trong btnSearch_Click) - KHONG gom lo/doi tim
-        /// xong moi hien nhu truoc, de nguoi dung thay ket qua hien ra dan tung
+        /// tu onFoundProgress trong btnSearch_Click, LUON tren UI thread) - khong
+        /// gom lo/doi tim xong moi hien, de nguoi dung thay ket qua hien ra dan tung
         /// dong mot ngay trong luc dang quet, giong cach Windows Explorer lam.
         /// </summary>
         private void AddResultItem(FileItemModel item)
