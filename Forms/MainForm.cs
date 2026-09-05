@@ -2979,6 +2979,20 @@ namespace FileExplorerApp.Forms
         /// null neu khong co dong nao - VD dang o khoang trong duoi danh
         /// sach) thay vi TreeView.GetNodeAt.
         /// </summary>
+        /// <remarks>
+        /// SUA LOI (nguoi dung bao cao "muon keo-tha vao vung trang cua
+        /// lvwFiles"): PHIEN BAN TRUOC tra e.Effect = None ngay khi khong
+        /// dang o tren mot dong thu muc hop le, AP DUNG CHUNG cho CA du lieu
+        /// NOI BO lan du lieu tu BEN NGOAI (FileDrop/tep ao) - dung cho
+        /// truong hop NOI BO (tha vao khoang trong luon la no-op, vi nguon
+        /// da nam san trong _currentPath) NHUNG SAI cho truong hop BEN NGOAI:
+        /// TRUOC KHI ho tro tha len mot dong thu muc cu the duoc them vao,
+        /// keo file/anh tu Windows Explorer hoac trinh duyet tha vao BAT KY
+        /// dau trong lvwFiles (ke ca khoang trong) LUON duoc phep (sao chep
+        /// vao _currentPath, xem lvwFiles_DragDrop) - nay TACH RIENG 2 truong
+        /// hop: du lieu BEN NGOAI luon Copy bat ke vi tri con tro, chi du lieu
+        /// NOI BO moi can kiem tra dang tren dong thu muc hop le hay khong.
+        /// </remarks>
         private void UpdateLvwFilesDragEffect(DragEventArgs e)
         {
             bool hasInternalData = e.Data.GetDataPresent(typeof(List<string>));
@@ -2989,25 +3003,32 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            if (!hasInternalData)
+            {
+                // Keo tu ben ngoai (FileDrop that su tu Windows Explorer, hoac
+                // "tep ao" tu trinh duyet - xem HasVirtualFileDragData) - LUON
+                // cho phep tha, KE CA khi khong dang o tren mot dong thu muc
+                // cu the (tha vao khoang trong/dong file khac se sao chep vao
+                // _currentPath - thu muc dang mo, xem lvwFiles_DragDrop) -
+                // giu dung hanh vi da co san TU TRUOC KHI tha len mot dong
+                // thu muc cu the duoc them vao (xem <remarks>).
+                e.Effect = DragDropEffects.Copy;
+                return;
+            }
+
             Point clientPoint = lvwFiles.PointToClient(new Point(e.X, e.Y));
             ListViewItem targetItem = lvwFiles.GetItemAt(clientPoint.X, clientPoint.Y);
             string targetFolderPath = targetItem?.Tag as string;
             bool isValidTarget = !string.IsNullOrEmpty(targetFolderPath) && Directory.Exists(targetFolderPath);
             if (!isValidTarget)
             {
-                // Dang tro toi khoang trong (khong co dong nao) hoac dong CUA
-                // MOT FILE (khong phai thu muc) - khong co y nghia de tha vao
-                // (file khong the chua gi ben trong, con khoang trong/tha ra
-                // ngoai moi dong thi da co san hanh vi rieng cho keo NGOAI vao
-                // - xem lvwFiles_DragDrop, KHONG can DragDropEffects rieng o
-                // day, chi tinh la None de con tro bao truoc dung).
+                // Keo-tha NOI BO (khong phai tu ben ngoai, da xu ly rieng o
+                // tren) dang tro toi khoang trong (khong co dong nao) hoac
+                // dong CUA MOT FILE (khong phai thu muc) - LUON la no-op (cac
+                // muc dang keo da nam san trong _currentPath, tha vao day
+                // khong thay doi gi ca) nen None, khac voi truong hop ben
+                // ngoai o tren.
                 e.Effect = DragDropEffects.None;
-                return;
-            }
-
-            if (!hasInternalData)
-            {
-                e.Effect = DragDropEffects.Copy; // Keo FileDrop tu ben ngoai vao dong thu muc hop le trong lvwFiles.
                 return;
             }
 
