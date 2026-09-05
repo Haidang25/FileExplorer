@@ -151,6 +151,30 @@ namespace FileExplorerApp.Forms
             if (_paths.Count == 0)
                 return;
 
+            // Kiem tra TRUNG TEN TRUOC KHI hoi xac nhan - lvwPreview chi TO MAU
+            // CANH BAO cac ten trung (xem UpdatePreview) nhung KHONG chan nguoi
+            // dung bam "Đổi tên" theo mau do. Neu cu de FileService.BatchRename
+            // tu xu ly, cac muc KHONG trung se doi ten THANH CONG con cac muc
+            // trung se bi Skipped - ket qua "do dang" (mot vai muc da doi that
+            // su, so con lai thi khong) rat de gay nham lan/kho khoi phuc lai
+            // dung trang thai ban dau. Thay vao do, DUNG HAN ngay tai day (KHONG
+            // hien hop thoai xac nhan, KHONG goi BatchRename() - tuc CHUA dong
+            // vao dia bat ky thay doi nao ca) va bao loi ro rang liet ke TUNG
+            // cap ten trung, de nguoi dung sua lai mau ten roi thu lai.
+            List<string> conflicts = _fileService.ValidateBatchRenameConflicts(_paths, txtPattern.Text);
+            if (conflicts.Count > 0)
+            {
+                MessageBox.Show(
+                    this,
+                    "Phát hiện trùng tên trong danh sách đổi tên - ĐÃ DỪNG LẠI, CHƯA đổi tên bất kỳ mục nào:\n\n" +
+                    string.Join("\n", conflicts) +
+                    "\n\nHãy sửa lại mẫu tên (hoặc bỏ bớt mục đang chọn) để tránh trùng tên rồi thử lại.",
+                    "Phát hiện trùng tên",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
+
             DialogResult confirm = MessageBox.Show(
                 this,
                 $"Bạn có chắc muốn đổi tên {_paths.Count} mục theo mẫu \"{txtPattern.Text}\" như danh sách xem trước bên trên?\n\n" +

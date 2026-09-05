@@ -382,6 +382,99 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Kiem tra TRUOC (khong dong vao dia gi ca) xem lan doi ten hang loat
+        /// nay co dan den TRUNG TEN thuc su hay khong - dung cho CA BatchRenameForm
+        /// (goi truoc khi hien hop thoai xac nhan, de bao loi va DUNG HAN neu co
+        /// trung ten, thay vi cu xac nhan roi doi "do dang") LAN BatchRename()
+        /// (goi lai o dau ham do lam lop bao ve thu 2, phong khi co loi goi khac
+        /// trong tuong lai khong di qua BatchRenameForm).
+        ///
+        /// Phan biet 2 loai trung ten THAT SU can chan (KHONG bao gom truong hop
+        /// "hoan doi ten cho nhau" giua cac muc trong LO - VD A muon lay ten cua
+        /// B, B muon lay ten khac - day la truong hop HOP LE, da duoc BatchRename
+        /// tu xu ly dung qua co che doi tam 2 giai doan, KHONG duoc coi la xung
+        /// dot o day):
+        /// - Hai muc TRONG CUNG LO cho ra CUNG MOT ten dich (VD pattern khong co
+        ///   token {n} nen tat ca deu thanh cung mot ten) - chi mot trong hai co
+        ///   the giu duoc ten do, muc con lai CHAC CHAN se bi Skipped neu cu doi.
+        /// - Ten dich trung voi MOT FILE/THU MUC DA CO SAN tren dia nhung KHONG
+        ///   thuoc lo dang doi ten nay (vi lo se tu "nhuong" het ten GOC cua minh
+        ///   o Giai doan 1 truoc khi doi vao ten dich, nen trung voi CHINH ten
+        ///   goc cua MOT MUC KHAC trong lo la binh thuong, khong tinh la xung dot).
+        /// </summary>
+        /// <param name="paths">Danh sach duong dan can doi ten - GIONG HET danh sach se truyen cho BatchRename().</param>
+        /// <param name="pattern">Mau ten - GIONG HET pattern se truyen cho BatchRename().</param>
+        /// <returns>
+        /// Danh sach mo ta (tieng Viet, de hien truc tiep cho nguoi dung) tung
+        /// xung dot phat hien duoc; rong neu khong co xung dot nao (an toan de
+        /// tien hanh doi ten). Muc bi NotFound (da bi xoa/di chuyen tu truoc)
+        /// KHONG duoc tinh la xung dot o day - BatchRename() se tu bao rieng.
+        /// </returns>
+        public List<string> ValidateBatchRenameConflicts(List<string> paths, string pattern)
+        {
+            var conflicts = new List<string>();
+            if (paths == null || paths.Count == 0)
+                return conflicts;
+
+            var targetPaths = new string[paths.Count];
+            var validIndexes = new List<int>();
+
+            for (int i = 0; i < paths.Count; i++)
+            {
+                string originalPath = paths[i];
+                if (string.IsNullOrWhiteSpace(originalPath) || (!File.Exists(originalPath) && !Directory.Exists(originalPath)))
+                    continue; // NotFound - BatchRename() tu bao rieng, khong tinh la trung ten o day.
+
+                string targetName = GenerateBatchRenameName(originalPath, pattern, i);
+                string directory = Path.GetDirectoryName(originalPath) ?? string.Empty;
+                targetPaths[i] = Path.Combine(directory, targetName);
+                validIndexes.Add(i);
+            }
+
+            // Loai 1: nhieu muc TRONG CUNG LO cho ra CUNG MOT duong dan dich (so
+            // sanh CA duong dan, khong chi ten - de dung ngay ca khi cac muc
+            // trong lo nam o nhieu thu muc khac nhau).
+            var reportedTargets = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var duplicateGroups = validIndexes
+                .GroupBy(i => targetPaths[i], StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count() > 1);
+
+            foreach (var group in duplicateGroups)
+            {
+                string targetName = Path.GetFileName(group.Key);
+                string sourceNames = string.Join(", ", group.Select(i => "\"" + Path.GetFileName(paths[i]) + "\""));
+                conflicts.Add($"{sourceNames} đều bị đổi thành cùng một tên \"{targetName}\"");
+                reportedTargets.Add(group.Key);
+            }
+
+            // Loai 2: ten dich trung voi mot muc DA CO SAN tren dia nhung KHONG
+            // thuoc lo nay (xem giai thich chi tiet o <summary>).
+            var originalPathSet = new HashSet<string>(
+                paths.Where(p => !string.IsNullOrWhiteSpace(p)), StringComparer.OrdinalIgnoreCase);
+
+            foreach (int i in validIndexes)
+            {
+                string target = targetPaths[i];
+                if (reportedTargets.Contains(target))
+                    continue; // Da bao o Loai 1 o tren, tranh bao trung 2 lan cho cung 1 ten dich.
+
+                bool existsOnDisk = File.Exists(target) || Directory.Exists(target);
+                bool isOwnOriginalPath = string.Equals(target, paths[i], StringComparison.OrdinalIgnoreCase);
+                bool isAnotherItemsOriginalPathInBatch = originalPathSet.Contains(target);
+
+                if (existsOnDisk && !isOwnOriginalPath && !isAnotherItemsOriginalPathInBatch)
+                {
+                    conflicts.Add(
+                        $"\"{Path.GetFileName(paths[i])}\" -> \"{Path.GetFileName(target)}\": " +
+                        "đã có sẵn một mục khác cùng tên tại vị trí đó");
+                    reportedTargets.Add(target);
+                }
+            }
+
+            return conflicts;
+        }
+
+        /// <summary>
         /// Doi ten hang loat danh sach file/thu muc theo MOT mau ten (pattern)
         /// dung chung - xem GenerateBatchRenameName de biet cac token ho tro
         /// ({name}, {ext}, {n}/{n:000}, {date}).
@@ -461,6 +554,28 @@ namespace FileExplorerApp.Services
                 targetNames[i] = GenerateBatchRenameName(originalPath, pattern, i);
                 string directory = Path.GetDirectoryName(originalPath);
                 itemResult.NewPath = Path.Combine(directory ?? string.Empty, targetNames[i]);
+            }
+
+            // KIEM TRA TRUNG TEN TRUOC KHI DONG VAO DIA (defense-in-depth):
+            // BatchRenameForm.btnApply_Click DA tu goi ValidateBatchRenameConflicts()
+            // rieng truoc khi goi ham nay, de hien thong bao loi CHI TIET (liet
+            // ke tung cap ten trung) va DUNG LAI HOAN TOAN truoc khi nguoi dung
+            // kip xac nhan - nhung kiem tra LAI o day (ngay ben trong BatchRename)
+            // de dam bao BAT KY LOI GOI NAO KHAC trong tuong lai (khong di qua
+            // BatchRenameForm) cung KHONG THE vo tinh doi ten "do dang" (mot vai
+            // muc da doi thanh cong, cac muc trung ten con lai bi Skipped) - neu
+            // phat hien trung ten, DUNG NGAY o day, KHONG thuc hien Giai doan 1/2
+            // ben duoi (tuc KHONG dong vao dia bat ky thay doi nao ca - "rollback"
+            // o day don gian la CHUA TUNG DOI GI ca, khong can hoan tac).
+            List<string> conflicts = ValidateBatchRenameConflicts(paths, pattern);
+            if (conflicts.Count > 0)
+            {
+                foreach (BatchRenameItemResult itemResult in itemResults)
+                {
+                    if (itemResult.Result != OperationResult.NotFound)
+                        itemResult.Result = OperationResult.Skipped;
+                }
+                return itemResults;
             }
 
             // Giai doan 1: doi tam TOAN BO muc hop le - xem giai thich chi
