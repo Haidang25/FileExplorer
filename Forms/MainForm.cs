@@ -4592,14 +4592,53 @@ namespace FileExplorerApp.Forms
                             return;
                         }
                     }
+                    catch (IOException)
+                    {
+                        // Tep dang bi khoa boi chuong trinh khac (VD dang mo san
+                        // trong Word/mot ung dung khac) - KHONG phai tep hong,
+                        // rat co the ung dung mac dinh (VD Word) van tu xu ly
+                        // duoc truong hop nay binh thuong (VD Word tu phat hien
+                        // dang mo san va chuyen focus sang cua so do thay vi
+                        // bao loi) - BO QUA CO Y, de Process.Start ben duoi tu
+                        // quyet dinh, GIONG HANH VI CU cho truong hop nay.
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        // Thieu quyen doc de KIEM TRA mat khau (PdfPig/OpenXml) -
+                        // KHONG co nghia ung dung mac dinh (VD Word, co the dang
+                        // chay voi quyen khac) cung se khong mo duoc - BO QUA CO
+                        // Y nhu IOException o tren, de Process.Start tu quyet dinh.
+                    }
                     catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
                     {
-                        // Loi KHAC voi mat khau (VD tep hong, sai dinh dang,
-                        // dang bi khoa boi chuong trinh khac...) - BO QUA o
-                        // day CO Y, de Process.Start ben duoi tu quyet dinh
-                        // (co the van mo duoc boi ung dung mac dinh du PdfPig/
-                        // OpenXml khong doc duoc, hoac se nem loi duoc bat o
-                        // catch (Exception ex) hien co ngay ben duoi).
+                        // SUA LOI (phat hien khi test voi "New Microsoft Word
+                        // Document.docx" 0 byte - Windows tao san khi bam chuot
+                        // phai > New nhung CHUA tung duoc Word mo/luu lai lan
+                        // nao, nen KHONG PHAI mot goi .docx hop le): truoc day
+                        // MOI loai loi khac mat khau (VD IsPasswordProtected nem
+                        // System.IO.FileFormatException "Stream length cannot be
+                        // zero..." cho tep .docx 0 byte, hoac OpenXmlPackageException/
+                        // PdfDocument tuong tu cho tep .pdf hong) deu bi BO QUA CO Y
+                        // de Process.Start "tu quyet dinh" - trong thuc te dieu nay
+                        // khien Word/trinh doc PDF mac dinh duoc mo LEN roi TU HIEN
+                        // hop thoai loi rieng cua no ("khong the mo vi noi dung co
+                        // van de"...), KHONG NHAT QUAN voi cach ung dung nay da xu
+                        // ly tep hong o noi khac (VD UpdateDocumentPreview/
+                        // "Không thể xem trước tệp này (có thể tệp bị hỏng hoặc
+                        // không đúng định dạng)", CompressionService voi zip hong -
+                        // xem yeu cau "Tạo 1 tệp .Zip bị hỏng ... để test"). SUA:
+                        // hien THONG BAO RO RANG cua CHINH ung dung nay va DUNG
+                        // LAI, KHONG con Process.Start nua (khac catch (IOException)
+                        // ngay tren - IOException CO THE chi la tep dang bi khoa
+                        // tam thoi boi chuong trinh khac, khong phai tep hong, nen
+                        // van duoc BO QUA nhu cu de Process.Start tu xu ly).
+                        MessageBox.Show(
+                            this,
+                            "Không thể mở tệp này (có thể tệp bị hỏng hoặc không đúng định dạng).",
+                            "Không thể mở tệp",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                        return;
                     }
                 }
 
