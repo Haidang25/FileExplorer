@@ -4340,13 +4340,45 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            bool isPdf = string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
             string extractedText;
             try
             {
-                bool isPdf = string.Equals(Path.GetExtension(path), ".pdf", StringComparison.OrdinalIgnoreCase);
-                extractedText = isPdf
-                    ? FormatPdfPreviewText(_documentPreviewService.ExtractPdfText(path), MaxPreviewTextChars)
-                    : _documentPreviewService.ExtractWordText(path);
+                if (isPdf)
+                {
+                    List<string> pageTexts = _documentPreviewService.ExtractPdfText(path);
+
+                    // PDF dang anh scan (moi trang la MOT anh bitmap, khong co
+                    // lop van ban nao) - ExtractPdfText (PdfPig) tra ve CHUOI
+                    // RONG cho TUNG trang trong truong hop nay (KHONG nem loi,
+                    // vi ve mat cau truc file van hop le). Neu de FormatPdfPreviewText
+                    // xu ly binh thuong, ket qua se la CHI CO cac dong tieu de
+                    // "── Trang N ──" LAP LAI ma KHONG co noi dung gi ben duoi -
+                    // nhin qua giong "trang trong khong ro ly do" (dung nhu
+                    // nguoi dung phan anh), DE NHAM LAN voi truong hop tai lieu
+                    // THAT SU khong co gi (xem nhanh IsNullOrWhiteSpace(extractedText)
+                    // ben duoi, danh cho .docx rong/PDF khong co trang nao) -
+                    // trong khi day la HAI TINH HUONG KHAC NHAU ve nguyen nhan
+                    // (mot ben la "tai lieu rong that", mot ben la "co noi dung
+                    // nhung o dang anh, can OCR moi doc duoc chu, ung dung nay
+                    // CHUA ho tro OCR"). Kiem tra rieng TRUOC khi goi
+                    // FormatPdfPreviewText de phan biet 2 thong diep.
+                    bool hasAnyPageText = pageTexts != null && pageTexts.Any(pageText => !string.IsNullOrWhiteSpace(pageText));
+                    if (!hasAnyPageText)
+                    {
+                        txtPreview.Text = "(Không trích xuất được văn bản từ tệp này - có thể đây là tệp PDF dạng ảnh scan)";
+                        txtPreview.Visible = true;
+                        lblPreviewCaption.Text = Path.GetFileName(path);
+                        spcFilesPreview.Panel2Collapsed = false;
+                        return;
+                    }
+
+                    extractedText = FormatPdfPreviewText(pageTexts, MaxPreviewTextChars);
+                }
+                else
+                {
+                    extractedText = _documentPreviewService.ExtractWordText(path);
+                }
             }
             catch (DocumentPasswordProtectedException ex)
             {
@@ -4373,14 +4405,18 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            // Tai lieu hop le nhung KHONG co van ban (VD file .docx moi tao,
-            // chua go gi - xem <returns> cua ExtractWordText, hoac mot PDF chi
-            // co hinh anh/trang trang) - ExtractWordText/FormatPdfPreviewText
+            // Tai lieu .docx hop le nhung KHONG co van ban (VD file moi tao,
+            // chua go gi - xem <returns> cua ExtractWordText) - ExtractWordText
             // tra ve chuoi RONG cho truong hop nay (KHONG nem loi, vi day KHONG
-            // phai loi). Truoc day txtPreview chi bi de trong TRANG XOA (khong
-            // co dong chu nao) trong truong hop nay - de nguoi dung KHONG the
-            // phan biet duoc "tep that su khong co noi dung" voi "dang tai/loi
-            // hien thi", nen them mot dong thong bao RO RANG thay vi de trang.
+            // phai loi). Rieng truong hop PDF khong trich xuat duoc van ban (VD
+            // PDF dang anh scan) da duoc xu ly RIENG o nhanh isPdf/hasAnyPageText
+            // o tren (thong diep khac, phan biet "rong that" voi "co noi dung
+            // nhung o dang anh") nen extractedText o day THUC TE chi con roi vao
+            // truong hop .docx rong. Truoc day txtPreview chi bi de trong TRANG
+            // XOA (khong co dong chu nao) trong truong hop nay - de nguoi dung
+            // KHONG the phan biet duoc "tep that su khong co noi dung" voi
+            // "dang tai/loi hien thi", nen them mot dong thong bao RO RANG thay
+            // vi de trang.
             if (string.IsNullOrWhiteSpace(extractedText))
             {
                 txtPreview.Text = "(Tệp không có nội dung văn bản)";
