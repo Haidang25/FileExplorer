@@ -33,10 +33,21 @@ namespace FileExplorerApp.Forms
         private readonly FileService _fileService = new FileService();
         private readonly LogService _logService = new LogService();
 
+        /// <summary>
+        /// Noi dung GOC cua lblPatternHint (huong dan token {name}/{ext}/{n}/
+        /// {date} do Designer dat san) - luu lai TRUOC KHI co the ghi de bang
+        /// thong bao canh bao ky tu khong hop le trong UpdatePreview, de co
+        /// the KHOI PHUC lai dung huong dan nay ngay khi pattern hop le tro
+        /// lai (xem UpdatePreview).
+        /// </summary>
+        private readonly string _patternHintText;
+
         public BatchRenameForm(List<string> paths)
         {
             InitializeComponent();
             ApplyTheme();
+
+            _patternHintText = lblPatternHint.Text;
 
             _paths = paths ?? new List<string>();
 
@@ -110,6 +121,30 @@ namespace FileExplorerApp.Forms
         private void UpdatePreview()
         {
             string pattern = txtPattern.Text;
+
+            // Canh bao NGAY khi pattern chua ky tu khong hop le (VD go truc
+            // tiep dau ":", "?", "*"...) - CHAN xem truoc/xac nhan cho toi khi
+            // sua lai, THAY VI de GenerateBatchRenameName am tham thay bang
+            // "_" nhu truoc (nguoi dung khong biet minh go sai, xem
+            // FileService.GetInvalidPatternLiteralChars de biet ly do chi
+            // kiem tra phan literal, khong kiem tra token).
+            List<char> invalidChars = FileService.GetInvalidPatternLiteralChars(pattern);
+            if (invalidChars.Count > 0)
+            {
+                lblPatternHint.Text =
+                    "Mẫu tên chứa ký tự không hợp lệ: " + string.Join(" ", invalidChars) +
+                    " — vui lòng xóa/sửa lại trước khi xem trước hoặc đổi tên.";
+                lblPatternHint.ForeColor = AppTheme.Error;
+
+                lvwPreview.Items.Clear();
+                btnApply.Enabled = false;
+                return;
+            }
+
+            lblPatternHint.Text = _patternHintText;
+            lblPatternHint.ForeColor = AppTheme.TextSecondary;
+            btnApply.Enabled = true;
+
             var newNames = new string[_paths.Count];
             for (int i = 0; i < _paths.Count; i++)
             {
@@ -150,6 +185,24 @@ namespace FileExplorerApp.Forms
         {
             if (_paths.Count == 0)
                 return;
+
+            // Kiem tra KY TU KHONG HOP LE TRUOC (phong ve du phong - btnApply
+            // da bi Enabled = false ngay khi phat hien o UpdatePreview, nhung
+            // kiem tra lai o day CHO CHAC CHAN, giong nguyen tac "kiem tra o
+            // ca UI va o diem thuc thi" da ap dung cho ValidateBatchRenameConflicts
+            // ben duoi) - KHONG hien hop thoai xac nhan, KHONG doi ten gi ca.
+            List<char> invalidPatternChars = FileService.GetInvalidPatternLiteralChars(txtPattern.Text);
+            if (invalidPatternChars.Count > 0)
+            {
+                MessageBox.Show(
+                    this,
+                    "Mẫu tên đang chứa ký tự không hợp lệ: " + string.Join(" ", invalidPatternChars) +
+                    "\n\nHãy sửa lại mẫu tên trước khi đổi tên.",
+                    "Mẫu tên không hợp lệ",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
+                return;
+            }
 
             // Kiem tra TRUNG TEN TRUOC KHI hoi xac nhan - lvwPreview chi TO MAU
             // CANH BAO cac ten trung (xem UpdatePreview) nhung KHONG chan nguoi

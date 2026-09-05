@@ -356,6 +356,53 @@ namespace FileExplorerApp.Services
         }
 
         /// <summary>
+        /// Tra ve danh sach cac KY TU KHONG HOP LE (Path.GetInvalidFileNameChars())
+        /// xuat hien trong PHAN VAN BAN CO DINH (literal) cua mot mau ten (pattern)
+        /// doi ten hang loat - tuc PHAN NGOAI cac token {name}/{ext}/{n[:dinh_dang]}/
+        /// {date[:dinh_dang]} (xem GenerateBatchRenameName). Chi PHAN LITERAL nguoi
+        /// dung TU GO truc tiep (VD dau ":", "?", "*"...) moi duoc kiem tra - gia
+        /// tri THAY THE cua cac token LUON hop le (lay tu ten file da co san tren
+        /// dia, so thu tu, hoac chuoi ngay gio da dinh dang qua DateTime.ToString,
+        /// KHONG the chua ky tu nhu "*"/"?"), nen khong can kiem tra phan do.
+        /// </summary>
+        /// <remarks>
+        /// Dung de CANH BAO NGAY khi nguoi dung go pattern (xem
+        /// BatchRenameForm.UpdatePreview/txtPattern_TextChanged) va CHAN xem
+        /// truoc/xac nhan doi ten cho toi khi sua lai, THAY VI de
+        /// GenerateBatchRenameName AM THAM thay the ky tu khong hop le bang "_"
+        /// nhu truoc (nguoi dung khong duoc bao truoc, ten cuoi cung tren dia
+        /// khac voi nhung gi ho go trong pattern ma khong hay biet).
+        ///
+        /// Dung CUNG mot Regex (BatchRenameTokenRegex) voi GenerateBatchRenameName
+        /// de "cat bo" dung phan token TRUOC KHI kiem tra - dam bao 2 ham LUON
+        /// thong nhat ve viec dau la token/dau la literal, tranh truong hop
+        /// mot cai coi la token con cai kia lai coi la ky tu thuong.
+        /// </remarks>
+        /// <param name="pattern">Mau ten can kiem tra.</param>
+        /// <returns>
+        /// Danh sach cac ky tu khong hop le, KHONG TRUNG LAP, theo dung thu tu
+        /// xuat hien LAN DAU trong pattern - danh sach RONG (khong phai null)
+        /// neu pattern hop le hoac rong.
+        /// </returns>
+        public static List<char> GetInvalidPatternLiteralChars(string pattern)
+        {
+            var result = new List<char>();
+            if (string.IsNullOrEmpty(pattern))
+                return result;
+
+            string literalOnly = BatchRenameTokenRegex.Replace(pattern, string.Empty);
+            char[] invalidChars = Path.GetInvalidFileNameChars();
+
+            foreach (char c in literalOnly)
+            {
+                if (Array.IndexOf(invalidChars, c) >= 0 && !result.Contains(c))
+                    result.Add(c);
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Sinh MOT ten tam (khong bao gio trung voi bat ky file/thu muc nao
         /// dang co, ke ca cac muc KHAC dang duoc doi ten trong CUNG mot lan
         /// goi BatchRename) - dua tren Guid nen xac suat trung la khong dang
