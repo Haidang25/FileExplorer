@@ -4579,6 +4579,39 @@ namespace FileExplorerApp.Forms
 
                 if (isPasswordCheckableDocument)
                 {
+                    // Tep 0 byte (VD "New Microsoft Word Document.docx" Windows
+                    // tao san khi bam chuot phai > New nhung CHUA tung duoc Word
+                    // mo/luu lai lan nao): CHAC CHAN khong co noi dung (0 byte
+                    // khong the la mot goi .docx/.pdf hop le CO noi dung), nen
+                    // day KHONG PHAI "tep hong" theo nghia nguoi dung hieu (ho
+                    // khong lam gi de "lam hong" tep ca) - dung THONG DIEP GIONG
+                    // HET truong hop preview mot tai lieu hop le nhung rong (xem
+                    // UpdateDocumentPreview) thay vi thong diep "co the tep bi
+                    // hong" (de danh rieng cho tep KHONG rong nhung van khong
+                    // doc duoc cau truc - xem nhanh catch (Exception ex) ben
+                    // duoi). Kiem tra TRUOC ca IsPasswordProtected de tranh goi
+                    // PdfPig/OpenXml mo mot tep chac chan se nem loi.
+                    long fileSizeForOpenCheck;
+                    try
+                    {
+                        fileSizeForOpenCheck = new FileInfo(path).Length;
+                    }
+                    catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException)
+                    {
+                        fileSizeForOpenCheck = -1; // Khong xac dinh duoc - bo qua nhanh nay, de logic ben duoi tu xu ly.
+                    }
+
+                    if (fileSizeForOpenCheck == 0)
+                    {
+                        MessageBox.Show(
+                            this,
+                            "Tệp không có nội dung văn bản.",
+                            "Tệp trống",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                        return;
+                    }
+
                     try
                     {
                         if (_documentPreviewService.IsPasswordProtected(path))
