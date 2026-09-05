@@ -8,8 +8,9 @@ namespace FileExplorerApp.Forms
     /// <summary>
     /// Popup "toast" nho, KHONG modal, TU DONG DONG sau vai giay - dung de
     /// canh bao REAL-TIME khi IntegrityService phat hien mot vi pham toan
-    /// ven (hien tai chi dung cho ContentModified - "tep bi sua", xem
-    /// MainForm.IntegrityService_IntegrityViolationDetected).
+    /// ven (ca ba loai: ContentModified/FileMissing/UnexpectedNewFile, tieu
+    /// de thay doi theo loai qua tham so title cua ShowToast - xem
+    /// MainForm.IntegrityService_IntegrityViolationDetected/GetIntegrityViolationTitle).
     /// </summary>
     /// <remarks>
     /// VI SAO TU VIET (khong dung NotifyIcon.ShowBalloonTip cua Windows): ung
@@ -86,10 +87,17 @@ namespace FileExplorerApp.Forms
         /// giam sat nen phat hien vi pham - xem <remarks> dau lop). Truyen
         /// null se dung Screen.PrimaryScreen thay the.
         /// </param>
-        /// <param name="filePath">Duong dan tep bi phat hien sua doi, hien o dong thu 2 cua toast.</param>
-        public static void ShowToast(Control referenceControl, string filePath)
+        /// <param name="filePath">Duong dan tep lien quan den vi pham, hien o dong thu 2 cua toast.</param>
+        /// <param name="title">
+        /// Tieu de hien o dong dau (dong 1) cua toast - cho phep phan biet
+        /// loai vi pham (VD "Phát hiện tệp bị sửa" khac voi "Phát hiện tệp bị
+        /// xóa"). Mac dinh giu nguyen tieu de cu ("Phát hiện tệp bị sửa") de
+        /// tuong thich nguoc voi noi goi khong truyen tham so nay.
+        /// </param>
+        public static void ShowToast(Control referenceControl, string filePath, string title = "Phát hiện tệp bị sửa")
         {
             var toast = new IntegrityToastForm();
+            toast.lblTitle.Text = title;
             toast.lblFilePath.Text = filePath;
 
             Rectangle workingArea = referenceControl != null

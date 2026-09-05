@@ -88,7 +88,7 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private readonly IntegrityService _integrityService = new IntegrityService();
 
-        /// <summary>Tong so canh bao toan ven (ContentModified) da phat hien tu luc bat dau giam sat lan gan nhat - hien tren tsslIntegrityAlert.</summary>
+        /// <summary>Tong so canh bao toan ven (ContentModified/FileMissing/UnexpectedNewFile) da phat hien tu luc bat dau giam sat lan gan nhat - hien tren tsslIntegrityAlert.</summary>
         private int _integrityAlertCount;
 
         /// <summary>
@@ -780,33 +780,27 @@ namespace FileExplorerApp.Forms
         /// ("Cross-thread operation not valid").
         /// </summary>
         /// <remarks>
-        /// PHAM VI HIEN TAI: chi canh bao (toast/StatusStrip) khi
-        /// <see cref="IntegrityViolationType.ContentModified"/> ("tệp bị sửa" -
-        /// dung y yeu cau) - Deleted/NewFile KHONG kich hoat canh bao
-        /// real-time nay (van co the tra cuu qua BaselineService.CompareWithBaselineAsync
-        /// neu can xem toan bo, xem yeu cau truoc). Mo rong canh bao cho ca
-        /// Deleted/NewFile se lam o mot yeu cau khac neu can.
+        /// PHAM VI HIEN TAI (da mo rong): canh bao (toast/StatusStrip) cho CA
+        /// BA loai vi pham - <see cref="IntegrityViolationType.ContentModified"/>
+        /// ("tệp bị sửa"), <see cref="IntegrityViolationType.FileMissing"/>
+        /// ("tệp bị xóa") VA <see cref="IntegrityViolationType.UnexpectedNewFile"/>
+        /// ("tệp mới không rõ nguồn gốc") - truoc day chi canh bao rieng
+        /// ContentModified, nhung nguoi dung bat giam sat roi XOA mot file
+        /// trong thu muc dang giam sat ma khong thay canh bao nao (chi co
+        /// trong log dieu tra, khong hien ngay) - vi vay bo dieu kien loc de
+        /// ca ba loai vi pham deu hien canh bao real-time nhu nhau, dung
+        /// GetIntegrityViolationTitle ben duoi de tieu de toast/thong bao khac
+        /// nhau theo tung loai.
         ///
-        /// GHI BAO CAO DIEU TRA (_logService.LogIntegrityViolation): KHAC voi
-        /// canh bao UI, ghi bao cao ap dung cho CA BA loai vi pham (ContentModified
-        /// LAN Deleted/UnexpectedNewFile), khong bi loc theo ContentModified
-        /// nhu nhanh canh bao ben duoi - "bao cao dieu tra" can day du de phuc
-        /// vu dieu tra sau nay (VD mot file bi XOA cung la mot dau hieu can
-        /// dieu tra, du khong hien toast ngay luc do), trong khi canh bao
-        /// real-time chi tap trung vao truong hop quan trong nhat (ContentModified)
-        /// de tranh lam phien nguoi dung voi qua nhieu toast. Vi vay lenh ghi
-        /// bao cao duoc dat TRUOC/DOC LAP voi dieu kien loc ContentModified ben
-        /// duoi, khong phai ben trong nhanh if. Ghi dong bo NGAY TREN LUONG
-        /// THREADPOOL hien tai cua su kien nay (khong can BeginInvoke) vi
-        /// LogService.WriteInvestigationEntry chi thao tac file/CSV, khong
-        /// dung control WinForms nao.
+        /// GHI BAO CAO DIEU TRA (_logService.LogIntegrityViolation): ap dung
+        /// cho CA BA loai vi pham nhu truoc, ghi TRUOC/DOC LAP voi canh bao UI
+        /// ben duoi. Ghi dong bo NGAY TREN LUONG THREADPOOL hien tai cua su
+        /// kien nay (khong can BeginInvoke) vi LogService.WriteInvestigationEntry
+        /// chi thao tac file/CSV, khong dung control WinForms nao.
         /// </remarks>
         private void IntegrityService_IntegrityViolationDetected(object sender, IntegrityViolationEventArgs e)
         {
             _logService.LogIntegrityViolation(e);
-
-            if (e.ViolationType != IntegrityViolationType.ContentModified)
-                return;
 
             if (this.IsHandleCreated && !this.IsDisposed)
             {
@@ -837,7 +831,28 @@ namespace FileExplorerApp.Forms
             tsslIntegrityAlert.Text = $"⚠ {_integrityAlertCount} cảnh báo toàn vẹn";
             tsslIntegrityAlert.Visible = true;
 
-            IntegrityToastForm.ShowToast(this, e.FilePath);
+            IntegrityToastForm.ShowToast(this, e.FilePath, GetIntegrityViolationTitle(e.ViolationType));
+        }
+
+        /// <summary>
+        /// Tieu de toast/thong bao tuong ung voi tung loai vi pham toan ven -
+        /// dung boi ShowIntegrityAlert de nguoi dung phan biet duoc "tệp bị
+        /// sửa" voi "tệp bị xóa"/"tệp mới không rõ nguồn gốc" thay vi luon
+        /// hien mot tieu de chung chung nhu truoc.
+        /// </summary>
+        private static string GetIntegrityViolationTitle(IntegrityViolationType violationType)
+        {
+            switch (violationType)
+            {
+                case IntegrityViolationType.ContentModified:
+                    return "Phát hiện tệp bị sửa";
+                case IntegrityViolationType.FileMissing:
+                    return "Phát hiện tệp bị xóa";
+                case IntegrityViolationType.UnexpectedNewFile:
+                    return "Phát hiện tệp mới không rõ nguồn gốc";
+                default:
+                    return "Phát hiện vi phạm toàn vẹn";
+            }
         }
 
         /// <summary>
@@ -850,7 +865,7 @@ namespace FileExplorerApp.Forms
         private void tsslIntegrityAlert_Click(object sender, EventArgs e)
         {
             MessageBox.Show(this,
-                $"Đã phát hiện {_integrityAlertCount} lần nội dung tệp bị sửa so với baseline kể từ khi bắt đầu giám sát thư mục \"{_integrityService.CurrentBaseline?.FolderPath}\".",
+                $"Đã phát hiện {_integrityAlertCount} lần vi phạm toàn vẹn (tệp bị sửa nội dung, bị xóa, hoặc phát sinh mới không rõ nguồn gốc) so với baseline kể từ khi bắt đầu giám sát thư mục \"{_integrityService.CurrentBaseline?.FolderPath}\".",
                 "Cảnh báo toàn vẹn thư mục", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
