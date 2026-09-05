@@ -3914,6 +3914,22 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrEmpty(path))
                 return;
 
+            // Duong dan qua dai (vuot FileHelper.MaxPathLength, xem OperationResult.
+            // PathTooLong): Directory.Exists/File.Exists ben duoi deu "nuot" rieng
+            // PathTooLongException va tra ve false cho CA thu muc/file THUC SU TON
+            // TAI tren dia - kiem tra binh thuong (Directory.Exists roi File.Exists)
+            // se roi vao CA 2 nhanh else, khong lam gi ca (nhap doi vao thu muc
+            // long qua sau "im lang" khong phan ung gi, dung nhu nguoi dung bao
+            // cao) thay vi bao loi ro rang. Kiem tra rieng truong hop nay TRUOC va
+            // dieu huong qua NavigateTo() - ham do da tu goi CanAccessDirectory()
+            // de hien dung thong bao "đường dẫn quá dài" (xem CanAccessDirectory),
+            // tranh lap lai logic hien thong bao o day.
+            if (FileHelper.IsPathTooLong(path))
+            {
+                NavigateTo(path);
+                return;
+            }
+
             if (Directory.Exists(path))
             {
                 NavigateTo(path);
