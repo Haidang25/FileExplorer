@@ -253,6 +253,18 @@ namespace FileExplorerApp.Forms
             // dong tinh lai moi khi nguoi dung doi kich thuoc cua so/keo splitter.
             AutoSizeNameColumn();
             lvwFiles.Resize += (s, e) => AutoSizeNameColumn();
+
+            // Ho tro tha (drop) NGAY LEN MOT DONG THU MUC dang hien thi trong
+            // chinh lvwFiles (khac voi tha vao khoang trong cua lvwFiles, van
+            // co san tu truoc - xem lvwFiles_DragDrop) - Designer.cs (KHONG
+            // duoc sua, chi doc de chan doan) moi chi noi DragEnter/DragDrop,
+            // CHUA co DragOver cho lvwFiles (trvFolders thi da co ca 3 tu
+            // truoc) nen dang ky THEM tai day, khong can sua Designer.cs -
+            // xem UpdateLvwFilesDragEffect/lvwFiles_DragOver de biet ly do
+            // can rieng DragOver (giu Ctrl doi Move/Copy NGAY TRONG luc keo
+            // ma khong roi khoi lvwFiles, giong ly do da giai thich o
+            // trvFolders_DragOver).
+            lvwFiles.DragOver += lvwFiles_DragOver;
         }
 
         /// <summary>
@@ -2914,57 +2926,140 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Kiem tra du lieu dang duoc keo vao lvwFiles (tu Windows Explorer
-        /// hoac ung dung khac ben ngoai - KHONG phai keo-tha noi bo giua
-        /// lvwFiles/trvFolders, se xu ly rieng o mot yeu cau khac) co dung la
-        /// mot hoac nhieu file/thu muc (DataFormats.FileDrop) hay khong.
-        /// e.Effect = Copy neu hop le (con tro chuot doi thanh dau "+", cho
-        /// phep tha) - None neu khong (VD: keo van ban/anh truc tiep tu trinh
-        /// duyet, khong phai duong dan file thuc te tren dia), WinForms se tu
-        /// hien con tro "cam" phu hop, khong can tu ve.
+        /// Kiem tra du lieu dang duoc keo vao lvwFiles - CA HAI truong hop:
+        /// keo-tha NOI BO cua chinh ung dung (typeof(List&lt;string&gt;), bat dau
+        /// tu lvwFiles_ItemDrag) tha len MOT DONG THU MUC dang hien thi ngay
+        /// trong lvwFiles (VD: keo file A sang thu muc B, ca hai deu dang
+        /// hien trong cung danh sach hien tai), VA keo tu Windows Explorer/
+        /// ung dung khac ben ngoai (DataFormats.FileDrop). Uy quyen toan bo
+        /// logic xac dinh DragDropEffects cho UpdateLvwFilesDragEffect (dung
+        /// CHUNG voi DragOver, xem ham do) - WinForms tu doi con tro chuot
+        /// theo dung e.Effect, khong can tu ve icon thu cong.
         /// </summary>
+        /// <remarks>
+        /// SUA LOI (nguoi dung bao cao): PHIEN BAN TRUOC luon dat e.Effect =
+        /// None ngay khi thay du lieu la keo-tha NOI BO, KHONG phan biet dang
+        /// tha len dau trong lvwFiles - ket qua la keo-tha nhieu file cung
+        /// luc vao MOT thu muc con dang hien thi NGAY TRONG lvwFiles (khac
+        /// voi keo sang mot nhanh tren trvFolders, da hoat dong tu truoc)
+        /// hoan toan KHONG lam gi ca. Nay tha len DUNG mot dong thu muc trong
+        /// lvwFiles se Move (hoac Copy neu giu Ctrl) - tha len khoang trong/
+        /// dong file khac van None nhu truoc (khong co y nghia, vi nguon va
+        /// dich se la CUNG mot thu muc).
+        /// </remarks>
         private void lvwFiles_DragEnter(object sender, DragEventArgs e)
         {
-            if (e.Data.GetDataPresent(typeof(List<string>)))
+            UpdateLvwFilesDragEffect(e);
+        }
+
+        /// <summary>
+        /// DragOver ban chat la DragEnter lien tuc goi lai trong khi con chuot
+        /// van con o trong lvwFiles (khac DragEnter, CHI bao mot lan duy nhat
+        /// luc con chuot moi di vao) - can rieng ham nay vi con chuot co the
+        /// di CHUYEN QUA NHIEU DONG khac nhau (co dong la thu muc, co dong la
+        /// file) trong luc van dang keo, VA nguoi dung co the nhan/nha phim
+        /// Ctrl NGAY TRONG luc keo de doi Move/Copy - giong ly do da giai
+        /// thich chi tiet o trvFolders_DragOver/UpdateTrvFoldersDragEffect.
+        /// Designer.cs (KHONG duoc sua) chua noi san su kien nay cho lvwFiles
+        /// (chi co DragEnter/DragDrop tu truoc) - da dang ky THEM trong
+        /// constructor cua Form (xem "lvwFiles.DragOver += lvwFiles_DragOver;"),
+        /// khong can sua Designer.cs.
+        /// </summary>
+        private void lvwFiles_DragOver(object sender, DragEventArgs e)
+        {
+            UpdateLvwFilesDragEffect(e);
+        }
+
+        /// <summary>
+        /// Xac dinh DragDropEffects dung chung cho ca lvwFiles_DragEnter va
+        /// lvwFiles_DragOver - GIONG HET cau truc UpdateTrvFoldersDragEffect
+        /// (xem ham do de biet chi tiet tung buoc/ly do), CHI KHAC noi xac
+        /// dinh "dong dang tro toi co phai thu muc hop le hay khong": dung
+        /// ListView.GetItemAt(x, y) (tra ve ListViewItem dang o vi tri do,
+        /// null neu khong co dong nao - VD dang o khoang trong duoi danh
+        /// sach) thay vi TreeView.GetNodeAt.
+        /// </summary>
+        private void UpdateLvwFilesDragEffect(DragEventArgs e)
+        {
+            bool hasInternalData = e.Data.GetDataPresent(typeof(List<string>));
+            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop);
+            if (!hasInternalData && !hasExternalData)
             {
-                // Day la phien keo-tha NOI BO cua chinh ung dung nay, bat dau
-                // tu lvwFiles_ItemDrag (nay cung dinh kem DataFormats.FileDrop
-                // de ho tro keo RA NGOAI ung dung - xem doc o do) - neu con
-                // chuot lai di NGANG QUA/quay lai chinh lvwFiles trong luc keo
-                // (VD: keo long vong) thi khong co dich nao khac de sao chep/
-                // di chuyen toi ca, nen luon None, KHONG doc DataFormats.FileDrop
-                // (se hieu lam thanh keo tu ben ngoai vao va tu "sao chep" file
-                // de len chinh no).
                 e.Effect = DragDropEffects.None;
                 return;
             }
 
-            e.Effect = e.Data.GetDataPresent(DataFormats.FileDrop)
-                ? DragDropEffects.Copy
-                : DragDropEffects.None;
+            Point clientPoint = lvwFiles.PointToClient(new Point(e.X, e.Y));
+            ListViewItem targetItem = lvwFiles.GetItemAt(clientPoint.X, clientPoint.Y);
+            string targetFolderPath = targetItem?.Tag as string;
+            bool isValidTarget = !string.IsNullOrEmpty(targetFolderPath) && Directory.Exists(targetFolderPath);
+            if (!isValidTarget)
+            {
+                // Dang tro toi khoang trong (khong co dong nao) hoac dong CUA
+                // MOT FILE (khong phai thu muc) - khong co y nghia de tha vao
+                // (file khong the chua gi ben trong, con khoang trong/tha ra
+                // ngoai moi dong thi da co san hanh vi rieng cho keo NGOAI vao
+                // - xem lvwFiles_DragDrop, KHONG can DragDropEffects rieng o
+                // day, chi tinh la None de con tro bao truoc dung).
+                e.Effect = DragDropEffects.None;
+                return;
+            }
+
+            if (!hasInternalData)
+            {
+                e.Effect = DragDropEffects.Copy; // Keo FileDrop tu ben ngoai vao dong thu muc hop le trong lvwFiles.
+                return;
+            }
+
+            bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
+            if (!isCopy)
+            {
+                var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
+                bool allAlreadyInTarget = draggedPaths != null && draggedPaths.Count > 0 &&
+                    draggedPaths.All(p => string.Equals(Path.GetDirectoryName(p), targetFolderPath, StringComparison.OrdinalIgnoreCase));
+                if (allAlreadyInTarget)
+                {
+                    e.Effect = DragDropEffects.None; // Tha vao se khong lam gi (da nam san o day) - bao truoc bang con tro "cam".
+                    return;
+                }
+            }
+
+            e.Effect = isCopy ? DragDropEffects.Copy : DragDropEffects.Move;
         }
 
         /// <summary>
-        /// Xu ly khi nguoi dung THA (drop) file duoc keo TU BEN NGOAI (Windows
-        /// Explorer hoac ung dung khac - KHONG phai keo-tha noi bo giua
-        /// lvwFiles/trvFolders, se lam o mot yeu cau khac) vao lvwFiles - sao
-        /// chep TUNG file vao _currentPath (thu muc dang mo) qua
-        /// FileService.CopyFile (ban dong bo don gian, danh cho thao tac tuc
-        /// thi nhu the nay; nang cap len CopyFileAsync + CopyProgressForm
-        /// giong mnuEditPaste_Click se lam o mot yeu cau rieng neu can theo
-        /// doi tien do/huy giua chung khi keo nhieu file lon).
-        ///
-        /// PHAM VI HIEN TAI: chi xu ly FILE. Thu muc duoc keo vao se bi BO QUA
-        /// (co bao rieng trong tong ket, khong am tham lam ngo) - sao chep ca
-        /// thu muc (de quy) can FolderService.CopyFolderAsync, se lam o mot
-        /// yeu cau khac. File trung ten voi mot muc DA CO trong thu muc dich
-        /// se bi Skipped (CHUA hoi Ghi de/Doi ten/Bo qua nhu
-        /// ConflictResolutionForm da lam cho Paste - co the bo sung sau).
+        /// Xu ly khi nguoi dung THA (drop) vao lvwFiles - CA HAI truong hop:
+        /// keo-tha NOI BO (List&lt;string&gt;) tha len mot dong thu muc dang
+        /// hien thi trong chinh lvwFiles (xem <see cref="UpdateLvwFilesDragEffect"/>),
+        /// VA keo TU BEN NGOAI (DataFormats.FileDrop, Windows Explorer/ung
+        /// dung khac). Xac dinh THU MUC DICH THEO DONG dang tro toi luc tha
+        /// (targetItem) - neu la dong THU MUC hop le, dich la thu muc do; neu
+        /// khong (tha vao khoang trong/dong file khac) thi:
+        /// - Voi du lieu NOI BO: khong lam gi (luon la no-op, xem <see cref="UpdateLvwFilesDragEffect"/>).
+        /// - Voi du lieu tu BEN NGOAI: giu nguyen hanh vi CU (sao chep vao
+        ///   _currentPath - thu muc dang mo) - KHONG doi hanh vi da co san
+        ///   nay, chi THEM kha nang nham dung mot dong thu muc cu the.
         /// </summary>
         private void lvwFiles_DragDrop(object sender, DragEventArgs e)
         {
+            Point clientPoint = lvwFiles.PointToClient(new Point(e.X, e.Y));
+            ListViewItem targetItem = lvwFiles.GetItemAt(clientPoint.X, clientPoint.Y);
+            string targetFolderPath = targetItem?.Tag as string;
+            bool hasValidFolderTarget = !string.IsNullOrEmpty(targetFolderPath) && Directory.Exists(targetFolderPath);
+
             if (e.Data.GetDataPresent(typeof(List<string>)))
-                return; // Phien keo-tha NOI BO cua chinh ung dung nay - xem lvwFiles_DragEnter.
+            {
+                if (!hasValidFolderTarget)
+                    return; // Tha ra khoang trong/dong file khac - luon la no-op, xem UpdateLvwFilesDragEffect.
+
+                var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
+                if (draggedPaths == null || draggedPaths.Count == 0)
+                    return;
+
+                bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
+                MoveOrCopyDraggedFiles(draggedPaths, targetFolderPath, targetItem.Text, isCopy);
+                return;
+            }
 
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
                 return;
@@ -2973,6 +3068,31 @@ namespace FileExplorerApp.Forms
             if (droppedPaths == null || droppedPaths.Length == 0)
                 return;
 
+            string destinationFolder = hasValidFolderTarget ? targetFolderPath : _currentPath;
+            string destinationLabel = hasValidFolderTarget ? $"thư mục \"{targetItem.Text}\"" : "thư mục này";
+            CopyExternalDroppedFiles(droppedPaths, destinationFolder, destinationLabel);
+        }
+
+        /// <summary>
+        /// Sao chep TUNG file trong droppedPaths (keo-tha TU BEN NGOAI, xem
+        /// DataFormats.FileDrop) vao destinationFolder - tach rieng thanh ham
+        /// dung chung tu lvwFiles_DragDrop (truoc day chi co MOT dich duy
+        /// nhat la _currentPath, nay co THEM truong hop dich la mot thu muc
+        /// con cu the dang hien trong lvwFiles, xem <see cref="lvwFiles_DragDrop"/>).
+        /// </summary>
+        /// <remarks>
+        /// PHAM VI HIEN TAI: chi xu ly FILE (giong lvwFiles_DragDrop truoc
+        /// day) - xem <see cref="MoveOrCopyDraggedFiles"/> (ap dung cho keo-tha
+        /// NOI BO) de biet ly do tuong tu (chua ho tro sao chep de quy ca thu
+        /// muc). File trung ten voi mot muc DA CO trong thu muc dich se bi
+        /// Skipped (CHUA hoi Ghi de/Doi ten/Bo qua nhu ConflictResolutionForm
+        /// da lam cho Paste - co the bo sung sau).
+        /// </remarks>
+        /// <param name="droppedPaths">Danh sach duong dan tu DataFormats.FileDrop.</param>
+        /// <param name="destinationFolder">Thu muc dich se sao chep toi.</param>
+        /// <param name="destinationLabelForLog">Ten thu muc dich, dung TRONG CAU (VD "thư mục \"X\"" hoac "thư mục này") cho dong log cua tung muc.</param>
+        private void CopyExternalDroppedFiles(string[] droppedPaths, string destinationFolder, string destinationLabelForLog)
+        {
             int successCount = 0;
             var skippedFolderNames = new List<string>();
             var problemLines = new List<string>();
@@ -2984,7 +3104,7 @@ namespace FileExplorerApp.Forms
 
                 if (Directory.Exists(sourcePath))
                 {
-                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <summary>.
+                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <remarks>.
                     skippedFolderNames.Add(Path.GetFileName(sourcePath));
                     continue;
                 }
@@ -2993,10 +3113,10 @@ namespace FileExplorerApp.Forms
                     continue; // Duong dan khong con hop le giua luc keo-tha (VD: vua bi xoa) - bo qua.
 
                 string name = Path.GetFileName(sourcePath);
-                string destinationPath = Path.Combine(_currentPath, name);
+                string destinationPath = Path.Combine(destinationFolder, name);
 
                 OperationResult result = _fileService.CopyFile(sourcePath, destinationPath);
-                LogOperationResult(FileOperationType.Copy, sourcePath, destinationPath, result, $"kéo-thả \"{name}\" vào thư mục này");
+                LogOperationResult(FileOperationType.Copy, sourcePath, destinationPath, result, $"kéo-thả \"{name}\" vào {destinationLabelForLog}");
 
                 if (result == OperationResult.Success)
                     successCount++;
@@ -3024,7 +3144,7 @@ namespace FileExplorerApp.Forms
                     "Kéo-thả tệp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            mnuViewRefresh_Click(sender, e);
+            mnuViewRefresh_Click(this, EventArgs.Empty);
         }
 
         /// <summary>Bit CTRL trong DragEventArgs.KeyState (xem MSDN DragEventArgs.KeyState).</summary>
@@ -3220,7 +3340,37 @@ namespace FileExplorerApp.Forms
                 return; // Tha ra ngoai moi node, hoac vao node "chua san sang" (VD o dia chua san sang) - khong lam gi ca.
 
             bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
+            MoveOrCopyDraggedFiles(draggedPaths, targetFolderPath, targetNode.Text, isCopy);
+        }
 
+        /// <summary>
+        /// Di chuyen (hoac sao chep, neu isCopy) TUNG FILE trong draggedPaths
+        /// (mot phien keo-tha NOI BO, xem lvwFiles_ItemDrag) sang targetFolderPath -
+        /// tach rieng thanh ham DUNG CHUNG cho CA HAI noi nhan keo-tha noi bo
+        /// cua ung dung: mot node tren trvFolders (xem trvFolders_DragDrop) VA
+        /// (tinh nang moi) mot dong thu muc dang hien thi ngay trong chinh
+        /// lvwFiles (xem lvwFiles_DragDrop) - truoc day CHI trvFolders co logic
+        /// nay, gio tach ra de KHONG sao chep-dan lai gan 50 dong giong het
+        /// nhau cho noi nhan thu hai.
+        /// </summary>
+        /// <remarks>
+        /// PHAM VI HIEN TAI: chi xu ly FILE (goi FileService.MoveFile hoac
+        /// FileService.CopyFile). Thu muc duoc keo se bi BO QUA (co bao rieng
+        /// trong tong ket) - di chuyen/sao chep ca thu muc can
+        /// FolderService.MoveFolder/CopyFolderAsync VA kiem tra khong duoc
+        /// di chuyen thu muc vao chinh no/thu muc con cua no, se lam o mot
+        /// yeu cau khac. Muc dang nam SAN trong thu muc dich: voi Move duoc
+        /// bo qua am tham (khong tinh la loi, vi khong lam gi ca cung dung);
+        /// voi Copy VAN thu sao chep nhu thuong (se tra ve Skipped qua
+        /// FileService.CopyFile vi trung ten - giong hanh vi FileDrop tu ben
+        /// ngoai, khong co logic doi ten "Copy of..." o day).
+        /// </remarks>
+        /// <param name="draggedPaths">Danh sach duong dan dang duoc keo (tu lvwFiles_ItemDrag).</param>
+        /// <param name="targetFolderPath">Duong dan day du cua thu muc dich.</param>
+        /// <param name="targetDisplayName">Ten hien thi cua thu muc dich (VD TreeNode.Text/ListViewItem.Text), dung trong log/hop thoai tong ket.</param>
+        /// <param name="isCopy">true = sao chep (giu Ctrl luc tha), false = di chuyen (mac dinh).</param>
+        private void MoveOrCopyDraggedFiles(List<string> draggedPaths, string targetFolderPath, string targetDisplayName, bool isCopy)
+        {
             int successCount = 0;
             var skippedFolderNames = new List<string>();
             var problemLines = new List<string>();
@@ -3232,7 +3382,7 @@ namespace FileExplorerApp.Forms
 
                 if (Directory.Exists(sourcePath))
                 {
-                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <summary>.
+                    // Chua ho tro keo-tha thu muc trong pham vi nay - xem <remarks>.
                     skippedFolderNames.Add(Path.GetFileName(sourcePath));
                     continue;
                 }
@@ -3255,8 +3405,8 @@ namespace FileExplorerApp.Forms
                     isCopy ? FileOperationType.Copy : FileOperationType.Move,
                     sourcePath, destinationPath, result,
                     isCopy
-                        ? $"kéo-thả \"{name}\" sang \"{targetNode.Text}\" (giữ Ctrl để sao chép)"
-                        : $"kéo-thả \"{name}\" sang \"{targetNode.Text}\"");
+                        ? $"kéo-thả \"{name}\" sang \"{targetDisplayName}\" (giữ Ctrl để sao chép)"
+                        : $"kéo-thả \"{name}\" sang \"{targetDisplayName}\"");
 
                 if (result == OperationResult.Success)
                     successCount++;
@@ -3275,12 +3425,12 @@ namespace FileExplorerApp.Forms
             {
                 string resultVerb = isCopy ? "sao chép" : "chuyển";
                 MessageBox.Show(this,
-                    $"Đã {resultVerb} thành công {successCount} tệp sang \"{targetNode.Text}\".\n\n" + string.Join("\n\n", summaryParts),
+                    $"Đã {resultVerb} thành công {successCount} tệp sang \"{targetDisplayName}\".\n\n" + string.Join("\n\n", summaryParts),
                     "Kéo-thả tệp", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
             if (successCount > 0)
-                mnuViewRefresh_Click(sender, e);
+                mnuViewRefresh_Click(this, EventArgs.Empty);
         }
 
         /// <summary>
