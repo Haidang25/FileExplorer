@@ -2982,7 +2982,7 @@ namespace FileExplorerApp.Forms
         private void UpdateLvwFilesDragEffect(DragEventArgs e)
         {
             bool hasInternalData = e.Data.GetDataPresent(typeof(List<string>));
-            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop);
+            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop) || HasVirtualFileDragData(e.Data);
             if (!hasInternalData && !hasExternalData)
             {
                 e.Effect = DragDropEffects.None;
@@ -3061,16 +3061,27 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            if (!e.Data.GetDataPresent(DataFormats.FileDrop))
-                return;
-
-            string[] droppedPaths = (string[])e.Data.GetData(DataFormats.FileDrop);
-            if (droppedPaths == null || droppedPaths.Length == 0)
-                return;
-
             string destinationFolder = hasValidFolderTarget ? targetFolderPath : _currentPath;
             string destinationLabel = hasValidFolderTarget ? $"thư mục \"{targetItem.Text}\"" : "thư mục này";
-            CopyExternalDroppedFiles(droppedPaths, destinationFolder, destinationLabel);
+
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] droppedPaths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (droppedPaths == null || droppedPaths.Length == 0)
+                    return;
+
+                CopyExternalDroppedFiles(droppedPaths, destinationFolder, destinationLabel);
+                return;
+            }
+
+            // Khong co DataFormats.FileDrop that su (khong phai keo tu Windows
+            // Explorer/mot ung dung dua duong dan file that) - kiem tra tiep
+            // xem co phai "tep ao" hay khong (VD keo mot anh truc tiep tu
+            // trang web trong trinh duyet - xem SaveVirtualFilesFromDrag).
+            if (HasVirtualFileDragData(e.Data))
+            {
+                SaveVirtualFilesFromDrag(e.Data, destinationFolder, destinationLabel);
+            }
         }
 
         /// <summary>
@@ -3160,6 +3171,359 @@ namespace FileExplorerApp.Forms
             mnuViewRefresh_Click(this, EventArgs.Empty);
         }
 
+        #region Keo-tha "tep ao" (virtual file) tu ngoai vao - VD keo anh tu trinh duyet web
+
+        /// <summary>
+        /// Ten dinh dang clipboard CHUAN cua Windows Shell cho "tep ao" (virtual
+        /// file) - dung khi noi keo (VD mot trinh duyet web nhu Chrome/Edge khi
+        /// nguoi dung keo mot anh tren trang web) KHONG co san mot file THUC SU
+        /// tren dia de dua qua DataFormats.FileDrop (CF_HDROP) nhu keo tu Windows
+        /// Explorer, ma phai TAO NOI DUNG file ngay trong luc keo-tha. Windows
+        /// Explorer/cac ung dung nhan keo-tha hieu 2 dinh dang nay CUNG NHAU:
+        /// - FileGroupDescriptorW: MOTA (ten file, kich thuoc...) cho TUNG tep ao,
+        ///   dang mot cau truc FILEGROUPDESCRIPTORW (xem TryParseFileGroupDescriptor).
+        /// - FileContents: NOI DUNG THUC SU cua tung tep ao, lay THEO TUNG CHI SO
+        ///   (lindex) qua mot IStream rieng cho moi tep - KHONG the doc qua
+        ///   IDataObject.GetData(string) thong thuong cua WinForms (khong ho tro
+        ///   lindex), PHAI dung truc tiep System.Runtime.InteropServices.ComTypes.IDataObject
+        ///   (xem SaveVirtualFilesFromDrag).
+        /// </summary>
+        private const string VirtualFileGroupDescriptorFormat = "FileGroupDescriptorW";
+
+        private const string VirtualFileContentsFormat = "FileContents";
+
+        /// <summary>
+        /// Kiem tra du lieu dang duoc keo co phai "tep ao" (xem <see cref="VirtualFileGroupDescriptorFormat"/>)
+        /// hay khong - dung boi UpdateLvwFilesDragEffect/UpdateTrvFoldersDragEffect
+        /// de nhan dien truong hop THU BA nay (khac voi keo-tha NOI BO cua ung
+        /// dung VA keo tu Windows Explorer that su co DataFormats.FileDrop).
+        /// </summary>
+        private static bool HasVirtualFileDragData(IDataObject data)
+        {
+            return data.GetDataPresent(VirtualFileGroupDescriptorFormat);
+        }
+
+        /// <summary>
+        /// Doc "tep ao" dang duoc keo (xem <see cref="VirtualFileGroupDescriptorFormat"/>)
+        /// va LUU THANH tep THUC SU trong destinationFolder - dung boi
+        /// lvwFiles_DragDrop/trvFolders_DragDrop khi HasVirtualFileDragData
+        /// tra ve true (khong co DataFormats.FileDrop that su, VD keo mot anh
+        /// truc tiep tu trang web trong trinh duyet).
+        /// </summary>
+        /// <remarks>
+        /// HAI BUOC, THEO DUNG THU TU bat buoc cua giao thuc nay:
+        /// 1. Doc FileGroupDescriptorW (qua IDataObject.GetData(string) thong
+        ///    thuong cua WinForms - dinh dang nay LUON tra ve duoi dang MOT
+        ///    Stream (HGLOBAL duoc WinForms tu chuyen doi), KHONG can COM cap
+        ///    thap) de biet SO LUONG tep ao va TEN cua tung tep - xem
+        ///    TryParseFileGroupDescriptor.
+        /// 2. VOI TUNG CHI SO (0-based, dung THU TU nhu FileGroupDescriptorW),
+        ///    doc noi dung qua FileContents - dinh dang nay PHAI doc qua
+        ///    lindex (chi so tep ao can lay) nen KHONG the dung
+        ///    IDataObject.GetData(string) thong thuong (khong co tham so chi
+        ///    so) - phai ep kieu data sang System.Runtime.InteropServices.ComTypes.IDataObject
+        ///    (giao dien COM goc, WinForms IDataObject THUC RA duoc cai dat
+        ///    tren CUNG mot doi tuong OLE nen ep kieu nay LUON hop le voi du
+        ///    lieu keo-tha tu ben ngoai) va tu goi GetData(ref FORMATETC, out
+        ///    STGMEDIUM) - xem TrySaveOneFileContent.
+        ///
+        /// TEN TEP duoc LOC lai qua Path.GetInvalidFileNameChars() (thay bang
+        /// "_") DE PHONG - trinh duyet co the dua ten chua ky tu khong hop le
+        /// (VD lay tu alt text/tieu de trang co dau ":" ) ma khong bao truoc.
+        /// Tep trung ten voi mot muc DA CO trong thu muc dich se bi BO QUA
+        /// (khong ghi de), giong hanh vi da chon cho FileDrop/keo-tha noi bo.
+        /// </remarks>
+        /// <param name="data">e.Data cua DragEventArgs luc tha.</param>
+        /// <param name="destinationFolder">Thu muc dich se luu cac tep ao vao.</param>
+        /// <param name="destinationLabelForLog">Ten thu muc dich, dung TRONG CAU (VD "thư mục \"X\"" hoac "thư mục này") cho dong log cua tung muc.</param>
+        private void SaveVirtualFilesFromDrag(IDataObject data, string destinationFolder, string destinationLabelForLog)
+        {
+            List<string> fileNames = TryParseFileGroupDescriptor(data);
+            if (fileNames == null || fileNames.Count == 0)
+            {
+                MessageBox.Show(this,
+                    "Không đọc được thông tin tệp từ nguồn kéo-thả này (định dạng không được hỗ trợ).",
+                    "Kéo-thả", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var comDataObject = data as System.Runtime.InteropServices.ComTypes.IDataObject;
+            if (comDataObject == null)
+            {
+                MessageBox.Show(this,
+                    "Không đọc được nội dung tệp từ nguồn kéo-thả này (định dạng không được hỗ trợ).",
+                    "Kéo-thả", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            int successCount = 0;
+            var problemLines = new List<string>();
+
+            for (int index = 0; index < fileNames.Count; index++)
+            {
+                string rawName = fileNames[index];
+                if (string.IsNullOrWhiteSpace(rawName))
+                    continue;
+
+                string name = rawName;
+                foreach (char invalidChar in Path.GetInvalidFileNameChars())
+                    name = name.Replace(invalidChar, '_');
+
+                string destinationPath = Path.Combine(destinationFolder, name);
+                if (File.Exists(destinationPath) || Directory.Exists(destinationPath))
+                {
+                    problemLines.Add(BuildOperationResultMessage(OperationResult.Skipped, $"lưu \"{name}\""));
+                    continue;
+                }
+
+                bool saved = TrySaveOneFileContent(comDataObject, index, destinationPath);
+                LogOperationResult(FileOperationType.Copy, "(kéo từ ngoài ứng dụng, VD trình duyệt web)", destinationPath,
+                    saved ? OperationResult.Success : OperationResult.Failed, $"kéo-thả \"{name}\" vào {destinationLabelForLog}");
+
+                if (saved)
+                    successCount++;
+                else
+                    problemLines.Add(BuildOperationResultMessage(OperationResult.Failed, $"lưu \"{name}\""));
+            }
+
+            if (problemLines.Count > 0)
+            {
+                MessageBox.Show(this,
+                    $"Đã lưu thành công {successCount} tệp.\n\n" + string.Join("\n", problemLines),
+                    "Kéo-thả", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+
+            if (successCount > 0)
+                mnuViewRefresh_Click(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// Phan tich cau truc FILEGROUPDESCRIPTORW (doc qua IDataObject.GetData(string)
+        /// thong thuong - WinForms tu chuyen HGLOBAL thanh MOT Stream) de lay ra
+        /// danh sach TEN cua tung tep ao, THEO DUNG THU TU se dung lam lindex khi
+        /// doc FileContents (xem SaveVirtualFilesFromDrag). Cau truc (theo dinh
+        /// nghia cua Windows Shell, xem MSDN FILEGROUPDESCRIPTORW/FILEDESCRIPTORW):
+        /// UINT cItems, roi cItems phan tu FILEDESCRIPTORW (moi phan tu CO DINH
+        /// 592 byte: cac truong dwFlags/clsid/sizel/pointl/dwFileAttributes/
+        /// 3 FILETIME/nFileSizeHigh/nFileSizeLow chiem 72 byte dau, roi
+        /// cFileName[260] kieu WCHAR (Unicode, 2 byte/ky tu) chiem 520 byte cuoi).
+        /// </summary>
+        /// <returns>
+        /// Danh sach ten tep (co the chua ky tu khong hop le, se duoc loc rieng
+        /// o noi goi) - null neu khong doc/phan tich duoc (VD du lieu khong dung
+        /// dinh dang mong doi, hoac Stream qua ngan).
+        /// </returns>
+        private static List<string> TryParseFileGroupDescriptor(IDataObject data)
+        {
+            const int FileDescriptorEntrySize = 592;
+            const int FileNameOffsetInEntry = 72;
+            const int FileNameMaxChars = 260;
+
+            try
+            {
+                object rawData = data.GetData(VirtualFileGroupDescriptorFormat);
+                byte[] bytes;
+                if (rawData is MemoryStream memoryStream)
+                    bytes = memoryStream.ToArray();
+                else if (rawData is Stream stream)
+                {
+                    using (var buffer = new MemoryStream())
+                    {
+                        stream.CopyTo(buffer);
+                        bytes = buffer.ToArray();
+                    }
+                }
+                else
+                {
+                    return null; // Dinh dang khong nhu mong doi - khong the phan tich.
+                }
+
+                if (bytes.Length < 4)
+                    return null;
+
+                uint itemCount = BitConverter.ToUInt32(bytes, 0);
+                var names = new List<string>();
+                for (int i = 0; i < itemCount; i++)
+                {
+                    int entryStart = 4 + (i * FileDescriptorEntrySize);
+                    int nameStart = entryStart + FileNameOffsetInEntry;
+                    if (nameStart + (FileNameMaxChars * 2) > bytes.Length)
+                        break; // Du lieu bi cat ngan hon mong doi - dung lai voi nhung gi da doc duoc.
+
+                    string name = Encoding.Unicode.GetString(bytes, nameStart, FileNameMaxChars * 2);
+                    int nullCharIndex = name.IndexOf('\0');
+                    if (nullCharIndex >= 0)
+                        name = name.Substring(0, nullCharIndex);
+
+                    names.Add(name);
+                }
+
+                return names;
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            {
+                // Du lieu keo-tha tu nguon ngoai KHONG DANG TIN CAY ve dung dinh
+                // dang - bat rong o day CO Y, tra null de noi goi tu bao "khong
+                // doc duoc", thay vi de mot loi phan tich nho lam crash ca ung
+                // dung khi nguoi dung chi dang keo-tha mot anh tu trang web.
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Doc noi dung MOT tep ao (theo chi so index, xem FileGroupDescriptorW)
+        /// qua dinh dang FileContents va ghi thang ra destinationPath - PHAI dung
+        /// System.Runtime.InteropServices.ComTypes.IDataObject.GetData(ref FORMATETC,
+        /// out STGMEDIUM) CAP THAP (khong phai IDataObject.GetData(string) thong
+        /// thuong cua WinForms) vi day la dinh dang duy nhat trong giao thuc nay
+        /// CAN tham so lindex (chi so tep) - FORMATETC.lindex = index chinh la
+        /// cach chi dinh "lay noi dung cua tep thu index", DataFormats.GetFormat(...).Id
+        /// dung de lay dung MA SO dinh dang FileContents da duoc Windows dang ky
+        /// (KHONG the dung hang so co dinh, moi dinh dang tuy chinh nhu the nay
+        /// duoc Windows cap MOT MA SO rieng luc chay - RegisterClipboardFormat).
+        /// </summary>
+        /// <returns>true neu doc va ghi tep thanh cong, false neu that bai (loi duoc nuot o day, chi tra false).</returns>
+        private static bool TrySaveOneFileContent(System.Runtime.InteropServices.ComTypes.IDataObject comDataObject, int index, string destinationPath)
+        {
+            var formatEtc = new System.Runtime.InteropServices.ComTypes.FORMATETC
+            {
+                cfFormat = (short)DataFormats.GetFormat(VirtualFileContentsFormat).Id,
+                ptd = IntPtr.Zero,
+                dwAspect = System.Runtime.InteropServices.ComTypes.DVASPECT.DVASPECT_CONTENT,
+                lindex = index,
+                tymed = System.Runtime.InteropServices.ComTypes.TYMED.TYMED_ISTREAM | System.Runtime.InteropServices.ComTypes.TYMED.TYMED_HGLOBAL
+            };
+
+            System.Runtime.InteropServices.ComTypes.STGMEDIUM medium;
+            try
+            {
+                comDataObject.GetData(ref formatEtc, out medium);
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            {
+                return false; // Nguon keo-tha khong cung cap duoc noi dung cho chi so nay.
+            }
+
+            try
+            {
+                if (medium.tymed == System.Runtime.InteropServices.ComTypes.TYMED.TYMED_ISTREAM)
+                {
+                    return TrySaveFromIStream(medium.unionmember, destinationPath);
+                }
+
+                if (medium.tymed == System.Runtime.InteropServices.ComTypes.TYMED.TYMED_HGLOBAL)
+                {
+                    return TrySaveFromHGlobal(medium.unionmember, destinationPath);
+                }
+
+                return false; // TYMED khac (hiem gap voi FileContents) - khong ho tro.
+            }
+            finally
+            {
+                ReleaseStgMedium(ref medium);
+            }
+        }
+
+        /// <summary>
+        /// Doc TOAN BO noi dung tu mot IStream COM (lay qua STGMEDIUM.unionmember
+        /// khi TYMED_ISTREAM) va ghi ra tepPath - dung Stat() de biet truoc kich
+        /// thuoc chinh xac (cbSize) roi Read() mot lan du buffer, thay vi doc lap
+        /// theo tung khoi nho (don gian hoa vi cac tep ao keo tu trinh duyet
+        /// thuong la anh, kich thuoc vua phai).
+        /// </summary>
+        private static bool TrySaveFromIStream(IntPtr streamPointer, string destinationPath)
+        {
+            if (streamPointer == IntPtr.Zero)
+                return false;
+
+            var stream = (System.Runtime.InteropServices.ComTypes.IStream)Marshal.GetObjectForIUnknown(streamPointer);
+            try
+            {
+                stream.Stat(out System.Runtime.InteropServices.ComTypes.STATSTG stat, 0);
+                long size = stat.cbSize;
+                if (size < 0 || size > int.MaxValue)
+                    return false;
+
+                var buffer = new byte[(int)size];
+                if (buffer.Length > 0)
+                {
+                    IntPtr bytesReadPointer = Marshal.AllocHGlobal(sizeof(int));
+                    try
+                    {
+                        stream.Read(buffer, buffer.Length, bytesReadPointer);
+                    }
+                    finally
+                    {
+                        Marshal.FreeHGlobal(bytesReadPointer);
+                    }
+                }
+
+                File.WriteAllBytes(destinationPath, buffer);
+                return true;
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            {
+                return false;
+            }
+            finally
+            {
+                Marshal.ReleaseComObject(stream);
+            }
+        }
+
+        /// <summary>
+        /// Doc toan bo noi dung tu mot vung nho HGLOBAL (truong hop hiem, mot so
+        /// nguon keo-tha cung cap FileContents qua TYMED_HGLOBAL thay vi
+        /// TYMED_ISTREAM) va ghi ra destinationPath.
+        /// </summary>
+        private static bool TrySaveFromHGlobal(IntPtr globalHandle, string destinationPath)
+        {
+            if (globalHandle == IntPtr.Zero)
+                return false;
+
+            IntPtr lockedPointer = IntPtr.Zero;
+            try
+            {
+                lockedPointer = GlobalLock(globalHandle);
+                if (lockedPointer == IntPtr.Zero)
+                    return false;
+
+                UIntPtr size = GlobalSize(globalHandle);
+                if (size.ToUInt64() > int.MaxValue)
+                    return false;
+
+                var buffer = new byte[(int)size.ToUInt64()];
+                if (buffer.Length > 0)
+                    Marshal.Copy(lockedPointer, buffer, 0, buffer.Length);
+
+                File.WriteAllBytes(destinationPath, buffer);
+                return true;
+            }
+            catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+            {
+                return false;
+            }
+            finally
+            {
+                if (lockedPointer != IntPtr.Zero)
+                    GlobalUnlock(globalHandle);
+            }
+        }
+
+        [DllImport("ole32.dll")]
+        private static extern void ReleaseStgMedium(ref System.Runtime.InteropServices.ComTypes.STGMEDIUM medium);
+
+        [DllImport("kernel32.dll")]
+        private static extern IntPtr GlobalLock(IntPtr hMem);
+
+        [DllImport("kernel32.dll")]
+        private static extern bool GlobalUnlock(IntPtr hMem);
+
+        [DllImport("kernel32.dll")]
+        private static extern UIntPtr GlobalSize(IntPtr hMem);
+
+        #endregion
+
         /// <summary>Bit CTRL trong DragEventArgs.KeyState (xem MSDN DragEventArgs.KeyState).</summary>
         private const int DragKeyStateCtrl = 8;
 
@@ -3220,7 +3584,7 @@ namespace FileExplorerApp.Forms
         private void UpdateTrvFoldersDragEffect(DragEventArgs e)
         {
             bool hasInternalData = e.Data.GetDataPresent(typeof(List<string>));
-            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop);
+            bool hasExternalData = e.Data.GetDataPresent(DataFormats.FileDrop) || HasVirtualFileDragData(e.Data);
             if (!hasInternalData && !hasExternalData)
             {
                 e.Effect = DragDropEffects.None;
@@ -3327,21 +3691,46 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void trvFolders_DragDrop(object sender, DragEventArgs e)
         {
-            if (!e.Data.GetDataPresent(typeof(List<string>)))
-                return;
-
-            var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
-            if (draggedPaths == null || draggedPaths.Count == 0)
-                return;
-
             Point clientPoint = trvFolders.PointToClient(new Point(e.X, e.Y));
             TreeNode targetNode = trvFolders.GetNodeAt(clientPoint);
             string targetFolderPath = targetNode?.Tag as string;
             if (string.IsNullOrEmpty(targetFolderPath) || !Directory.Exists(targetFolderPath))
                 return; // Tha ra ngoai moi node, hoac vao node "chua san sang" (VD o dia chua san sang) - khong lam gi ca.
 
-            bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
-            MoveOrCopyDraggedFiles(draggedPaths, targetFolderPath, targetNode.Text, isCopy);
+            if (e.Data.GetDataPresent(typeof(List<string>)))
+            {
+                var draggedPaths = e.Data.GetData(typeof(List<string>)) as List<string>;
+                if (draggedPaths == null || draggedPaths.Count == 0)
+                    return;
+
+                bool isCopy = (e.KeyState & DragKeyStateCtrl) == DragKeyStateCtrl;
+                MoveOrCopyDraggedFiles(draggedPaths, targetFolderPath, targetNode.Text, isCopy);
+                return;
+            }
+
+            string destinationLabel = $"thư mục \"{targetNode.Text}\"";
+
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                string[] droppedPaths = (string[])e.Data.GetData(DataFormats.FileDrop);
+                if (droppedPaths == null || droppedPaths.Length == 0)
+                    return;
+
+                // SUA LOI (phat hien khi bo sung ho tro "tep ao"): truoc day
+                // trvFolders_DragDrop CHI xu ly du lieu NOI BO (typeof(List<string>)),
+                // du trvFolders_DragEnter/DragOver (qua UpdateTrvFoldersDragEffect)
+                // van hien con tro Copy hop le cho DataFormats.FileDrop tu ben
+                // ngoai - keo file THAT TU Windows Explorer tha vao mot nhanh
+                // cay thu muc TRUOC DAY am tham khong lam gi ca. Nay xu ly
+                // giong lvwFiles_DragDrop (CopyExternalDroppedFiles).
+                CopyExternalDroppedFiles(droppedPaths, targetFolderPath, destinationLabel);
+                return;
+            }
+
+            if (HasVirtualFileDragData(e.Data))
+            {
+                SaveVirtualFilesFromDrag(e.Data, targetFolderPath, destinationLabel);
+            }
         }
 
         /// <summary>
