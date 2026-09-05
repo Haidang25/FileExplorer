@@ -4377,7 +4377,13 @@ namespace FileExplorerApp.Forms
                 }
                 else
                 {
-                    extractedText = _documentPreviewService.ExtractWordText(path);
+                    // Truyen MaxPreviewTextChars de ExtractWordText DUNG SOM
+                    // ngay khi da du du lieu, thay vi doc/gop HET toan bo tai
+                    // lieu .docx (co the RAT DAI, hang tram trang) roi moi cat
+                    // bang Substring ben duoi - do la nguyen nhan gay "treo"
+                    // giao dien tam thoi khi xem tep .docx dai nhieu trang (xem
+                    // ghi chu <param name="maxChars"> tai ExtractWordText).
+                    extractedText = _documentPreviewService.ExtractWordText(path, MaxPreviewTextChars);
                 }
             }
             catch (DocumentPasswordProtectedException ex)
@@ -4426,10 +4432,16 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            // Cat CHINH XAC dung so ky tu gioi han da cau hinh (MaxPreviewTextChars)
+            // du ExtractWordText/FormatPdfPreviewText co the tra ve NHIEU HON
+            // mot chut (chi dung SOM o ranh gioi mot doan van/bang/trang, khong
+            // cat GIUA chung mot phan tu - xem ghi chu tai ExtractWordText) -
+            // Substring o day moi la noi DAM BAO chinh xac tuyet doi khong vuot
+            // qua gioi han hien thi.
             bool truncated = extractedText.Length > MaxPreviewTextChars;
             if (truncated)
             {
-                extractedText = extractedText.Substring(0, MaxPreviewTextChars) + Environment.NewLine + "… (đã rút gọn)";
+                extractedText = extractedText.Substring(0, MaxPreviewTextChars) + Environment.NewLine + "… (đã cắt bớt nội dung)";
             }
 
             txtPreview.Text = extractedText;

@@ -84,10 +84,33 @@ namespace FileExplorerApp.Services
         /// lay van ban thuan" da neu o remarks dau lop.
         /// </remarks>
         /// <param name="filePath">Duong dan file .docx can doc.</param>
+        /// <param name="maxChars">
+        /// Dung SOM (break) viec doc them cac phan tu (Paragraph/Table) tiep
+        /// theo cua body NGAY KHI do dai chuoi da gop DU vuot qua nguong nay -
+        /// dung cho muc dich XEM TRUOC (preview), noi chi can MOT LUONG van ban
+        /// GIOI HAN de hien thi (xem UpdateDocumentPreview.MaxPreviewTextChars),
+        /// tranh phai doc/gop HET toan bo mot tai lieu .docx RAT DAI (VD hang
+        /// tram trang) chi de sau do TU BO PHAN LON ket qua qua Substring - day
+        /// la nguyen nhan gay "treo" giao dien tam thoi voi tai lieu dai (chay
+        /// dong bo tren luong UI, xem MaxPreviewDocumentBytes) MA nguong dung
+        /// luong file (20 MB) khong chan duoc (mot .docx duoi 20 MB toan van
+        /// ban thuan van co the co hang trieu ky tu). Mac dinh int.MaxValue
+        /// (khong gioi han - doc HET tai lieu) de KHONG lam thay doi hanh vi
+        /// cho noi goi khac (neu co trong tuong lai) can toan bo noi dung, VD
+        /// mot tinh nang tim kiem full-text sau nay - CHI truyen gia tri huu
+        /// han khi CHAC CHAN chi can xem truoc mot phan (nhu UpdateDocumentPreview
+        /// dang lam). LUU Y: do dai KET QUA TRA VE co the VUOT NHE qua maxChars
+        /// (kiem tra SAU KHI gop xong MOT phan tu/doan van/bang, khong cat
+        /// giua chung mot phan tu) - noi goi (VD UpdateDocumentPreview) VAN can
+        /// tu Substring lai chinh xac de dam bao KHONG VUOT qua gioi han hien
+        /// thi cau hinh.
+        /// </param>
         /// <returns>
         /// Toan bo van ban, cac doan van cach nhau boi Environment.NewLine.
         /// Tra ve chuoi RONG (khong phai null) neu tai lieu hop le nhung
-        /// KHONG co noi dung (VD file .docx moi tao, chua go gi).
+        /// KHONG co noi dung (VD file .docx moi tao, chua go gi). Neu maxChars
+        /// huu han va tai lieu dai hon, KET QUA CO THE BI CAT NGANG (xem
+        /// <paramref name="maxChars"/>) - KHONG phai toan bo tai lieu.
         /// </returns>
         /// <exception cref="ArgumentException">filePath rong hoac chi chua khoang trang.</exception>
         /// <exception cref="FileNotFoundException">File khong ton tai tai duong dan chi dinh.</exception>
@@ -120,7 +143,7 @@ namespace FileExplorerApp.Services
         /// (VD SectionProperties - thong tin trang/le, khong phai noi dung)
         /// van duoc BO QUA nhu truoc.
         /// </remarks>
-        public string ExtractWordText(string filePath)
+        public string ExtractWordText(string filePath, int maxChars = int.MaxValue)
         {
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException("Đường dẫn file không được rỗng.", nameof(filePath));
@@ -166,6 +189,14 @@ namespace FileExplorerApp.Services
                         }
                         // Cac loai phan tu khac cua body (VD SectionProperties -
                         // thong tin trang/le, khong phai noi dung) - BO QUA.
+
+                        // Dung SOM ngay khi DA DU du lieu cho muc dich xem truoc
+                        // - xem <param name="maxChars"> o tren de biet ly do va
+                        // ve viec noi goi van can tu Substring lai chinh xac.
+                        if (resultBuilder.Length > maxChars)
+                        {
+                            break;
+                        }
                     }
 
                     return resultBuilder.ToString();
