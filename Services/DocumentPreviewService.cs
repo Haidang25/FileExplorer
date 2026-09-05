@@ -352,5 +352,73 @@ namespace FileExplorerApp.Services
                     "Tệp PDF này được bảo vệ bằng mật khẩu, không thể xem trước nội dung.", ex);
             }
         }
+
+        /// <summary>
+        /// Kiem tra NHANH mot file Word (.docx) hoac PDF (.pdf) co dang duoc
+        /// bao ve bang mat khau hay khong, KHONG trich xuat noi dung van ban -
+        /// dung TRUOC KHI mo file bang ung dung mac dinh cua he thong
+        /// (Process.Start trong MainForm.OpenSelectedItem), de bao thong bao
+        /// RO RANG ngay trong ung dung ("tep duoc bao ve, khong the trich
+        /// xuat/mo") THAY VI de Process.Start am tham mo trinh xem PDF/Word
+        /// mac dinh cua Windows (nguoi dung se phai tu nhap mat khau O DO -
+        /// khong nhat quan voi thong bao da co san o khung xem truoc khi CHI
+        /// CHON file, xem UpdateDocumentPreview/ExtractPdfText/ExtractWordText).
+        /// </summary>
+        /// <remarks>
+        /// CHI mo goi tai lieu (PdfDocument.Open/WordprocessingDocument.Open)
+        /// ROI DONG LAI NGAY - viec MO (khong phai doc noi dung tung trang/
+        /// tung Paragraph) da la buoc PdfPig/OpenXml SDK tu kiem tra va nem
+        /// loi ma hoa (xem ExtractPdfText/ExtractWordText o tren), nen KHONG
+        /// can goi Extract*Text (se doc toan bo noi dung van ban, cham hon
+        /// khong can thiet cho CAU HOI DON GIAN "co mat khau hay khong").
+        ///
+        /// CAC LOI KHAC (file hong, sai dinh dang, khong du quyen doc...)
+        /// KHONG duoc bat o day - CO Y de nguyen cho NEM RA NGOAI ham nay, vi
+        /// ham nay CHI tra loi cau hoi "co mat khau hay khong", KHONG phai
+        /// kiem tra tinh hop le chung cua file (noi goi - OpenSelectedItem -
+        /// da co san catch (Exception ex) rieng de xu ly cac loi con lai khi
+        /// Process.Start that bai).
+        /// </remarks>
+        /// <param name="filePath">Duong dan file .docx hoac .pdf can kiem tra.</param>
+        /// <returns>true neu file duoc bao ve bang mat khau, nguoc lai false.</returns>
+        /// <exception cref="ArgumentException">filePath rong hoac chi chua khoang trang.</exception>
+        /// <exception cref="FileNotFoundException">File khong ton tai tai duong dan chi dinh.</exception>
+        public bool IsPasswordProtected(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath))
+                throw new ArgumentException("Đường dẫn file không được rỗng.", nameof(filePath));
+
+            if (!File.Exists(filePath))
+                throw new FileNotFoundException("Không tìm thấy file cần đọc.", filePath);
+
+            bool isPdf = string.Equals(Path.GetExtension(filePath), ".pdf", StringComparison.OrdinalIgnoreCase);
+
+            if (isPdf)
+            {
+                try
+                {
+                    using (PdfDocument.Open(filePath))
+                    {
+                        return false;
+                    }
+                }
+                catch (PdfDocumentEncryptedException)
+                {
+                    return true;
+                }
+            }
+
+            try
+            {
+                using (WordprocessingDocument.Open(filePath, isEditable: false))
+                {
+                    return false;
+                }
+            }
+            catch (OpenXmlPackageException ex) when (ex.Message.IndexOf("Encrypt", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                return true;
+            }
+        }
     }
 }

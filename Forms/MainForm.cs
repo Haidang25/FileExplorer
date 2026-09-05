@@ -3936,6 +3936,48 @@ namespace FileExplorerApp.Forms
             }
             else if (File.Exists(path))
             {
+                // Tep Word (.docx)/PDF (.pdf) duoc bao ve bang mat khau: KIEM
+                // TRA TRUOC khi Process.Start, thay vi de Process.Start am
+                // tham mo trinh xem PDF/Word MAC DINH cua Windows (nguoi dung
+                // se phai tu nhap mat khau O DO, khong nhat quan voi thong
+                // bao "duoc bao ve boi mat khau" da co san o khung xem truoc
+                // khi CHI CHON file - xem UpdateDocumentPreview) - bao THONG
+                // BAO RO RANG ngay trong ung dung va DUNG LAI, KHONG mo file,
+                // KHONG crash. Dung DocumentPreviewService.IsPasswordProtected
+                // (chi mo goi tai lieu de kiem tra, khong doc noi dung van
+                // ban - xem ham do) - CHI ap dung cho .docx/.pdf, cac dinh
+                // dang khac van Process.Start binh thuong nhu truoc.
+                string extension = Path.GetExtension(path);
+                bool isPasswordCheckableDocument =
+                    string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(extension, ".docx", StringComparison.OrdinalIgnoreCase);
+
+                if (isPasswordCheckableDocument)
+                {
+                    try
+                    {
+                        if (_documentPreviewService.IsPasswordProtected(path))
+                        {
+                            MessageBox.Show(
+                                this,
+                                "Tệp này được bảo vệ bằng mật khẩu, không thể trích xuất/mở nội dung.",
+                                "Tệp được bảo vệ",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning);
+                            return;
+                        }
+                    }
+                    catch (Exception ex) when (!(ex is OutOfMemoryException || ex is StackOverflowException || ex is ThreadAbortException))
+                    {
+                        // Loi KHAC voi mat khau (VD tep hong, sai dinh dang,
+                        // dang bi khoa boi chuong trinh khac...) - BO QUA o
+                        // day CO Y, de Process.Start ben duoi tu quyet dinh
+                        // (co the van mo duoc boi ung dung mac dinh du PdfPig/
+                        // OpenXml khong doc duoc, hoac se nem loi duoc bat o
+                        // catch (Exception ex) hien co ngay ben duoi).
+                    }
+                }
+
                 try
                 {
                     Process.Start(path);
