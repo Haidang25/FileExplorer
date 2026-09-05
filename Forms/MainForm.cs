@@ -4373,6 +4373,23 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
+            // Tai lieu hop le nhung KHONG co van ban (VD file .docx moi tao,
+            // chua go gi - xem <returns> cua ExtractWordText, hoac mot PDF chi
+            // co hinh anh/trang trang) - ExtractWordText/FormatPdfPreviewText
+            // tra ve chuoi RONG cho truong hop nay (KHONG nem loi, vi day KHONG
+            // phai loi). Truoc day txtPreview chi bi de trong TRANG XOA (khong
+            // co dong chu nao) trong truong hop nay - de nguoi dung KHONG the
+            // phan biet duoc "tep that su khong co noi dung" voi "dang tai/loi
+            // hien thi", nen them mot dong thong bao RO RANG thay vi de trang.
+            if (string.IsNullOrWhiteSpace(extractedText))
+            {
+                txtPreview.Text = "(Tệp không có nội dung văn bản)";
+                txtPreview.Visible = true;
+                lblPreviewCaption.Text = Path.GetFileName(path);
+                spcFilesPreview.Panel2Collapsed = false;
+                return;
+            }
+
             bool truncated = extractedText.Length > MaxPreviewTextChars;
             if (truncated)
             {
