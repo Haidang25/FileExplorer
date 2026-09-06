@@ -59,6 +59,49 @@ namespace FileExplorerApp.Forms
 
             if (!string.IsNullOrWhiteSpace(keyword))
                 txtKeyword.Text = keyword;
+
+            // SUA LOI (bao cao nguoi dung: "ứng dụng hay bị crash khi ấn hủy
+            // trong chức năng tìm kiếm"): SearchForm duoc MainForm mo bang
+            // ShowDialog() (modal) roi Dispose ngay khi dialog dong (xem
+            // mnuToolsSearch_Click: using (var searchForm = new SearchForm(...))
+            // { searchForm.ShowDialog(this); }) - nhung SearchService.SearchAsync
+            // chay HOAN TOAN tren mot luong ThreadPool rieng (Task.Run BEN
+            // TRONG SearchService) va CHI kiem tra CancellationToken dinh ky
+            // (ThrowIfCancellationRequested giua cac lan doc thu muc/file), nen
+            // co the mat mot khoang thoi gian SAU KHI nguoi dung bam Huy truoc
+            // khi luong nen do THAT SU dung lai. Neu nguoi dung dong luon cua
+            // so (X, nut Đóng, hoac double-click mot ket qua) NGAY SAU KHI bam
+            // Huy (truoc khi luong nen kip dung) - hoac don gian la dong cua
+            // so trong luc TIM KIEM VAN DANG CHAY MA CHUA BAM Huy - cac Progress<T>.Report()
+            // (onFoundProgress/onScannedProgress trong btnSearch_Click) van
+            // tiep tuc "Post" callback ve UI thread NHU CU, nhung luc do
+            // lvwResults/lblStatus (hoac ca SearchForm) da bi Dispose - gay
+            // ObjectDisposedException khi callback co gang cham vao cac
+            // control nay, crash ca ung dung neu khong duoc bat.
+            //
+            // SUA (2 lop, giong pattern IntegrityService_IntegrityViolationDetected
+            // cua MainForm da dung cho cung loai van de - callback tu luong
+            // nen/callback bi tre co the toi SAU khi Form da dong):
+            // 1. FormClosing: chu dong Cancel() ngay khi dong cua so trong luc
+            //    dang tim kiem, giam toi da khoang thoi gian luong nen con
+            //    chay sau khi Form da dong.
+            // 2. AddResultItem/UpdateStatusSafely: kiem tra IsDisposed truoc
+            //    khi dung control, VA boc them try/catch (ObjectDisposedException)
+            //    lam luoi an toan cho truong hop hiem con lot qua kiem tra
+            //    IsDisposed do dieu kien tranh chap (race) giua luc kiem tra
+            //    va luc thuc su dung control.
+            FormClosing += SearchForm_FormClosing;
+        }
+
+        /// <summary>
+        /// Xem ghi chu day du tai constructor - chu dong huy tim kiem dang chay
+        /// (neu co) khi nguoi dung dong cua so, giam toi da khoang thoi gian
+        /// luong nen (Task.Run trong SearchService) con tiep tuc chay VA co the
+        /// goi Progress&lt;T&gt;.Report() ve mot Form sap/da bi dong.
+        /// </summary>
+        private void SearchForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            _searchCts?.Cancel();
         }
 
         private void btnBrowseRootFolder_Click(object sender, EventArgs e)
@@ -129,6 +172,14 @@ namespace FileExplorerApp.Forms
                     // (AddResultItem) tai dung thoi diem tim thay.
                     var onFoundProgress = new Progress<FileItemModel>(item =>
                     {
+                        // IsDisposed: xem ghi chu day du tai constructor/
+                        // SearchForm_FormClosing - callback nay co the toi SAU
+                        // khi nguoi dung da dong cua so (luong nen chua kip
+                        // dung khi Cancel() duoc goi) - bo qua AM THAM thay vi
+                        // cham vao lvwResults/lblStatus da bi Dispose.
+                        if (IsDisposed)
+                            return;
+
                         foundCount++;
                         AddResultItem(item);
                         lblStatus.Text = $"Đang tìm... đã thấy {foundCount} mục ({FormatElapsed(stopwatch.Elapsed)}).";
@@ -143,6 +194,10 @@ namespace FileExplorerApp.Forms
                     // thuong tren luong nen.
                     var onScannedProgress = new Progress<int>(scannedCount =>
                     {
+                        // IsDisposed: xem ghi chu tai onFoundProgress o tren.
+                        if (IsDisposed)
+                            return;
+
                         if (foundCount == 0)
                             lblStatus.Text = $"Đang quét... đã kiểm tra {scannedCount:N0} mục, chưa thấy kết quả ({FormatElapsed(stopwatch.Elapsed)}).";
                     });
@@ -164,6 +219,14 @@ namespace FileExplorerApp.Forms
                         onFoundProgress, onScannedProgress, token);
 
                     stopwatch.Stop();
+
+                    // Form da dong (X/nut Đóng/double-click ket qua) trong luc
+                    // await ben tren dang cho - xem ghi chu day du tai
+                    // constructor/SearchForm_FormClosing - khong con gi de cap
+                    // nhat/thong bao nua, DUNG LAI NGAY (finally ben duoi van
+                    // chay binh thuong, da tu kiem tra IsDisposed rieng).
+                    if (IsDisposed)
+                        return;
 
                     // Truong hop khong tim thay gi (foundCount == 0): thong bao rieng,
                     // ro rang hon la de lblStatus hien "Tìm thấy 0 mục..." de nguoi
@@ -189,12 +252,23 @@ namespace FileExplorerApp.Forms
                     // lvwResults ngay luc tim thay (AddResultItem() trong onFoundProgress
                     // o tren) - khong mat gi ca, chi can bao trang thai.
                     stopwatch.Stop();
-                    lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục sau {FormatElapsed(stopwatch.Elapsed)}).";
+
+                    // IsDisposed: xem ghi chu tai constructor/SearchForm_FormClosing -
+                    // truong hop Huy DUOC bam nhung nguoi dung cung dong luon
+                    // cua so ngay sau do, OperationCanceledException nay co the
+                    // duoc quan sat SAU khi Form da Dispose.
+                    if (!IsDisposed)
+                        lblStatus.Text = $"Đã hủy tìm kiếm (đã thấy {foundCount} mục sau {FormatElapsed(stopwatch.Elapsed)}).";
                 }
                 finally
                 {
-                    btnSearch.Enabled = true;
-                    btnCancelSearch.Enabled = false;
+                    // IsDisposed: xem ghi chu tai constructor/SearchForm_FormClosing.
+                    if (!IsDisposed)
+                    {
+                        btnSearch.Enabled = true;
+                        btnCancelSearch.Enabled = false;
+                    }
+
                     _searchCts = null;
                 }
             }
