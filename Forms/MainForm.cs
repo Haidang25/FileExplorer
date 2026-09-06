@@ -1822,7 +1822,48 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.
 
-            string newFolderPath = Path.Combine(_currentPath, name);
+            // SUA LOI (phat hien qua bao cao nguoi dung - screenshot "Đã xảy ra
+            // lỗi ngoài dự kiến: Illegal characters in path."): PHIEN BAN TRUOC
+            // goi Path.Combine(_currentPath, name) NGAY TAI DAY, TRUOC CA khi
+            // _folderService.CreateFolder ben duoi kip kiem tra ten hop le qua
+            // FileHelper.IsValidFileName. Path.Combine (mscorlib) co THE tu nem
+            // ArgumentException "Illegal characters in path." cho MOT SO ky tu
+            // ma Windows/.NET Framework coi la khong hop le CHO DUONG DAN noi
+            // chung - tap ky tu nay KHONG HOAN TOAN trung voi
+            // Path.GetInvalidFileNameChars() (tap FileHelper.IsValidFileName
+            // dang dung) do mot bat nhat da biet cua chinh .NET Framework, nen
+            // mot ten nguoi dung nhap co the "lot qua" duoc du dinh se bi
+            // CreateFolder tu choi sau do, nhung lai lam Path.Combine nem loi
+            // TRUOC KHI kip toi buoc kiem tra do - ngoai try/catch nao, roi bi
+            // handler loi TOAN CUC (Program.cs) bat lai va hien thong bao chung
+            // chung "Đã xảy ra lỗi ngoài dự kiến" thay vi thong bao ro rang
+            // "tên không hợp lệ" nhu cac truong hop invalid-name khac trong ung
+            // dung. SUA: kiem tra IsValidFileName NGAY TAI DAY (truoc ca
+            // Path.Combine) de chan som voi thong bao dung y dinh - VA boc them
+            // try/catch (ArgumentException) quanh Path.Combine lam luoi an toan
+            // thu hai, phong truong hop con ky tu nao khac IsValidFileName chua
+            // luong het.
+            if (!FileHelper.IsValidFileName(name))
+            {
+                MessageBox.Show(this,
+                    $"Không thể tạo thư mục \"{name}\": tên không hợp lệ hoặc có lỗi xảy ra.",
+                    "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string newFolderPath;
+            try
+            {
+                newFolderPath = Path.Combine(_currentPath, name);
+            }
+            catch (ArgumentException)
+            {
+                MessageBox.Show(this,
+                    $"Không thể tạo thư mục \"{name}\": tên không hợp lệ hoặc có lỗi xảy ra.",
+                    "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             OperationResult result = _folderService.CreateFolder(_currentPath, name);
             ShowOperationResultMessage(result, $"tao thu muc \"{name}\"");
 
@@ -1901,7 +1942,30 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.
 
-            string newFilePath = Path.Combine(_currentPath, name);
+            // SUA LOI: cung mot loi Path.Combine nem ArgumentException "Illegal
+            // characters in path." cho ten khong hop le - xem ghi chu day du
+            // tai mnuFileNewFolder_Click (loi nay ap dung y het cho New File).
+            if (!FileHelper.IsValidFileName(name))
+            {
+                MessageBox.Show(this,
+                    $"Không thể tạo file \"{name}\": tên không hợp lệ hoặc có lỗi xảy ra.",
+                    "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string newFilePath;
+            try
+            {
+                newFilePath = Path.Combine(_currentPath, name);
+            }
+            catch (ArgumentException)
+            {
+                MessageBox.Show(this,
+                    $"Không thể tạo file \"{name}\": tên không hợp lệ hoặc có lỗi xảy ra.",
+                    "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
             OperationResult result = _fileService.CreateFile(_currentPath, name);
             ShowOperationResultMessage(result, $"tao file \"{name}\"");
 
