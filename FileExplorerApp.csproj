@@ -39,19 +39,10 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.11, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\Microsoft.Bcl.AsyncInterfaces.10.0.11\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
-    </Reference>
     <Reference Include="System">
       <HintPath>C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.dll</HintPath>
     </Reference>
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
-      <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -65,81 +56,17 @@
     <Reference Include="System.Net.Http" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
-    <!-- DocumentFormat.OpenXml + DocumentFormat.OpenXml.Framework (goi NuGet
-         da co san trong packages.config/packages\ - dung de doc noi dung
-         file Word .docx trong DocumentPreviewService.ExtractWordText, xem
-         ghi chu day du tai dau file DocumentPreviewService.cs). Ban .NET
-         Framework (thu muc "net46" trong lib\ cua goi - khong co ban rieng
-         cho 4.7.2 nhung 4.6 tuong thich xuoi binh thuong) KHONG can them goi
-         NuGet System.IO.Packaging nhu ban .NET/netstandard hien dai (xem
-         group targetFramework=".NETFramework4.6" rong trong .nuspec cua 2
-         goi tren) - thay vao do dung truc tiep WindowsBase.dll co san TRONG
-         BAN THAN .NET Framework (namespace System.IO.Packaging nam trong
-         WindowsBase, khong phai mot goi NuGet rieng tren Framework) nen chi
-         can them tham chieu WindowsBase (co san, khong can HintPath) ben
-         duoi, KHONG can tham chieu goi System.IO.Packaging trong packages.config. -->
-    <Reference Include="DocumentFormat.OpenXml">
-      <HintPath>packages\DocumentFormat.OpenXml.3.5.1\lib\net46\DocumentFormat.OpenXml.dll</HintPath>
-    </Reference>
-    <Reference Include="DocumentFormat.OpenXml.Framework">
-      <HintPath>packages\DocumentFormat.OpenXml.Framework.3.5.1\lib\net46\DocumentFormat.OpenXml.Framework.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="WindowsBase" />
-    <!-- PdfPig (goi NuGet da co san trong packages.config) - dung de doc
-         noi dung van ban PDF trong DocumentPreviewService.ExtractPdfText.
-         PdfPig KHONG dong goi thanh 1 file .dll duy nhat ma chia thanh
-         NHIEU assembly con (Core/Fonts/Tokenization/Tokens) - da kiem tra
-         truc tiep (strings tren cac .dll trong thu muc packages\) de xac
-         dinh CHINH XAC UglyToad.PdfPig.dll THUC SU can nhung assembly con
-         nao (KHONG bao gom UglyToad.PdfPig.Package.dll/DocumentLayoutAnalysis.dll -
-         2 assembly nay KHONG duoc UglyToad.PdfPig.dll tham chieu toi, chi
-         can cho cac tinh nang khac ngoai pham vi ExtractPdfText hien tai
-         nhu ghi/xuat PDF hay phan tich bo cuc trang). Dung thu muc "net471"
-         (khong co ban rieng cho 4.7.2, day la ban .NET Framework GAN NHAT
-         ma goi PdfPig co san). System.Memory/System.Buffers/System.Numerics.Vectors/
-         Microsoft.Bcl.HashCode la cac goi "polyfill" ma PdfPig can tren .NET
-         Framework (theo .nuspec cua goi, nhom targetFramework=".NETFramework4.7.1") -
-         dung thu muc "net462" cua CAC goi nay (khong co ban rieng cho 4.7.x,
-         day la ban Framework gan nhat chung co san). System.IO.Compression
-         (assembly co san trong .NET Framework, KHONG phai NuGet) can cho
-         PdfPig giai ma cac luong du lieu nen (compressed stream) ben trong
-         PDF. -->
+    <!-- System.IO.Compression + System.IO.Compression.FileSystem: assembly co
+         san trong .NET Framework (KHONG phai NuGet) - CompressionService dung
+         ZipArchive (System.IO.Compression) va ZipFile.CreateFromDirectory/
+         ExtractToDirectory (System.IO.Compression.FileSystem) de nen/giai nen
+         thu muc/tep .zip (chuc nang Nen/Giai nen, KHONG lien quan tinh nang
+         xem truoc Word/PDF da bo - GHI CHU: truoc day 2 tham chieu nay con
+         duoc DocumentPreviewService dung chung de doc PDF, nhung van PHAI
+         giu lai o day vi CompressionService van can, chi bo cac tham chieu
+         RIENG cua DocumentFormat.OpenXml/UglyToad.PdfPig ben duoi). -->
     <Reference Include="System.IO.Compression" />
-    <!-- System.IO.Compression.FileSystem: assembly co san trong .NET Framework
-         (KHONG phai NuGet, giong System.IO.Compression o tren) - cung cap
-         ZipFile.CreateFromDirectory/ExtractToDirectory (namespace
-         System.IO.Compression, lop ZipFile) de nen/giai nen CA MOT THU MUC
-         truc tiep bang API tinh gian, KHAC voi System.IO.Compression (chi co
-         ZipArchive/DeflateStream muc thap hon, tu duyet tung entry). -->
     <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="UglyToad.PdfPig">
-      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.dll</HintPath>
-    </Reference>
-    <Reference Include="UglyToad.PdfPig.Core">
-      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="UglyToad.PdfPig.Fonts">
-      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Fonts.dll</HintPath>
-    </Reference>
-    <Reference Include="UglyToad.PdfPig.Tokenization">
-      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Tokenization.dll</HintPath>
-    </Reference>
-    <Reference Include="UglyToad.PdfPig.Tokens">
-      <HintPath>packages\PdfPig.0.1.16\lib\net471\UglyToad.PdfPig.Tokens.dll</HintPath>
-    </Reference>
-    <Reference Include="Microsoft.Bcl.HashCode">
-      <HintPath>packages\Microsoft.Bcl.HashCode.6.0.0\lib\net462\Microsoft.Bcl.HashCode.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Memory">
-      <HintPath>packages\System.Memory.4.6.0\lib\net462\System.Memory.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Buffers">
-      <HintPath>packages\System.Buffers.4.6.0\lib\net462\System.Buffers.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Numerics.Vectors">
-      <HintPath>packages\System.Numerics.Vectors.4.6.0\lib\net462\System.Numerics.Vectors.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Forms\MainForm.cs">
@@ -238,8 +165,6 @@
     <Compile Include="Models\RecycleBinItemModel.cs" />
     <Compile Include="Services\BaselineService.cs" />
     <Compile Include="Services\CompressionService.cs" />
-    <Compile Include="Services\DocumentPasswordProtectedException.cs" />
-    <Compile Include="Services\DocumentPreviewService.cs" />
     <Compile Include="Services\DuplicateService.cs" />
     <Compile Include="Services\FileService.cs" />
     <Compile Include="Services\FileMonitorService.cs" />
