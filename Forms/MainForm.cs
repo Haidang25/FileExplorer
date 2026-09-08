@@ -3995,35 +3995,13 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private const long MaxPreviewImageBytes = 20 * 1024 * 1024; // 20 MB
 
-        /// <summary>So dong toi da doc de preview van ban - tranh nap ca file
-        /// log/csv hang trieu dong vao txtPreview lam treo UI.</summary>
-        private const int MaxPreviewTextLines = 200;
-
-        /// <summary>Gioi han tong so ky tu doc duoc khi preview van ban, dung
-        /// song song voi MaxPreviewTextLines de phong khi file khong xuong
-        /// dong (VD file minify .js/.json tren mot dong rat dai).</summary>
-        private const int MaxPreviewTextChars = 100_000;
-
-        /// <summary>
-        /// Cac phan mo rong duoc coi la van ban thuan (plain text) de doc N
-        /// dong dau lam preview trong txtPreview. KHONG dung
-        /// FileHelper.FileIconCategory.Code vi nhom do gom ca file nhi phan
-        /// (.exe/.dll/.msi) khong doc duoc nhu van ban.
-        /// </summary>
-        private static readonly HashSet<string> TextPreviewExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ".txt", ".md", ".log", ".ini", ".config", ".csv",
-            ".json", ".xml", ".html", ".htm", ".css", ".js", ".ts",
-            ".cs", ".vb", ".sql", ".bat", ".ps1", ".py", ".java",
-            ".c", ".cpp", ".h", ".yaml", ".yml"
-        };
-
         /// <summary>
         /// Dispatcher chinh cho khu vuc preview ben phai lvwFiles: chi hien
         /// preview khi CHINH XAC mot muc duoc chon (khong phai thu muc) -
-        /// dua vao phan mo rong de chon giua preview anh (pbxPreview) hay
-        /// preview van ban (txtPreview), moi truong hop khac deu goi
-        /// ClearPreview voi thong bao phu hop.
+        /// hien preview anh (pbxPreview) cho file anh, moi truong hop khac
+        /// deu goi ClearPreview voi thong bao phu hop (GHI CHU: preview van
+        /// ban thuan qua txtPreview - G3 - da duoc BO theo yeu cau nguoi
+        /// dung "bỏ luôn chức năng G3 - xem trước tệp văn bản").
         /// </summary>
         private void UpdatePreview()
         {
@@ -4045,10 +4023,6 @@ namespace FileExplorerApp.Forms
             if (FileHelper.GetFileIconCategory(path) == FileIconCategory.Image)
             {
                 UpdateImagePreview(path);
-            }
-            else if (TextPreviewExtensions.Contains(Path.GetExtension(path)))
-            {
-                UpdateTextPreview(path);
             }
             else
             {
@@ -4152,136 +4126,6 @@ namespace FileExplorerApp.Forms
                 lblPreviewCaption.Text = "Không thể xem trước ảnh này";
                 spcFilesPreview.Panel2Collapsed = true;
             }
-        }
-
-        /// <summary>
-        /// Do encoding cua mot mau byte dau file de chon Encoding phu hop cho
-        /// StreamReader, uu tien theo thu tu:
-        /// - Co BOM (UTF-8 / UTF-16 LE-BE / UTF-32 LE-BE): dung dung encoding
-        ///   tuong ung, StreamReader se tu bo qua cac byte BOM nay khi doc.
-        /// - Khong co BOM nhung toan bo mau la UTF-8 hop le (giai ma nghiem
-        ///   ngat, throwOnInvalidBytes): coi la UTF-8 khong BOM (kieu file
-        ///   van ban pho bien nhat hien nay, VD luu tu VS Code/Notepad mac
-        ///   dinh "UTF-8").
-        /// - Con lai: coi la "ANSI", dung Encoding.Default, tuc trang ma
-        ///   (code page) mac dinh cua he dieu hanh Windows dang chay (VD
-        ///   CP1258 tren May tinh cau hinh Tieng Viet, CP1252 tren May tinh
-        ///   Tieng Anh) - dung y nghia "ANSI" ma Notepad tren Windows dung.
-        ///
-        /// Vi mot ky tu UTF-8 co the dai toi 4 byte, mau doc co the bi cat cut
-        /// dung giua mot ky tu neu file lon hon kich thuoc mau - ham se thu lai
-        /// toi da 3 lan, moi lan bot 1 byte cuoi mau, truoc khi ket luan la
-        /// khong phai UTF-8 hop le.
-        /// </summary>
-        private static Encoding DetectTextEncoding(byte[] sample, int length)
-        {
-            if (length >= 3 && sample[0] == 0xEF && sample[1] == 0xBB && sample[2] == 0xBF)
-                return Encoding.UTF8; // UTF-8 co BOM
-            if (length >= 4 && sample[0] == 0x00 && sample[1] == 0x00 && sample[2] == 0xFE && sample[3] == 0xFF)
-                return new UTF32Encoding(bigEndian: true, byteOrderMark: true); // UTF-32 BE
-            if (length >= 4 && sample[0] == 0xFF && sample[1] == 0xFE && sample[2] == 0x00 && sample[3] == 0x00)
-                return new UTF32Encoding(bigEndian: false, byteOrderMark: true); // UTF-32 LE
-            if (length >= 2 && sample[0] == 0xFF && sample[1] == 0xFE)
-                return Encoding.Unicode; // UTF-16 LE
-            if (length >= 2 && sample[0] == 0xFE && sample[1] == 0xFF)
-                return Encoding.BigEndianUnicode; // UTF-16 BE
-
-            var strictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
-            for (int trim = 0; trim <= 3 && trim <= length; trim++)
-            {
-                try
-                {
-                    strictUtf8.GetString(sample, 0, length - trim);
-                    return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
-                }
-                catch (DecoderFallbackException)
-                {
-                    // Co the do ky tu UTF-8 nhieu byte bi cat cut o cuoi mau -
-                    // thu bot byte cuoi roi kiem tra lai truoc khi bo cuoc.
-                }
-            }
-
-            // Khong phai UTF-8 hop le -> coi la van ban ANSI theo trang ma mac
-            // dinh cua he thong.
-            return Encoding.Default;
-        }
-
-        /// <summary>
-        /// Cap nhat txtPreview bang cach doc toi da MaxPreviewTextLines dong
-        /// dau cua file (them gioi han MaxPreviewTextChars phong khi file
-        /// khong xuong dong) - dung StreamReader.ReadLine theo tung dong thay
-        /// vi File.ReadAllText/ReadAllLines de KHONG BAO GIO nap ca file vao
-        /// RAM, du file van ban do lon toi dau. Mo file voi FileShare.ReadWrite
-        /// de van xem duoc preview ngay ca khi file dang duoc ung dung khac
-        /// (VD trinh soan thao) mo va ghi. Encoding (UTF-8 co/khong BOM,
-        /// UTF-16, hoac ANSI) duoc tu dong do qua DetectTextEncoding truoc khi
-        /// doc noi dung, tranh hien thi sai dau tieng Viet khi file la ANSI.
-        /// </summary>
-        private void UpdateTextPreview(string path)
-        {
-            pbxPreview.Image?.Dispose();
-            pbxPreview.Image = null;
-            pbxPreview.Visible = false;
-
-            var sb = new StringBuilder();
-            int lineCount = 0;
-            bool truncated = false;
-
-            try
-            {
-                using (var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                {
-                    byte[] sample = new byte[Math.Min(65536L, fileStream.Length)];
-                    int sampleRead = 0;
-                    while (sampleRead < sample.Length)
-                    {
-                        int read = fileStream.Read(sample, sampleRead, sample.Length - sampleRead);
-                        if (read == 0) break;
-                        sampleRead += read;
-                    }
-                    fileStream.Position = 0;
-
-                    Encoding encoding = DetectTextEncoding(sample, sampleRead);
-                    using (var reader = new StreamReader(fileStream, encoding, detectEncodingFromByteOrderMarks: false))
-                    {
-                        string line;
-                        while (lineCount < MaxPreviewTextLines && (line = reader.ReadLine()) != null)
-                        {
-                            if (sb.Length + line.Length > MaxPreviewTextChars)
-                            {
-                                sb.Append(line, 0, Math.Max(0, MaxPreviewTextChars - sb.Length));
-                                truncated = true;
-                                break;
-                            }
-
-                            sb.AppendLine(line);
-                            lineCount++;
-                        }
-
-                        if (!truncated && reader.Peek() != -1)
-                            truncated = true;
-                    }
-                }
-            }
-            catch (Exception ex) when (ex is IOException || ex is UnauthorizedAccessException
-                || ex is ArgumentException)
-            {
-                // File dang bi khoa hoan toan boi tien trinh khac, hoac duong
-                // dan khong hop le giua luc dang doc - hien thong bao thay vi
-                // de loi lam vo preview.
-                txtPreview.Visible = false;
-                lblPreviewCaption.Text = "Không thể xem trước tệp này";
-                spcFilesPreview.Panel2Collapsed = true;
-                return;
-            }
-
-            if (truncated)
-                sb.AppendLine("… (đã rút gọn)");
-
-            txtPreview.Text = sb.ToString();
-            txtPreview.Visible = true;
-            lblPreviewCaption.Text = Path.GetFileName(path);
-            spcFilesPreview.Panel2Collapsed = false;
         }
 
         /// <summary>
