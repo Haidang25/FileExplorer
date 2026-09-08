@@ -22,10 +22,6 @@ namespace FileExplorerApp.Forms
 
         #region Windows Form Designer generated code
 
-        private System.Windows.Forms.GroupBox groupBoxTheme;
-        private System.Windows.Forms.RadioButton rbLight;
-        private System.Windows.Forms.RadioButton rbDark;
-
         private System.Windows.Forms.GroupBox groupBoxDisplay;
         private System.Windows.Forms.CheckBox chkShowHidden;
         private System.Windows.Forms.CheckBox chkShowExtension;
@@ -56,9 +52,6 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void InitializeComponent()
         {
-            this.groupBoxTheme = new System.Windows.Forms.GroupBox();
-            this.rbLight = new System.Windows.Forms.RadioButton();
-            this.rbDark = new System.Windows.Forms.RadioButton();
             this.groupBoxDisplay = new System.Windows.Forms.GroupBox();
             this.chkShowHidden = new System.Windows.Forms.CheckBox();
             this.chkShowExtension = new System.Windows.Forms.CheckBox();
@@ -79,45 +72,11 @@ namespace FileExplorerApp.Forms
             this.btnOpenLogFolder = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
-            this.groupBoxTheme.SuspendLayout();
             this.groupBoxDisplay.SuspendLayout();
             this.groupBoxWatcher.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.numWatcherDelay)).BeginInit();
             this.groupBoxLog.SuspendLayout();
             this.SuspendLayout();
-            //
-            // groupBoxTheme
-            //
-            this.groupBoxTheme.Controls.Add(this.rbLight);
-            this.groupBoxTheme.Controls.Add(this.rbDark);
-            this.groupBoxTheme.Location = new System.Drawing.Point(12, 12);
-            this.groupBoxTheme.Name = "groupBoxTheme";
-            this.groupBoxTheme.Size = new System.Drawing.Size(476, 56);
-            this.groupBoxTheme.TabIndex = 0;
-            this.groupBoxTheme.TabStop = false;
-            this.groupBoxTheme.Text = "GIAO DIỆN";
-            //
-            // rbLight
-            //
-            this.rbLight.AutoSize = true;
-            this.rbLight.Location = new System.Drawing.Point(16, 24);
-            this.rbLight.Name = "rbLight";
-            this.rbLight.Size = new System.Drawing.Size(80, 20);
-            this.rbLight.TabIndex = 0;
-            this.rbLight.Text = "Sáng (Light)";
-            this.rbLight.UseVisualStyleBackColor = true;
-            //
-            // rbDark
-            //
-            this.rbDark.AutoSize = true;
-            this.rbDark.Checked = true;
-            this.rbDark.Location = new System.Drawing.Point(160, 24);
-            this.rbDark.Name = "rbDark";
-            this.rbDark.Size = new System.Drawing.Size(78, 20);
-            this.rbDark.TabIndex = 1;
-            this.rbDark.TabStop = true;
-            this.rbDark.Text = "Tối (Dark)";
-            this.rbDark.UseVisualStyleBackColor = true;
             //
             // groupBoxDisplay
             //
@@ -127,7 +86,7 @@ namespace FileExplorerApp.Forms
             this.groupBoxDisplay.Controls.Add(this.rbDetails);
             this.groupBoxDisplay.Controls.Add(this.rbLargeIcon);
             this.groupBoxDisplay.Controls.Add(this.rbList);
-            this.groupBoxDisplay.Location = new System.Drawing.Point(12, 80);
+            this.groupBoxDisplay.Location = new System.Drawing.Point(12, 12);
             this.groupBoxDisplay.Name = "groupBoxDisplay";
             this.groupBoxDisplay.Size = new System.Drawing.Size(476, 118);
             this.groupBoxDisplay.TabIndex = 1;
@@ -202,7 +161,7 @@ namespace FileExplorerApp.Forms
             this.groupBoxWatcher.Controls.Add(this.lblWatcherDelay);
             this.groupBoxWatcher.Controls.Add(this.numWatcherDelay);
             this.groupBoxWatcher.Controls.Add(this.lblWatcherDelayUnit);
-            this.groupBoxWatcher.Location = new System.Drawing.Point(12, 210);
+            this.groupBoxWatcher.Location = new System.Drawing.Point(12, 142);
             this.groupBoxWatcher.Name = "groupBoxWatcher";
             this.groupBoxWatcher.Size = new System.Drawing.Size(476, 96);
             this.groupBoxWatcher.TabIndex = 2;
@@ -264,7 +223,7 @@ namespace FileExplorerApp.Forms
             this.groupBoxLog.Controls.Add(this.lblLogPath);
             this.groupBoxLog.Controls.Add(this.txtLogPath);
             this.groupBoxLog.Controls.Add(this.btnOpenLogFolder);
-            this.groupBoxLog.Location = new System.Drawing.Point(12, 318);
+            this.groupBoxLog.Location = new System.Drawing.Point(12, 250);
             this.groupBoxLog.Name = "groupBoxLog";
             this.groupBoxLog.Size = new System.Drawing.Size(476, 100);
             this.groupBoxLog.TabIndex = 3;
@@ -311,7 +270,7 @@ namespace FileExplorerApp.Forms
             // btnSave
             //
             this.btnSave.DialogResult = System.Windows.Forms.DialogResult.OK;
-            this.btnSave.Location = new System.Drawing.Point(330, 430);
+            this.btnSave.Location = new System.Drawing.Point(330, 362);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(75, 30);
             this.btnSave.TabIndex = 4;
@@ -322,7 +281,7 @@ namespace FileExplorerApp.Forms
             // btnCancel
             //
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(413, 430);
+            this.btnCancel.Location = new System.Drawing.Point(413, 362);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(75, 30);
             this.btnCancel.TabIndex = 5;
@@ -334,8 +293,7 @@ namespace FileExplorerApp.Forms
             this.AcceptButton = this.btnSave;
             this.CancelButton = this.btnCancel;
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(500, 480);
-            this.Controls.Add(this.groupBoxTheme);
+            this.ClientSize = new System.Drawing.Size(500, 412);
             this.Controls.Add(this.groupBoxDisplay);
             this.Controls.Add(this.groupBoxWatcher);
             this.Controls.Add(this.groupBoxLog);
@@ -347,8 +305,6 @@ namespace FileExplorerApp.Forms
             this.Name = "SettingsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Cài đặt";
-            this.groupBoxTheme.ResumeLayout(false);
-            this.groupBoxTheme.PerformLayout();
             this.groupBoxDisplay.ResumeLayout(false);
             this.groupBoxDisplay.PerformLayout();
             this.groupBoxWatcher.ResumeLayout(false);

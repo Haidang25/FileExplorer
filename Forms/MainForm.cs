@@ -4965,8 +4965,8 @@ namespace FileExplorerApp.Forms
             {
                 if (settingsForm.ShowDialog(this) == DialogResult.OK)
                 {
-                    // SettingsForm da luu Settings.Default va cap nhat AppTheme.IsDarkMode
-                    // trong bo nho — ap dung lai theme + trang thai hien thi cho MainForm
+                    // SettingsForm da luu Settings.Default — ap dung lai theme (chi con
+                    // Light, xem Helpers/AppTheme.cs) + trang thai hien thi cho MainForm
                     // ngay, khong can khoi dong lai ung dung.
                     ApplyTheme();
                     LoadDisplaySettings();

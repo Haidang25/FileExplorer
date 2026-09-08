@@ -12,9 +12,13 @@ namespace FileExplorerApp.Forms
     /// Man hinh Cai dat, mo tu MainForm.mnuToolsSettings_Click. Cac lua chon duoc
     /// luu qua Properties.Settings.Default de nho lai giua cac lan chay.
     ///
-    /// Nhom "Giao dien" (Light/Dark) va "Hien thi" (hien tep an, che do xem mac
-    /// dinh) co tac dung ngay: MainForm doc lai gia tri nay va goi ApplyTheme()/
-    /// dong bo lai UI sau khi dong hop thoai nay voi DialogResult.OK.
+    /// GHI CHU: nhom "Giao dien" (chon Light/Dark) da duoc BO theo yeu cau
+    /// nguoi dung "bỏ đi phần giao diện dark mode" - ung dung gio chi con
+    /// DUY NHAT giao dien sang (Light, xem Helpers/AppTheme.cs).
+    ///
+    /// Nhom "Hien thi" (hien tep an, che do xem mac dinh) van co tac dung
+    /// ngay: MainForm doc lai gia tri nay va dong bo lai UI sau khi dong hop
+    /// thoai nay voi DialogResult.OK.
     ///
     /// Nhom "Giam sat thu muc" (FileMonitorService) va "Nhat ky" (LogService)
     /// deu da co tac dung THUC TE:
@@ -38,9 +42,6 @@ namespace FileExplorerApp.Forms
         /// <summary>Nap gia tri hien tai tu Properties.Settings.Default len cac control.</summary>
         private void LoadSettings()
         {
-            rbDark.Checked = Settings.Default.IsDarkMode;
-            rbLight.Checked = !Settings.Default.IsDarkMode;
-
             chkShowHidden.Checked = Settings.Default.ShowHiddenFiles;
 
             switch ((View)Settings.Default.DefaultViewMode)
@@ -70,7 +71,7 @@ namespace FileExplorerApp.Forms
             this.BackColor = AppTheme.Background;
             this.ForeColor = AppTheme.TextPrimary;
 
-            foreach (GroupBox box in new[] { groupBoxTheme, groupBoxDisplay, groupBoxWatcher, groupBoxLog })
+            foreach (GroupBox box in new[] { groupBoxDisplay, groupBoxWatcher, groupBoxLog })
             {
                 box.ForeColor = AppTheme.TextSecondary;
             }
@@ -101,7 +102,6 @@ namespace FileExplorerApp.Forms
         /// <summary>Luu lua chon vao Properties.Settings.Default va dong voi DialogResult.OK.</summary>
         private void btnSave_Click(object sender, EventArgs e)
         {
-            Settings.Default.IsDarkMode = rbDark.Checked;
             Settings.Default.ShowHiddenFiles = chkShowHidden.Checked;
 
             if (rbLargeIcon.Checked)
@@ -143,10 +143,6 @@ namespace FileExplorerApp.Forms
                 ErrorHandler.Show(this, "Không thể lưu cài đặt:", ex, "Cài đặt");
                 return;
             }
-
-            // Cap nhat ngay AppTheme trong bo nho de MainForm/cac Form mo sau do
-            // dung dung mau vua chon, khong can khoi dong lai ung dung.
-            AppTheme.IsDarkMode = Settings.Default.IsDarkMode;
 
             this.DialogResult = DialogResult.OK;
         }
