@@ -352,6 +352,79 @@ namespace FileExplorerApp.Forms
             _ = RunScanAsync();
         }
 
+        /// <summary>
+        /// "Chon tat ca ban trung": tick MOI tep trong moi nhom TRU tep dau tien
+        /// (tep dau tien duoc giu lai) - dung quy tac an toan cua
+        /// btnDeleteSelected_Click (moi nhom phai con it nhat 1 ban), nen nguoi
+        /// dung co the bam "Xoa tep da chon" ngay sau do de don sach trung lap.
+        /// </summary>
+        private void btnSelectAll_Click(object sender, EventArgs e)
+        {
+            SelectAllDuplicates();
+        }
+
+        private void btnDeselectAll_Click(object sender, EventArgs e)
+        {
+            SetAllChecked(false);
+        }
+
+        /// <summary>Ctrl+A tren danh sach: tuong duong nut "Chon tat ca ban trung".</summary>
+        private void lvwDuplicates_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Control && e.KeyCode == Keys.A)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                SelectAllDuplicates();
+            }
+        }
+
+        private void SelectAllDuplicates()
+        {
+            if (lvwDuplicates.Items.Count == 0)
+            {
+                MessageBox.Show(this, "Chưa có kết quả trùng lặp nào để chọn.",
+                    "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            int checkedCount = 0;
+            lvwDuplicates.BeginUpdate();
+            try
+            {
+                foreach (ListViewGroup group in lvwDuplicates.Groups)
+                {
+                    for (int i = 0; i < group.Items.Count; i++)
+                    {
+                        bool isDuplicateCopy = i > 0; // Giu lai tep dau tien cua moi nhom.
+                        group.Items[i].Checked = isDuplicateCopy;
+                        if (isDuplicateCopy)
+                            checkedCount++;
+                    }
+                }
+            }
+            finally
+            {
+                lvwDuplicates.EndUpdate();
+            }
+
+            lblStatus.Text = $"Đã chọn {checkedCount} bản trùng (giữ lại tệp đầu tiên của mỗi nhóm).";
+        }
+
+        private void SetAllChecked(bool isChecked)
+        {
+            lvwDuplicates.BeginUpdate();
+            try
+            {
+                foreach (ListViewItem item in lvwDuplicates.Items)
+                    item.Checked = isChecked;
+            }
+            finally
+            {
+                lvwDuplicates.EndUpdate();
+            }
+        }
+
         private void btnClose_Click(object sender, EventArgs e)
         {
             Close();

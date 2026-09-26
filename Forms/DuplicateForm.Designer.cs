@@ -21,6 +21,9 @@ namespace FileExplorerApp.Forms
         private System.Windows.Forms.ColumnHeader colDupModified;
         private System.Windows.Forms.Button btnDeleteSelected;
         private System.Windows.Forms.Button btnClose;
+        private System.Windows.Forms.Button btnSelectAll;
+        private System.Windows.Forms.Button btnDeselectAll;
+        private System.Windows.Forms.ToolTip ttpDuplicate;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -57,6 +60,10 @@ namespace FileExplorerApp.Forms
             this.colDupModified = new System.Windows.Forms.ColumnHeader();
             this.btnDeleteSelected = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
+            this.btnSelectAll = new System.Windows.Forms.Button();
+            this.btnDeselectAll = new System.Windows.Forms.Button();
+            this.components = new System.ComponentModel.Container();
+            this.ttpDuplicate = new System.Windows.Forms.ToolTip(this.components);
             this.components = new System.ComponentModel.Container();
             this.SuspendLayout();
             //
@@ -148,6 +155,7 @@ namespace FileExplorerApp.Forms
             this.lvwDuplicates.UseCompatibleStateImageBehavior = false;
             this.lvwDuplicates.View = System.Windows.Forms.View.Details;
             this.lvwDuplicates.DoubleClick += new System.EventHandler(this.lvwDuplicates_DoubleClick);
+            this.lvwDuplicates.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lvwDuplicates_KeyDown);
             //
             // colDupName
             //
@@ -180,6 +188,28 @@ namespace FileExplorerApp.Forms
             this.btnDeleteSelected.Text = "Xóa tệp đã chọn";
             this.btnDeleteSelected.Click += new System.EventHandler(this.btnDeleteSelected_Click);
             //
+            // btnSelectAll
+            //
+            this.btnSelectAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnSelectAll.Location = new System.Drawing.Point(204, 510);
+            this.btnSelectAll.Name = "btnSelectAll";
+            this.btnSelectAll.Size = new System.Drawing.Size(190, 32);
+            this.btnSelectAll.TabIndex = 9;
+            this.btnSelectAll.Text = "Chọn tất cả bản trùng";
+            this.ttpDuplicate.SetToolTip(this.btnSelectAll, "Tick mọi tệp trùng lặp, giữ lại tệp đầu tiên của mỗi nhóm (Ctrl+A)");
+            this.btnSelectAll.Click += new System.EventHandler(this.btnSelectAll_Click);
+            //
+            // btnDeselectAll
+            //
+            this.btnDeselectAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.btnDeselectAll.Location = new System.Drawing.Point(402, 510);
+            this.btnDeselectAll.Name = "btnDeselectAll";
+            this.btnDeselectAll.Size = new System.Drawing.Size(100, 32);
+            this.btnDeselectAll.TabIndex = 10;
+            this.btnDeselectAll.Text = "Bỏ chọn";
+            this.ttpDuplicate.SetToolTip(this.btnDeselectAll, "Bỏ tick tất cả các tệp");
+            this.btnDeselectAll.Click += new System.EventHandler(this.btnDeselectAll_Click);
+            //
             // btnClose
             //
             this.btnClose.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
@@ -205,11 +235,13 @@ namespace FileExplorerApp.Forms
             this.Controls.Add(this.pgbScan);
             this.Controls.Add(this.lvwDuplicates);
             this.Controls.Add(this.btnDeleteSelected);
+            this.Controls.Add(this.btnSelectAll);
+            this.Controls.Add(this.btnDeselectAll);
             this.Controls.Add(this.btnClose);
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(560, 420);
+            this.MinimumSize = new System.Drawing.Size(640, 420);
             this.Name = "DuplicateForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Tìm tệp trùng lặp";
