@@ -1,69 +1,107 @@
-# FileExplorer
+# SFileManager
 
-## Giới thiệu
+Ứng dụng quản lý tệp tin trên Windows, xây dựng bằng **C# / Windows Forms (.NET Framework 4.7.2)**. Đây là đồ án môn học với mục tiêu bổ sung cho File Explorer những chức năng mà công cụ mặc định của Windows còn thiếu: **ghi nhật ký thao tác**, **giám sát toàn vẹn tệp bằng giá trị băm** và **tìm tệp trùng lặp**.
 
-**FileExplorer** là đồ án môn học xây dựng một ứng dụng quản lý tệp tin (File Explorer) trên nền tảng Windows, mô phỏng lại các chức năng cơ bản của Windows Explorer. Ứng dụng được phát triển bằng **C#** với **Windows Forms (WinForms)** trên nền tảng **.NET**.
+## Tính năng
 
-Mục tiêu của đồ án là vận dụng kiến thức lập trình hướng đối tượng, thao tác với hệ thống tệp tin (File System) trong .NET, cùng kỹ năng xây dựng giao diện người dùng (GUI) để tạo ra một ứng dụng quản lý file/folder trực quan, dễ sử dụng.
+**Quản lý tệp cơ bản**
+- Duyệt ổ đĩa và cây thư mục (nạp dần khi mở rộng), tự cập nhật khi cắm/rút USB.
+- Điều hướng: thanh địa chỉ, Quay lại / Tiến tới / Lên trên / Làm mới.
+- Tạo, đổi tên, sao chép, cắt, dán, xóa tệp và thư mục; chọn nhiều mục; kéo-thả (kể cả kéo từ ứng dụng khác vào).
+- Hỏi khi trùng tên: Ghi đè, Bỏ qua hoặc Đổi tên (gợi ý sẵn tên mới); hiển thị tiến độ và cho phép hủy khi sao chép.
+- Xóa vào Thùng rác của Windows hoặc xóa vĩnh viễn; xem và khôi phục Thùng rác ngay trong ứng dụng.
+- 4 chế độ xem, sắp xếp theo cột, lọc theo loại tệp, xem trước ảnh.
+- Xem và sửa thuộc tính (Chỉ đọc, Ẩn, Hệ thống, Lưu trữ), tính dung lượng thư mục.
 
-## Công nghệ sử dụng
+**Tìm kiếm**
+- Tìm theo tên, hỗ trợ ký tự đại diện `*` và `?`, tìm đệ quy trong thư mục con.
+- Chạy nền, hiện kết quả ngay khi tìm thấy, có thể hủy giữa chừng.
 
-- **Ngôn ngữ:** C#
-- **Nền tảng:** .NET (Windows Forms)
-- **IDE:** Visual Studio
-- **Hệ điều hành:** Windows
+**Nhật ký và giám sát toàn vẹn**
+- Ghi nhật ký mọi thao tác (thời điểm, thao tác, nguồn, đích, kết quả); lọc và xuất CSV.
+- Giám sát toàn vẹn một thư mục: chụp baseline băm **SHA-256** cho từng tệp, sau đó theo dõi bằng `FileSystemWatcher` và cảnh báo khi tệp bị sửa nội dung, bị xóa hoặc có tệp lạ xuất hiện.
+- Mỗi vi phạm được ghi kèm giá trị băm trước/sau và tài khoản Windows, có thể xuất báo cáo điều tra.
 
-## Tính năng chính
+**Công cụ mở rộng**
+- Tìm tệp trùng lặp: nhóm theo kích thước rồi so sánh băm **MD5**, chọn và xóa bản thừa.
+- Đổi tên hàng loạt theo mẫu với các token `{name}`, `{ext}`, `{n}` / `{n:000}`, `{date}`, có bảng xem trước.
+- Nén thư mục thành `.zip` và giải nén `.zip`.
 
-- Duyệt cây thư mục (Treeview) và xem nội dung thư mục hiện tại (ListView).
-- Tạo, đổi tên, xóa file và folder.
-- Sao chép (Copy), cắt (Cut), dán (Paste) file/folder.
-- Xem thông tin thuộc tính (properties) của file/folder: kích thước, ngày tạo, ngày sửa đổi.
-- Tìm kiếm file/folder theo tên.
-- Sắp xếp và hiển thị file theo loại, kích thước, ngày sửa đổi.
-- Mở file bằng ứng dụng mặc định của hệ thống.
-- Quản lý ổ đĩa (Drives) và điều hướng qua lại giữa các thư mục (Back/Forward/Up).
+**Giao diện**
+- Toàn bộ giao diện tiếng Việt.
+- Chữ và icon được phóng to (mặc định 12pt) để dễ đọc khi trình chiếu, cửa sổ tự vừa màn hình nhỏ.
 
-> Ghi chú: danh sách tính năng trên có thể được cập nhật theo tiến độ triển khai thực tế của đồ án.
+## Yêu cầu
 
-## Cấu trúc dự án
+| | Chạy chương trình | Phát triển |
+|---|---|---|
+| Hệ điều hành | Windows 7 SP1 / 10 / 11 | Windows 10 / 11 |
+| Runtime | .NET Framework 4.7.2 trở lên | .NET Framework 4.7.2 Developer Pack |
+| Công cụ | — | Visual Studio 2022 (17.13+) hoặc mới hơn, workload *.NET desktop development* |
+
+Ứng dụng chỉ dùng thư viện có sẵn của .NET Framework (`System.IO`, `System.IO.Compression`, `System.Security.Cryptography`), không cần gói NuGet để chạy.
+
+## Build và chạy từ mã nguồn
+
+```bash
+git clone https://github.com/Haidang25/FileExplorer.git
+```
+
+1. Mở `FileExplorerApp.slnx` bằng Visual Studio.
+2. Chọn cấu hình **Release** (hoặc Debug), build bằng **Ctrl+Shift+B**.
+3. Nhấn **F5** để chạy. Tệp chạy nằm ở `bin\Release\FileExplorerApp.exe`.
+
+## Chạy bản đóng gói
+
+Ứng dụng chạy độc lập (portable), không cần cài đặt hay quyền quản trị:
+
+1. Giải nén `SFileManager_v1.0.zip` vào một thư mục bất kỳ.
+2. Giữ `SFileManager.exe` và `SFileManager.exe.config` trong cùng thư mục, chạy `SFileManager.exe`.
+
+Tự đóng gói: build Release, sao chép `bin\Release\FileExplorerApp.exe` và `FileExplorerApp.exe.config` ra thư mục mới (có thể đổi tên thành `SFileManager.exe` / `SFileManager.exe.config`, hai tên phải khớp nhau), rồi nén lại.
+
+## Dữ liệu ứng dụng
+
+| Dữ liệu | Vị trí mặc định |
+|---|---|
+| Nhật ký thao tác, báo cáo điều tra | `%AppData%\SFileManager\logs` (đổi được trong Cài đặt) |
+| Baseline giám sát toàn vẹn | `%AppData%\SFileManager\baselines` |
+| Tệp đã xóa (không xóa vĩnh viễn) | Thùng rác của Windows |
+
+## Kiến trúc và cấu trúc thư mục
+
+Ứng dụng tổ chức theo 3 lớp: **Presentation** (Forms) → **Business Logic** (Services) → **System Access** (`System.IO`, `System.IO.Compression`, `System.Security.Cryptography`). Lớp trên chỉ gọi lớp liền dưới.
 
 ```
 FileExplorerApp/
-├── FileExplorerApp.slnx        # Solution file
-├── FileExplorerApp.csproj      # Project file
-├── Program.cs
-├── Form1.cs / Form1.Designer.cs
-├── Forms/                      # Các form giao diện        -> namespace FileExplorerApp.Forms
-├── Models/                     # Các lớp mô hình dữ liệu    -> namespace FileExplorerApp.Models
-├── Services/                   # Xử lý logic thao tác file/folder -> namespace FileExplorerApp.Services
-├── Helpers/                    # Các hàm/lớp hỗ trợ dùng chung -> namespace FileExplorerApp.Helpers
-├── Utilities/                  # Các lớp tiện ích chung      -> namespace FileExplorerApp.Utilities
-├── Resources/                  # Tài nguyên tĩnh (icon, ảnh...) -> namespace FileExplorerApp.Resources
-└── README.md
+├── FileExplorerApp.slnx / .csproj
+├── Program.cs              # Điểm khởi chạy, bộ xử lý ngoại lệ toàn cục
+├── Forms/                  # 12 form: MainForm, SearchForm, PropertiesForm, DuplicateForm,
+│                           # BatchRenameForm, RecycleBinForm, LogForm, SettingsForm,
+│                           # AboutForm, ConflictResolutionForm, CopyProgressForm, IntegrityToastForm
+├── Services/               # 10 service: File, Folder, Search, Log, FileMonitor, Integrity,
+│                           # Baseline, Duplicate, Compression, RecycleBin
+├── Models/                 # FileItemModel, FolderItemModel, LogEntryModel, FolderBaselineModel,
+│                           # IntegrityInvestigationEntry, RecycleBinItemModel, OperationResult...
+├── Helpers/                # FileHelper, PermissionHelper, HashHelper, FormatHelper,
+│                           # ErrorHandler, AppTheme, UiScale...
+├── Properties/             # AssemblyInfo, Resources, Settings
+├── Resources/              # app.ico
+└── docs/                   # Quy ước đặt tên control
 ```
 
-> Quy ước namespace: mỗi thư mục con tương ứng với một namespace con theo `RootNamespace` (`FileExplorerApp`). Ví dụ file `Forms/LoginForm.cs` phải khai báo `namespace FileExplorerApp.Forms`. Quy ước này được kiểm tra tự động qua `.editorconfig` (`dotnet_style_namespace_match_folder`).
+Quy ước: mỗi thư mục con là một namespace con của `FileExplorerApp` (ví dụ `FileExplorerApp.Services`), được kiểm tra qua `.editorconfig`. Quy ước đặt tên control xem tại [docs/QuyUocDatTenControl.md](docs/QuyUocDatTenControl.md).
 
-## Yêu cầu hệ thống
+**Chỉnh cỡ giao diện:** đổi hằng số `FontSize` trong [`Helpers/UiScale.cs`](Helpers/UiScale.cs) (ví dụ `11F` nhỏ hơn, `13F` to hơn). Cỡ icon danh sách tệp đặt trong `MainForm.InitializeUiScaling()`.
 
-- Windows 10/11
-- .NET SDK (khuyến nghị .NET 6.0 trở lên) hoặc .NET Framework tương ứng với cấu hình project
-- Visual Studio 2022 (hoặc phiên bản phù hợp)
+## Nhóm thực hiện
 
-## Hướng dẫn cài đặt & chạy chương trình
-
-1. Clone repository:
-   ```bash
-   git clone https://github.com/Haidang25/FileExplorer.git
-   ```
-2. Mở file `FileExplorer.sln` bằng Visual Studio.
-3. Build solution (Ctrl+Shift+B).
-4. Nhấn F5 hoặc chọn **Start** để chạy ứng dụng.
-
-## Tác giả
-
-- Hai Dang Nguyen
+| Thành viên | Vai trò |
+|---|---|
+| Nguyễn Hải Đăng (nhóm trưởng) | Phân tích, thiết kế, lập trình toàn bộ chức năng |
+| Lương Mỹ Hoa | Phân tích yêu cầu, kiểm thử chức năng |
+| Phạm Thanh Trọng | Kiểm thử hiệu năng, tương thích, đóng gói |
+| Hồ Lê Quốc Khang | Soạn thảo báo cáo, tài liệu tham khảo |
 
 ## Giấy phép
 
