@@ -37,6 +37,7 @@ namespace FileExplorerApp.Forms
         public DuplicateForm(string rootFolder)
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
 
             _rootFolder = rootFolder;
             lblRootFolderValue.Text = rootFolder;

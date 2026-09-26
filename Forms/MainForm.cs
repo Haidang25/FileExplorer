@@ -436,7 +436,10 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private void InitializeUiScaling()
         {
-            this.Font = new Font("Segoe UI", 10F);
+            // Phong to chu, control, icon toolbar va cot danh sach theo UiScale.FontSize
+            // (dung chung cho moi Form - xem Helpers/UiScale.cs).
+            UiScale.Apply(this);
+            UiScale.ApplyToContextMenu(cmsListView);
 
             // ClientSize KHONG tinh thanh tieu de/vien cua so (them ~30-40px chieu
             // cao) - lan dau chinh 1360x800 tren man hinh 1366x768 (do phan giai
@@ -446,8 +449,14 @@ namespace FileExplorerApp.Forms
             this.ClientSize = new Size(1280, 680);
             this.MinimumSize = new Size(800, 500);
 
-            imlIcons.ImageSize = new Size(20, 20);
-            _imlIconsLarge.ImageSize = new Size(40, 40);
+            // Man hinh/may chieu nho hon kich thuoc tren (VD 1024x768) - mo toan man hinh.
+            Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
+            if (this.Width > workingArea.Width || this.Height > workingArea.Height)
+                this.WindowState = FormWindowState.Maximized;
+
+            // Icon trong danh sach tep/cay thu muc: 16/32 goc -> 28/56 de nhin ro khi trinh chieu.
+            imlIcons.ImageSize = new Size(28, 28);
+            _imlIconsLarge.ImageSize = new Size(56, 56);
         }
 
         /// <summary>
@@ -1803,7 +1812,7 @@ namespace FileExplorerApp.Forms
         private void mnuFileNewFolder_Click(object sender, EventArgs e)
         {
             string name = Interaction.InputBox(
-                "Nhap ten thu muc moi:", "Tao thu muc moi", "New Folder");
+                "Nhập tên thư mục mới:", "Tạo thư mục mới", "Thư mục mới");
 
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.
@@ -1923,7 +1932,7 @@ namespace FileExplorerApp.Forms
         private void mnuFileNewFile_Click(object sender, EventArgs e)
         {
             string name = Interaction.InputBox(
-                "Nhap ten file moi (bao gom phan mo rong, VD: moi.txt):", "Tao file moi", "New File.txt");
+                "Nhập tên tệp mới (bao gồm phần mở rộng, VD: moi.txt):", "Tạo tệp mới", "Tệp mới.txt");
 
             if (string.IsNullOrWhiteSpace(name))
                 return; // Nguoi dung bam Cancel hoac de trong.

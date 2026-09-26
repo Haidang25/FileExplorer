@@ -13,6 +13,7 @@ namespace FileExplorerApp.Forms
         public AboutForm()
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
         }
     }
 }

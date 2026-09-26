@@ -45,6 +45,7 @@ namespace FileExplorerApp.Forms
         public BatchRenameForm(List<string> paths)
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
             ApplyTheme();
 
             _patternHintText = lblPatternHint.Text;

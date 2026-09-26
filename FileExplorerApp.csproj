@@ -150,6 +150,7 @@
     <Compile Include="Helpers\HashHelper.cs" />
     <Compile Include="Helpers\ListViewItemComparer.cs" />
     <Compile Include="Helpers\PermissionHelper.cs" />
+    <Compile Include="Helpers\UiScale.cs" />
     <Compile Include="Models\BatchRenameItemResult.cs" />
     <Compile Include="Models\CompressionOperationResult.cs" />
     <Compile Include="Models\ConflictAction.cs" />

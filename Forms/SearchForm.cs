@@ -53,6 +53,7 @@ namespace FileExplorerApp.Forms
         public SearchForm(string rootFolder, string keyword = null)
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
 
             if (!string.IsNullOrWhiteSpace(rootFolder))
                 txtRootFolder.Text = rootFolder;

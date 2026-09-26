@@ -192,6 +192,7 @@
             this.spcMain = new System.Windows.Forms.SplitContainer();
             this.trvFolders = new System.Windows.Forms.TreeView();
             this.imlIcons = new System.Windows.Forms.ImageList(this.components);
+            this.spcFilesPreview = new System.Windows.Forms.SplitContainer();
             this.lvwFiles = new System.Windows.Forms.ListView();
             this.colName = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
             this.colSize = ((System.Windows.Forms.ColumnHeader)(new System.Windows.Forms.ColumnHeader()));
@@ -212,7 +213,6 @@
             this.cmsSeparator4 = new System.Windows.Forms.ToolStripSeparator();
             this.cmsProperties = new System.Windows.Forms.ToolStripMenuItem();
             this.lblEmptyFolder = new System.Windows.Forms.Label();
-            this.spcFilesPreview = new System.Windows.Forms.SplitContainer();
             this.pnlPreview = new System.Windows.Forms.Panel();
             this.pbxPreview = new System.Windows.Forms.PictureBox();
             this.txtPreview = new System.Windows.Forms.TextBox();
@@ -234,9 +234,9 @@
             this.spcFilesPreview.Panel1.SuspendLayout();
             this.spcFilesPreview.Panel2.SuspendLayout();
             this.spcFilesPreview.SuspendLayout();
+            this.cmsListView.SuspendLayout();
             this.pnlPreview.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbxPreview)).BeginInit();
-            this.cmsListView.SuspendLayout();
             this.stsMain.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -476,59 +476,59 @@
             // 
             this.mnuToolsSearch.Name = "mnuToolsSearch";
             this.mnuToolsSearch.ShortcutKeys = ((System.Windows.Forms.Keys)((System.Windows.Forms.Keys.Control | System.Windows.Forms.Keys.F)));
-            this.mnuToolsSearch.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsSearch.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsSearch.Text = "&Tìm kiếm...";
             this.mnuToolsSearch.Click += new System.EventHandler(this.mnuToolsSearch_Click);
             // 
             // mnuToolsFindDuplicates
             // 
             this.mnuToolsFindDuplicates.Name = "mnuToolsFindDuplicates";
-            this.mnuToolsFindDuplicates.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsFindDuplicates.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsFindDuplicates.Text = "Tìm file &trùng lặp...";
             this.mnuToolsFindDuplicates.Click += new System.EventHandler(this.mnuToolsFindDuplicates_Click);
-            //
+            // 
             // mnuToolsBatchRename
-            //
+            // 
             this.mnuToolsBatchRename.Name = "mnuToolsBatchRename";
-            this.mnuToolsBatchRename.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsBatchRename.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsBatchRename.Text = "Đổi tên hàng &loạt...";
             this.mnuToolsBatchRename.Click += new System.EventHandler(this.mnuToolsBatchRename_Click);
-            //
+            // 
             // mnuToolsIntegrityMonitor
-            //
+            // 
             this.mnuToolsIntegrityMonitor.Name = "mnuToolsIntegrityMonitor";
-            this.mnuToolsIntegrityMonitor.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsIntegrityMonitor.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsIntegrityMonitor.Text = "&Giám sát toàn vẹn thư mục này";
             this.mnuToolsIntegrityMonitor.Click += new System.EventHandler(this.mnuToolsIntegrityMonitor_Click);
-            //
+            // 
             // mnuToolsSeparator1
-            //
+            // 
             this.mnuToolsSeparator1.Name = "mnuToolsSeparator1";
-            this.mnuToolsSeparator1.Size = new System.Drawing.Size(243, 6);
+            this.mnuToolsSeparator1.Size = new System.Drawing.Size(293, 6);
             // 
             // mnuToolsRecycleBin
             // 
             this.mnuToolsRecycleBin.Name = "mnuToolsRecycleBin";
-            this.mnuToolsRecycleBin.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsRecycleBin.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsRecycleBin.Text = "Thùng &rác";
             this.mnuToolsRecycleBin.Click += new System.EventHandler(this.mnuToolsRecycleBin_Click);
             // 
             // mnuToolsLogs
             // 
             this.mnuToolsLogs.Name = "mnuToolsLogs";
-            this.mnuToolsLogs.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsLogs.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsLogs.Text = "&Xem nhật ký hoạt động";
             this.mnuToolsLogs.Click += new System.EventHandler(this.mnuToolsLogs_Click);
             // 
             // mnuToolsSeparator2
             // 
             this.mnuToolsSeparator2.Name = "mnuToolsSeparator2";
-            this.mnuToolsSeparator2.Size = new System.Drawing.Size(243, 6);
+            this.mnuToolsSeparator2.Size = new System.Drawing.Size(293, 6);
             // 
             // mnuToolsSettings
             // 
             this.mnuToolsSettings.Name = "mnuToolsSettings";
-            this.mnuToolsSettings.Size = new System.Drawing.Size(246, 26);
+            this.mnuToolsSettings.Size = new System.Drawing.Size(296, 26);
             this.mnuToolsSettings.Text = "&Cài đặt...";
             this.mnuToolsSettings.Click += new System.EventHandler(this.mnuToolsSettings_Click);
             // 
@@ -572,7 +572,7 @@
             // 
             this.tsbBack.Name = "tsbBack";
             this.tsbBack.Size = new System.Drawing.Size(44, 44);
-            this.tsbBack.Text = "←\r\nBack";
+            this.tsbBack.Text = "←\r\nQuay lại";
             this.tsbBack.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbBack.ToolTipText = "Quay lại thư mục trước";
             this.tsbBack.Click += new System.EventHandler(this.tsbBack_Click);
@@ -581,7 +581,7 @@
             // 
             this.tsbForward.Name = "tsbForward";
             this.tsbForward.Size = new System.Drawing.Size(67, 44);
-            this.tsbForward.Text = "→\r\nForward";
+            this.tsbForward.Text = "→\r\nTiến tới";
             this.tsbForward.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbForward.ToolTipText = "Đi tới thư mục vừa quay lại";
             this.tsbForward.Click += new System.EventHandler(this.tsbForward_Click);
@@ -590,7 +590,7 @@
             // 
             this.tsbUp.Name = "tsbUp";
             this.tsbUp.Size = new System.Drawing.Size(32, 44);
-            this.tsbUp.Text = "↑\r\nUp";
+            this.tsbUp.Text = "↑\r\nLên trên";
             this.tsbUp.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbUp.ToolTipText = "Lên thư mục cha";
             this.tsbUp.Click += new System.EventHandler(this.tsbUp_Click);
@@ -599,7 +599,7 @@
             // 
             this.tsbRefresh.Name = "tsbRefresh";
             this.tsbRefresh.Size = new System.Drawing.Size(62, 44);
-            this.tsbRefresh.Text = "⟳\r\nRefresh";
+            this.tsbRefresh.Text = "⟳\r\nLàm mới";
             this.tsbRefresh.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbRefresh.ToolTipText = "Làm mới (F5)";
             this.tsbRefresh.Click += new System.EventHandler(this.tsbRefresh_Click);
@@ -613,7 +613,7 @@
             // 
             this.tsbNewFolder.Name = "tsbNewFolder";
             this.tsbNewFolder.Size = new System.Drawing.Size(89, 44);
-            this.tsbNewFolder.Text = "+\r\nNew Folder";
+            this.tsbNewFolder.Text = "+\r\nThư mục mới";
             this.tsbNewFolder.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbNewFolder.ToolTipText = "Tạo thư mục mới";
             this.tsbNewFolder.Click += new System.EventHandler(this.tsbNewFolder_Click);
@@ -627,7 +627,7 @@
             // 
             this.tsbCopy.Name = "tsbCopy";
             this.tsbCopy.Size = new System.Drawing.Size(47, 44);
-            this.tsbCopy.Text = "⧉\r\nCopy";
+            this.tsbCopy.Text = "⧉\r\nSao chép";
             this.tsbCopy.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbCopy.ToolTipText = "Sao chép (Ctrl+C)";
             this.tsbCopy.Click += new System.EventHandler(this.tsbCopy_Click);
@@ -636,7 +636,7 @@
             // 
             this.tsbPaste.Name = "tsbPaste";
             this.tsbPaste.Size = new System.Drawing.Size(47, 44);
-            this.tsbPaste.Text = "▤\r\nPaste";
+            this.tsbPaste.Text = "▤\r\nDán";
             this.tsbPaste.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbPaste.ToolTipText = "Dán (Ctrl+V)";
             this.tsbPaste.Click += new System.EventHandler(this.tsbPaste_Click);
@@ -650,7 +650,7 @@
             // 
             this.tsbDelete.Name = "tsbDelete";
             this.tsbDelete.Size = new System.Drawing.Size(57, 44);
-            this.tsbDelete.Text = "✕\r\nDelete";
+            this.tsbDelete.Text = "✕\r\nXóa";
             this.tsbDelete.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
             this.tsbDelete.ToolTipText = "Xóa (Del)";
             this.tsbDelete.Click += new System.EventHandler(this.tsbDelete_Click);
@@ -754,92 +754,19 @@
             // 
             this.spcMain.Panel1.Controls.Add(this.trvFolders);
             this.spcMain.Panel1MinSize = 120;
-            //
+            // 
             // spcMain.Panel2
-            //
+            // 
             this.spcMain.Panel2.Controls.Add(this.spcFilesPreview);
             this.spcMain.Panel2MinSize = 200;
             this.spcMain.Size = new System.Drawing.Size(1200, 555);
             this.spcMain.SplitterDistance = 300;
             this.spcMain.TabIndex = 3;
-            //
-            // spcFilesPreview
-            //
-            this.spcFilesPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.spcFilesPreview.Location = new System.Drawing.Point(0, 0);
-            this.spcFilesPreview.Name = "spcFilesPreview";
-            //
-            // spcFilesPreview.Panel1
-            //
-            this.spcFilesPreview.Panel1.Controls.Add(this.lvwFiles);
-            this.spcFilesPreview.Panel1.Controls.Add(this.lblEmptyFolder);
-            this.spcFilesPreview.Panel1MinSize = 200;
-            //
-            // spcFilesPreview.Panel2
-            //
-            this.spcFilesPreview.Panel2.Controls.Add(this.pnlPreview);
-            this.spcFilesPreview.Panel2Collapsed = true;
-            this.spcFilesPreview.Panel2MinSize = 150;
-            this.spcFilesPreview.Size = new System.Drawing.Size(896, 555);
-            this.spcFilesPreview.SplitterDistance = 646;
-            this.spcFilesPreview.TabIndex = 0;
-            //
-            // pnlPreview
-            //
-            this.pnlPreview.Controls.Add(this.pbxPreview);
-            this.pnlPreview.Controls.Add(this.txtPreview);
-            this.pnlPreview.Controls.Add(this.lblPreviewCaption);
-            this.pnlPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pnlPreview.Location = new System.Drawing.Point(0, 0);
-            this.pnlPreview.Name = "pnlPreview";
-            this.pnlPreview.Padding = new System.Windows.Forms.Padding(4);
-            this.pnlPreview.Size = new System.Drawing.Size(246, 555);
-            this.pnlPreview.TabIndex = 0;
-            //
-            // pbxPreview
-            //
-            this.pbxPreview.BackColor = System.Drawing.Color.White;
-            this.pbxPreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.pbxPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.pbxPreview.Location = new System.Drawing.Point(4, 24);
-            this.pbxPreview.Name = "pbxPreview";
-            this.pbxPreview.Size = new System.Drawing.Size(238, 527);
-            this.pbxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
-            this.pbxPreview.TabIndex = 0;
-            this.pbxPreview.TabStop = false;
-            //
-            // txtPreview
-            //
-            this.txtPreview.BackColor = System.Drawing.Color.White;
-            this.txtPreview.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.txtPreview.Font = new System.Drawing.Font("Consolas", 9F);
-            this.txtPreview.Location = new System.Drawing.Point(4, 24);
-            this.txtPreview.Multiline = true;
-            this.txtPreview.Name = "txtPreview";
-            this.txtPreview.ReadOnly = true;
-            this.txtPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtPreview.Size = new System.Drawing.Size(238, 527);
-            this.txtPreview.TabIndex = 2;
-            this.txtPreview.Visible = false;
-            this.txtPreview.WordWrap = false;
-            //
-            // lblPreviewCaption
-            //
-            this.lblPreviewCaption.Dock = System.Windows.Forms.DockStyle.Top;
-            this.lblPreviewCaption.Location = new System.Drawing.Point(4, 4);
-            this.lblPreviewCaption.Name = "lblPreviewCaption";
-            this.lblPreviewCaption.Size = new System.Drawing.Size(238, 20);
-            this.lblPreviewCaption.TabIndex = 1;
-            this.lblPreviewCaption.Text = "Không có ảnh để xem trước";
-            this.lblPreviewCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            //
+            // 
             // trvFolders
-            //
+            // 
             this.trvFolders.AllowDrop = true;
-            this.trvFolders.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.trvFolders.DragEnter += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragEnter);
-            this.trvFolders.DragOver += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragOver);
-            this.trvFolders.DragDrop += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragDrop);
+            this.trvFolders.Dock = System.Windows.Forms.DockStyle.Top;
             this.trvFolders.HideSelection = false;
             this.trvFolders.ImageKey = "folder";
             this.trvFolders.ImageList = this.imlIcons;
@@ -850,6 +777,9 @@
             this.trvFolders.TabIndex = 0;
             this.trvFolders.BeforeExpand += new System.Windows.Forms.TreeViewCancelEventHandler(this.trvFolders_BeforeExpand);
             this.trvFolders.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.trvFolders_AfterSelect);
+            this.trvFolders.DragDrop += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragDrop);
+            this.trvFolders.DragEnter += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragEnter);
+            this.trvFolders.DragOver += new System.Windows.Forms.DragEventHandler(this.trvFolders_DragOver);
             // 
             // imlIcons
             // 
@@ -857,8 +787,29 @@
             this.imlIcons.ImageSize = new System.Drawing.Size(16, 16);
             this.imlIcons.TransparentColor = System.Drawing.Color.Transparent;
             // 
+            // spcFilesPreview
+            // 
+            this.spcFilesPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.spcFilesPreview.Location = new System.Drawing.Point(0, 0);
+            this.spcFilesPreview.Name = "spcFilesPreview";
+            // 
+            // spcFilesPreview.Panel1
+            // 
+            this.spcFilesPreview.Panel1.Controls.Add(this.lvwFiles);
+            this.spcFilesPreview.Panel1.Controls.Add(this.lblEmptyFolder);
+            this.spcFilesPreview.Panel1MinSize = 200;
+            // 
+            // spcFilesPreview.Panel2
+            // 
+            this.spcFilesPreview.Panel2.Controls.Add(this.pnlPreview);
+            this.spcFilesPreview.Panel2Collapsed = true;
+            this.spcFilesPreview.Panel2MinSize = 150;
+            this.spcFilesPreview.Size = new System.Drawing.Size(896, 555);
+            this.spcFilesPreview.SplitterDistance = 200;
+            this.spcFilesPreview.TabIndex = 0;
+            // 
             // lvwFiles
-            //
+            // 
             this.lvwFiles.AllowDrop = true;
             this.lvwFiles.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this.colName,
@@ -866,7 +817,7 @@
             this.colType,
             this.colModified});
             this.lvwFiles.ContextMenuStrip = this.cmsListView;
-            this.lvwFiles.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.lvwFiles.Dock = System.Windows.Forms.DockStyle.Left;
             this.lvwFiles.FullRowSelect = true;
             this.lvwFiles.HideSelection = false;
             this.lvwFiles.LabelEdit = true;
@@ -880,10 +831,10 @@
             this.lvwFiles.AfterLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_AfterLabelEdit);
             this.lvwFiles.BeforeLabelEdit += new System.Windows.Forms.LabelEditEventHandler(this.lvwFiles_BeforeLabelEdit);
             this.lvwFiles.ColumnClick += new System.Windows.Forms.ColumnClickEventHandler(this.lvwFiles_ColumnClick);
-            this.lvwFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragDrop);
-            this.lvwFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragEnter);
             this.lvwFiles.ItemDrag += new System.Windows.Forms.ItemDragEventHandler(this.lvwFiles_ItemDrag);
             this.lvwFiles.SelectedIndexChanged += new System.EventHandler(this.lvwFiles_SelectedIndexChanged);
+            this.lvwFiles.DragDrop += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragDrop);
+            this.lvwFiles.DragEnter += new System.Windows.Forms.DragEventHandler(this.lvwFiles_DragEnter);
             this.lvwFiles.DoubleClick += new System.EventHandler(this.lvwFiles_DoubleClick);
             this.lvwFiles.KeyDown += new System.Windows.Forms.KeyEventHandler(this.lvwFiles_KeyDown);
             // 
@@ -1023,6 +974,55 @@
             this.lblEmptyFolder.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
             this.lblEmptyFolder.Visible = false;
             // 
+            // pnlPreview
+            // 
+            this.pnlPreview.Controls.Add(this.pbxPreview);
+            this.pnlPreview.Controls.Add(this.txtPreview);
+            this.pnlPreview.Controls.Add(this.lblPreviewCaption);
+            this.pnlPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pnlPreview.Location = new System.Drawing.Point(0, 0);
+            this.pnlPreview.Name = "pnlPreview";
+            this.pnlPreview.Padding = new System.Windows.Forms.Padding(4);
+            this.pnlPreview.Size = new System.Drawing.Size(96, 100);
+            this.pnlPreview.TabIndex = 0;
+            // 
+            // pbxPreview
+            // 
+            this.pbxPreview.BackColor = System.Drawing.Color.White;
+            this.pbxPreview.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
+            this.pbxPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.pbxPreview.Location = new System.Drawing.Point(4, 24);
+            this.pbxPreview.Name = "pbxPreview";
+            this.pbxPreview.Size = new System.Drawing.Size(88, 72);
+            this.pbxPreview.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
+            this.pbxPreview.TabIndex = 0;
+            this.pbxPreview.TabStop = false;
+            // 
+            // txtPreview
+            // 
+            this.txtPreview.BackColor = System.Drawing.Color.White;
+            this.txtPreview.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.txtPreview.Font = new System.Drawing.Font("Consolas", 9F);
+            this.txtPreview.Location = new System.Drawing.Point(4, 24);
+            this.txtPreview.Multiline = true;
+            this.txtPreview.Name = "txtPreview";
+            this.txtPreview.ReadOnly = true;
+            this.txtPreview.ScrollBars = System.Windows.Forms.ScrollBars.Both;
+            this.txtPreview.Size = new System.Drawing.Size(88, 72);
+            this.txtPreview.TabIndex = 2;
+            this.txtPreview.Visible = false;
+            this.txtPreview.WordWrap = false;
+            // 
+            // lblPreviewCaption
+            // 
+            this.lblPreviewCaption.Dock = System.Windows.Forms.DockStyle.Top;
+            this.lblPreviewCaption.Location = new System.Drawing.Point(4, 4);
+            this.lblPreviewCaption.Name = "lblPreviewCaption";
+            this.lblPreviewCaption.Size = new System.Drawing.Size(88, 20);
+            this.lblPreviewCaption.TabIndex = 1;
+            this.lblPreviewCaption.Text = "Không có ảnh để xem trước";
+            this.lblPreviewCaption.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            // 
             // stsMain
             // 
             this.stsMain.ImageScalingSize = new System.Drawing.Size(20, 20);
@@ -1040,7 +1040,7 @@
             // tsslStatus
             // 
             this.tsslStatus.Name = "tsslStatus";
-            this.tsslStatus.Size = new System.Drawing.Size(956, 24);
+            this.tsslStatus.Size = new System.Drawing.Size(776, 24);
             this.tsslStatus.Spring = true;
             this.tsslStatus.Text = "Sẵn sàng";
             this.tsslStatus.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
@@ -1051,19 +1051,19 @@
             this.tspProgress.Size = new System.Drawing.Size(120, 22);
             this.tspProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
             this.tspProgress.Visible = false;
-            //
+            // 
             // tsslIntegrityAlert
-            //
+            // 
             this.tsslIntegrityAlert.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
-            this.tsslIntegrityAlert.ForeColor = System.Drawing.Color.OrangeRed;
             this.tsslIntegrityAlert.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Bold);
+            this.tsslIntegrityAlert.ForeColor = System.Drawing.Color.OrangeRed;
             this.tsslIntegrityAlert.Name = "tsslIntegrityAlert";
-            this.tsslIntegrityAlert.Size = new System.Drawing.Size(0, 24);
+            this.tsslIntegrityAlert.Size = new System.Drawing.Size(180, 24);
             this.tsslIntegrityAlert.Text = "⚠ 0 cảnh báo toàn vẹn";
             this.tsslIntegrityAlert.ToolTipText = "Bấm để xem chi tiết các cảnh báo toàn vẹn thư mục gần đây";
             this.tsslIntegrityAlert.Visible = false;
             this.tsslIntegrityAlert.Click += new System.EventHandler(this.tsslIntegrityAlert_Click);
-            //
+            // 
             // tsslItemCount
             // 
             this.tsslItemCount.BorderSides = System.Windows.Forms.ToolStripStatusLabelBorderSides.Left;
@@ -1092,6 +1092,7 @@
             this.MinimumSize = new System.Drawing.Size(700, 450);
             this.Name = "MainForm";
             this.Text = "MainForm";
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.mnsMain.ResumeLayout(false);
             this.mnsMain.PerformLayout();
             this.tlsMain.ResumeLayout(false);
@@ -1106,9 +1107,10 @@
             this.spcFilesPreview.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)(this.spcFilesPreview)).EndInit();
             this.spcFilesPreview.ResumeLayout(false);
-            this.pnlPreview.ResumeLayout(false);
-            ((System.ComponentModel.ISupportInitialize)(this.pbxPreview)).EndInit();
             this.cmsListView.ResumeLayout(false);
+            this.pnlPreview.ResumeLayout(false);
+            this.pnlPreview.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.pbxPreview)).EndInit();
             this.stsMain.ResumeLayout(false);
             this.stsMain.PerformLayout();
             this.ResumeLayout(false);

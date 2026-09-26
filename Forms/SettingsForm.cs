@@ -35,6 +35,7 @@ namespace FileExplorerApp.Forms
         public SettingsForm()
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
             ApplyTheme();
             LoadSettings();
         }

@@ -48,6 +48,7 @@ namespace FileExplorerApp.Forms
         public RecycleBinForm()
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
             ApplyTheme();
 
             // Gan ListViewItemSorter TRUOC khi nap du lieu - lvwItems se tu

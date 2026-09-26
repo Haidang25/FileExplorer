@@ -52,6 +52,7 @@ namespace FileExplorerApp.Forms
         public PropertiesForm()
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
             btnApply.Enabled = false;
             btnOK.Click += btnOK_Click;
             btnCancel.Click += btnCancel_Click;

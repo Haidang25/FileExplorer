@@ -33,6 +33,7 @@ namespace FileExplorerApp.Forms
         public ConflictResolutionForm(string sourcePath, string destinationDirectory)
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
 
             _sourcePath = sourcePath;
             _destinationDirectory = destinationDirectory;

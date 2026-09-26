@@ -39,6 +39,7 @@ namespace FileExplorerApp.Forms
         public IntegrityToastForm()
         {
             InitializeComponent();
+            FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
 
             // Bam VAO BAT KY DAU tren toast (khong chi vien ngoai Form) deu
             // dong ngay - cac Label con NAM DE len tren Form nen phai tu
