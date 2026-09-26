@@ -353,14 +353,15 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// "Chon tat ca ban trung": tick MOI tep trong moi nhom TRU tep dau tien
-        /// (tep dau tien duoc giu lai) - dung quy tac an toan cua
-        /// btnDeleteSelected_Click (moi nhom phai con it nhat 1 ban), nen nguoi
-        /// dung co the bam "Xoa tep da chon" ngay sau do de don sach trung lap.
+        /// "Chon ban trung trong nhom": chi tac dong len NHOM chua tep dang duoc
+        /// chon (boi den) - tep dang chon la ban GIU LAI, moi tep con lai trong
+        /// cung nhom duoc tick de xoa. Cac nhom khac giu nguyen. Nhu vay moi
+        /// nhom luon con it nhat 1 ban, dung quy tac an toan cua
+        /// btnDeleteSelected_Click.
         /// </summary>
         private void btnSelectAll_Click(object sender, EventArgs e)
         {
-            SelectAllDuplicates();
+            SelectDuplicatesInCurrentGroup();
         }
 
         private void btnDeselectAll_Click(object sender, EventArgs e)
@@ -368,39 +369,42 @@ namespace FileExplorerApp.Forms
             SetAllChecked(false);
         }
 
-        /// <summary>Ctrl+A tren danh sach: tuong duong nut "Chon tat ca ban trung".</summary>
+        /// <summary>Ctrl+A tren danh sach: tuong duong nut "Chon ban trung trong nhom".</summary>
         private void lvwDuplicates_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Control && e.KeyCode == Keys.A)
             {
                 e.Handled = true;
                 e.SuppressKeyPress = true;
-                SelectAllDuplicates();
+                SelectDuplicatesInCurrentGroup();
             }
         }
 
-        private void SelectAllDuplicates()
+        private void SelectDuplicatesInCurrentGroup()
         {
-            if (lvwDuplicates.Items.Count == 0)
+            ListViewItem keepItem = lvwDuplicates.SelectedItems.Count > 0
+                ? lvwDuplicates.SelectedItems[0]
+                : lvwDuplicates.FocusedItem;
+
+            if (keepItem == null || keepItem.Group == null)
             {
-                MessageBox.Show(this, "Chưa có kết quả trùng lặp nào để chọn.",
+                MessageBox.Show(this,
+                    "Hãy bấm chọn một tệp trong nhóm (tệp muốn giữ lại) trước, rồi bấm \"Chọn bản trùng trong nhóm\".",
                     "Thông báo", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
+            ListViewGroup group = keepItem.Group;
             int checkedCount = 0;
             lvwDuplicates.BeginUpdate();
             try
             {
-                foreach (ListViewGroup group in lvwDuplicates.Groups)
+                foreach (ListViewItem item in group.Items)
                 {
-                    for (int i = 0; i < group.Items.Count; i++)
-                    {
-                        bool isDuplicateCopy = i > 0; // Giu lai tep dau tien cua moi nhom.
-                        group.Items[i].Checked = isDuplicateCopy;
-                        if (isDuplicateCopy)
-                            checkedCount++;
-                    }
+                    bool isDuplicateCopy = item != keepItem;
+                    item.Checked = isDuplicateCopy;
+                    if (isDuplicateCopy)
+                        checkedCount++;
                 }
             }
             finally
@@ -408,7 +412,7 @@ namespace FileExplorerApp.Forms
                 lvwDuplicates.EndUpdate();
             }
 
-            lblStatus.Text = $"Đã chọn {checkedCount} bản trùng (giữ lại tệp đầu tiên của mỗi nhóm).";
+            lblStatus.Text = $"Đã chọn {checkedCount} bản trùng trong nhóm, giữ lại \"{keepItem.Text}\".";
         }
 
         private void SetAllChecked(bool isChecked)

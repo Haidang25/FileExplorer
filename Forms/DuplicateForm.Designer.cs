@@ -193,16 +193,16 @@ namespace FileExplorerApp.Forms
             this.btnSelectAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnSelectAll.Location = new System.Drawing.Point(204, 510);
             this.btnSelectAll.Name = "btnSelectAll";
-            this.btnSelectAll.Size = new System.Drawing.Size(190, 32);
+            this.btnSelectAll.Size = new System.Drawing.Size(210, 32);
             this.btnSelectAll.TabIndex = 9;
-            this.btnSelectAll.Text = "Chọn tất cả bản trùng";
-            this.ttpDuplicate.SetToolTip(this.btnSelectAll, "Tick mọi tệp trùng lặp, giữ lại tệp đầu tiên của mỗi nhóm (Ctrl+A)");
+            this.btnSelectAll.Text = "Chọn bản trùng trong nhóm";
+            this.ttpDuplicate.SetToolTip(this.btnSelectAll, "Bấm chọn tệp muốn GIỮ LẠI, rồi bấm nút này để tick các tệp còn lại trong cùng nhóm (Ctrl+A)");
             this.btnSelectAll.Click += new System.EventHandler(this.btnSelectAll_Click);
             //
             // btnDeselectAll
             //
             this.btnDeselectAll.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnDeselectAll.Location = new System.Drawing.Point(402, 510);
+            this.btnDeselectAll.Location = new System.Drawing.Point(422, 510);
             this.btnDeselectAll.Name = "btnDeselectAll";
             this.btnDeselectAll.Size = new System.Drawing.Size(100, 32);
             this.btnDeselectAll.TabIndex = 10;
@@ -241,7 +241,7 @@ namespace FileExplorerApp.Forms
             this.Font = new System.Drawing.Font("Segoe UI", 9F);
             this.ForeColor = FileExplorerApp.Helpers.AppTheme.TextPrimary;
             this.MinimizeBox = false;
-            this.MinimumSize = new System.Drawing.Size(640, 420);
+            this.MinimumSize = new System.Drawing.Size(660, 420);
             this.Name = "DuplicateForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "Tìm tệp trùng lặp";
