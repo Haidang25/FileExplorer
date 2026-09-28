@@ -54,6 +54,7 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
+            InitializeResponsiveLayout();
 
             if (!string.IsNullOrWhiteSpace(rootFolder))
                 txtRootFolder.Text = rootFolder;
@@ -92,6 +93,63 @@ namespace FileExplorerApp.Forms
             //    IsDisposed do dieu kien tranh chap (race) giua luc kiem tra
             //    va luc thuc su dung control.
             FormClosing += SearchForm_FormClosing;
+        }
+
+        private void InitializeResponsiveLayout()
+        {
+            // UiScale can make the designed window taller than the usable screen.
+            // Lay out the result list from the actual client area after fitting it.
+            var screen = Screen.FromControl(this).WorkingArea;
+            MinimumSize = new System.Drawing.Size(
+                Math.Min(UiScale.Scale(520), screen.Width),
+                Math.Min(UiScale.Scale(380), screen.Height));
+            Size = new System.Drawing.Size(Math.Min(Width, screen.Width), Math.Min(Height, screen.Height));
+            ClientSizeChanged += (sender, args) => LayoutSearchControls();
+            LayoutSearchControls();
+        }
+
+        private void LayoutSearchControls()
+        {
+            int margin = UiScale.Scale(16);
+            int gap = UiScale.Scale(8);
+            int right = ClientSize.Width - margin;
+
+            lblKeyword.SetBounds(margin, margin, right - margin, lblKeyword.Height);
+            txtKeyword.SetBounds(margin, lblKeyword.Bottom + 2, right - margin, txtKeyword.Height);
+            lblRootFolder.SetBounds(margin, txtKeyword.Bottom + gap, right - margin, lblRootFolder.Height);
+
+            int rootY = lblRootFolder.Bottom + 2;
+            btnBrowseRootFolder.Location = new System.Drawing.Point(right - btnBrowseRootFolder.Width, rootY);
+            txtRootFolder.SetBounds(margin, rootY,
+                Math.Max(1, btnBrowseRootFolder.Left - gap - margin), txtRootFolder.Height);
+
+            int optionsY = Math.Max(txtRootFolder.Bottom, btnBrowseRootFolder.Bottom) + gap;
+            grpOptions.SetBounds(margin, optionsY, right - margin, grpOptions.Height);
+
+            int actionsY = grpOptions.Bottom + gap;
+            btnSearch.Location = new System.Drawing.Point(margin, actionsY);
+            btnCancelSearch.Location = new System.Drawing.Point(btnSearch.Right + gap, actionsY);
+            int statusLeft = btnCancelSearch.Right + gap;
+            if (right - statusLeft >= UiScale.Scale(130))
+                lblStatus.SetBounds(statusLeft, actionsY, right - statusLeft, btnSearch.Height);
+            else
+                lblStatus.SetBounds(margin, btnSearch.Bottom + gap, right - margin, lblStatus.Height);
+
+            btnClose.Location = new System.Drawing.Point(right - btnClose.Width,
+                ClientSize.Height - margin - btnClose.Height);
+            int listTop = Math.Max(btnCancelSearch.Bottom, lblStatus.Bottom) + gap;
+            lvwResults.SetBounds(margin, listTop, right - margin,
+                Math.Max(1, btnClose.Top - gap - listTop));
+
+            // Keep all four result headers visible even after the window is
+            // narrowed; long file names and paths are still scrollable in a row.
+            int columnSpace = Math.Max(1, lvwResults.ClientSize.Width
+                - SystemInformation.VerticalScrollBarWidth - 4);
+            colResultSize.Width = UiScale.Scale(95);
+            colResultModified.Width = UiScale.Scale(118);
+            int flexibleSpace = Math.Max(1, columnSpace - colResultSize.Width - colResultModified.Width);
+            colResultName.Width = Math.Min(UiScale.Scale(165), flexibleSpace / 2);
+            colResultLocation.Width = Math.Max(1, flexibleSpace - colResultName.Width);
         }
 
         /// <summary>

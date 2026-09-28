@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Text;
@@ -56,10 +57,174 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
+            InitializeResponsiveLayout();
             ApplyTheme();
             InitializeFilterOptions();
             LoadLogs();
             LoadViolations();
+        }
+
+        private void InitializeResponsiveLayout()
+        {
+            var screen = Screen.FromControl(this).WorkingArea;
+            MinimumSize = new Size(
+                Math.Min(UiScale.Scale(700), screen.Width),
+                Math.Min(UiScale.Scale(420), screen.Height));
+            Size = new Size(Math.Min(Width, screen.Width), Math.Min(Height, screen.Height));
+
+            // The log columns may scroll horizontally, but the filters and
+            // actions must remain accessible at every window size.
+            lvwViolations.Dock = DockStyle.Fill;
+            ClientSizeChanged += (sender, args) => LayoutLogControls();
+            tabOperationLog.ClientSizeChanged += (sender, args) => LayoutLogTab();
+            LayoutLogControls();
+        }
+
+        private void LayoutLogControls()
+        {
+            int margin = UiScale.Scale(12);
+            int gap = UiScale.Scale(6);
+            int available = Math.Max(1, ClientSize.Width - 2 * margin);
+            Button[] buttons = { btnVerifyReport, btnExportInvestigationReport,
+                btnRefresh, btnExportCsv, btnClearLogs, btnClose };
+
+            int buttonHeight = 0;
+            int totalWidth = 0;
+            foreach (Button button in buttons)
+            {
+                buttonHeight = Math.Max(buttonHeight, button.Height);
+                totalWidth += button.Width;
+            }
+            totalWidth += gap * (buttons.Length - 1);
+
+            int footerTop;
+            if (totalWidth + gap + lblStatus.PreferredWidth <= available)
+            {
+                footerTop = ClientSize.Height - margin - buttonHeight;
+                int x = ClientSize.Width - margin - totalWidth;
+                foreach (Button button in buttons)
+                {
+                    button.Location = new Point(x, footerTop);
+                    x += button.Width + gap;
+                }
+                lblStatus.Location = new Point(margin,
+                    footerTop + (buttonHeight - lblStatus.Height) / 2);
+            }
+            else
+            {
+                var rows = new List<List<Button>>();
+                var row = new List<Button>();
+                int rowWidth = 0;
+                foreach (Button button in buttons)
+                {
+                    int nextWidth = rowWidth + (row.Count == 0 ? 0 : gap) + button.Width;
+                    if (row.Count > 0 && nextWidth > available)
+                    {
+                        rows.Add(row);
+                        row = new List<Button>();
+                        rowWidth = 0;
+                    }
+                    rowWidth += (row.Count == 0 ? 0 : gap) + button.Width;
+                    row.Add(button);
+                }
+                if (row.Count > 0)
+                    rows.Add(row);
+
+                if (rows.Count == 2)
+                {
+                    while (rows[0].Count > rows[1].Count + 1)
+                    {
+                        Button moved = rows[0][rows[0].Count - 1];
+                        int secondWidth = moved.Width + gap * rows[1].Count;
+                        foreach (Button button in rows[1])
+                            secondWidth += button.Width;
+                        if (secondWidth > available)
+                            break;
+                        rows[0].RemoveAt(rows[0].Count - 1);
+                        rows[1].Insert(0, moved);
+                    }
+                }
+
+                int footerHeight = lblStatus.Height + gap + rows.Count * buttonHeight
+                    + (rows.Count - 1) * gap;
+                footerTop = ClientSize.Height - margin - footerHeight;
+                lblStatus.Location = new Point(margin, footerTop);
+                int y = footerTop + lblStatus.Height + gap;
+                foreach (List<Button> buttonRow in rows)
+                {
+                    int width = 0;
+                    foreach (Button button in buttonRow)
+                        width += button.Width;
+                    width += (buttonRow.Count - 1) * gap;
+                    int x = ClientSize.Width - margin - width;
+                    foreach (Button button in buttonRow)
+                    {
+                        button.Location = new Point(x, y);
+                        x += button.Width + gap;
+                    }
+                    y += buttonHeight + gap;
+                }
+            }
+
+            tabsLog.SetBounds(margin, margin, available,
+                Math.Max(1, footerTop - gap - margin));
+            LayoutLogTab();
+        }
+
+        private void LayoutLogTab()
+        {
+            int width = tabOperationLog.ClientSize.Width;
+            if (width <= 0)
+                return;
+
+            int inset = UiScale.Scale(12);
+            int gap = UiScale.Scale(8);
+            int labelHeight = Math.Max(Math.Max(lblFilterOperation.Height, lblFilterResult.Height),
+                Math.Max(lblFilterFrom.Height, lblFilterTo.Height));
+            int inputHeight = Math.Max(Math.Max(cboFilterOperation.Height, cboFilterResult.Height),
+                Math.Max(dtpFilterFrom.Height, dtpFilterTo.Height));
+            int rowHeight = labelHeight + 2 + inputHeight;
+            int rowX = inset;
+            int rowY = UiScale.Scale(28);
+
+            var fields = new[]
+            {
+                new { Label = (Control)lblFilterOperation, Input = (Control)cboFilterOperation },
+                new { Label = (Control)lblFilterResult, Input = (Control)cboFilterResult },
+                new { Label = (Control)lblFilterFrom, Input = (Control)dtpFilterFrom },
+                new { Label = (Control)lblFilterTo, Input = (Control)dtpFilterTo }
+            };
+            foreach (var field in fields)
+            {
+                int fieldWidth = Math.Max(field.Label.Width, field.Input.Width);
+                if (rowX > inset && rowX + fieldWidth > width - inset)
+                {
+                    rowX = inset;
+                    rowY += rowHeight + gap;
+                }
+                field.Label.Location = new Point(rowX, rowY);
+                field.Input.Location = new Point(rowX, rowY + labelHeight + 2);
+                rowX += fieldWidth + gap;
+            }
+
+            int actionWidth = btnApplyFilter.Width + gap + btnResetFilter.Width;
+            bool actionsWrapped = rowX > inset && rowX + actionWidth > width - inset;
+            if (actionsWrapped)
+            {
+                rowX = inset;
+                rowY += rowHeight + gap;
+            }
+            int actionY = actionsWrapped ? rowY : rowY + labelHeight + 2;
+            btnApplyFilter.Location = new Point(rowX, actionY);
+            btnResetFilter.Location = new Point(rowX + btnApplyFilter.Width + gap, actionY);
+
+            int filtersHeight = (actionsWrapped
+                ? Math.Max(btnApplyFilter.Bottom, btnResetFilter.Bottom)
+                : Math.Max(rowY + rowHeight, btnApplyFilter.Bottom)) + gap;
+            grpFilters.SetBounds(0, 0, width, filtersHeight);
+            int listTop = grpFilters.Bottom + gap;
+            lvwLogs.SetBounds(0, listTop, width,
+                Math.Max(1, tabOperationLog.ClientSize.Height - listTop));
         }
 
         /// <summary>
