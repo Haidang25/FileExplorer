@@ -800,7 +800,10 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private static void ExportToCsv(string filePath, List<LogEntryModel> entries)
         {
-            using (var writer = new StreamWriter(filePath, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false)))
+            // Excel needs the UTF-8 BOM to detect Vietnamese text correctly
+            // when opening the exported CSV directly. The internal log stays
+            // BOM-free because it is read and appended by LogService.
+            using (var writer = new StreamWriter(filePath, false, new UTF8Encoding(encoderShouldEmitUTF8Identifier: true)))
             {
                 writer.WriteLine(LogService.LogFileHeader);
 
