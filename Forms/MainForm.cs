@@ -142,6 +142,7 @@ namespace FileExplorerApp.Forms
             ImageSize = new Size(32, 32),
             ColorDepth = ColorDepth.Depth32Bit
         };
+        private bool _iconsReady;
 
         // True neu dang hien thi ca file/thu muc an (IsHidden). Mac dinh la false.
         private bool _showHiddenItems;
@@ -207,6 +208,7 @@ namespace FileExplorerApp.Forms
             InitializeUiScaling();
             ApplyTheme();
             LoadIconImages();
+            _iconsReady = true;
             LoadTreeViewFolders();
             LoadDisplaySettings();
             InitializeFolderMonitoring();
@@ -2747,6 +2749,12 @@ namespace FileExplorerApp.Forms
 
         private void LoadListViewFiles()
         {
+            // SelectedIndexChanged can fire while the constructor is still
+            // configuring the ImageLists. Loading files then adds extension
+            // icons before ImageSize is set and shifts the native icon indices.
+            if (!_iconsReady)
+                return;
+
             // Kiem tra QUYEN TRUY CAP thuc su vao _currentPath TRUOC khi liet ke -
             // FileService.GetItems/FolderService.GetSubFolders vo tinh "nuot" rieng
             // UnauthorizedAccessException va tra ve danh sach RONG (thiet ke ban dau
