@@ -1244,18 +1244,9 @@ namespace FileExplorerApp.Forms
             AddIconPair("driveNetwork", CreateDriveIcon(DriveIconStyle.Network));
             AddIconPair("driveNotReady", CreateDriveIcon(DriveIconStyle.NotReady));
 
-            // Icon rieng cho tung nhom file tren lvwFiles, dua tren
-            // FileHelper.GetFileIconCategory() (VD: anh, tai lieu, bang tinh...) -
-            // moi nhom dung 1 phan mo rong DAI DIEN, PHO BIEN de lay icon Shell that
-            // (VD ".txt" luon co san Notepad tren moi may Windows) - nhom nao khong
-            // khop se dung lai "file" (icon Shell trung tinh co san) thay vi ve them
-            // mot ImageCategory.Generic rieng khong can thiet.
-            AddShellIconPair("fileImage", ".jpg", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Image));
-            AddShellIconPair("fileDocument", ".txt", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Document));
-            AddShellIconPair("fileSpreadsheet", ".xlsx", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Spreadsheet));
-            AddShellIconPair("fileArchive", ".zip", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Archive));
-            AddShellIconPair("fileMedia", ".mp3", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Media));
-            AddShellIconPair("fileCode", ".js", isDirectory: false, fallbackIcon: CreateFileTypeIcon(FileIconCategory.Code));
+            // File icons are loaded on demand by GetFileImageKey. Each extension
+            // gets its own Shell association instead of sharing a representative
+            // icon (for example, .docx must not use the .txt icon).
 
             // lvwFiles.SmallImageList = imlIcons da duoc gan san trong
             // MainForm.Designer.cs - chi con thieu LargeImageList (chua tung
@@ -1266,7 +1257,7 @@ namespace FileExplorerApp.Forms
 
         #region Lay icon that cua Windows Shell (SHGetFileInfo)
 
-        [StructLayout(LayoutKind.Sequential)]
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct SHFILEINFO
         {
             public IntPtr hIcon;
@@ -1294,9 +1285,9 @@ namespace FileExplorerApp.Forms
 
         /// <summary>
         /// Lay icon THAT cua Windows Shell (chinh la icon File Explorer dang dung
-        /// tren may nguoi dung) qua SHGetFileInfo, dung SHGFI_USEFILEATTRIBUTES nen
-        /// KHONG can file/thu muc do THAT SU ton tai - chi can 1 duong dan/phan mo
-        /// rong dai dien (VD ".jpg", hoac bat ky chuoi nao cho thu muc). Tra ve
+        /// tren may nguoi dung) qua SHGetFileInfo. Voi phan mo rong, dung
+        /// SHGFI_USEFILEATTRIBUTES de khong can file that; voi file co icon rieng
+        /// (.exe/.ico/.lnk/.url), doc icon truc tiep tu duong dan that. Tra ve
         /// null (khong nem Exception) neu API loi hoac chay tren moi truong khong
         /// ho tro Shell32 (VD build/test ngoai Windows that) - AddShellIconPair se
         /// tu dong ve du phong bang GDI+ (CreateFolderIcon/CreateFileIcon) trong
@@ -1305,12 +1296,16 @@ namespace FileExplorerApp.Forms
         /// <param name="pathOrExtension">Duong dan/phan mo rong dai dien (VD ".jpg"), khong can ton tai that.</param>
         /// <param name="isDirectory">True neu muon lay icon thu muc (folder), false neu lay icon file.</param>
         /// <param name="large">True lay ban icon lon (thuong 32x32) cho _imlIconsLarge, false lay ban nho (thuong 16x16) cho imlIcons.</param>
-        private static Bitmap GetShellIconRaw(string pathOrExtension, bool isDirectory, bool large)
+        /// <param name="useFileAttributes">True voi icon theo phan mo rong/thu muc chung; false de Shell doc icon tu file that.</param>
+        private static Bitmap GetShellIconRaw(string pathOrExtension, bool isDirectory, bool large,
+            bool useFileAttributes = true)
         {
             try
             {
                 var shinfo = new SHFILEINFO();
-                uint flags = SHGFI_ICON | SHGFI_USEFILEATTRIBUTES | (large ? SHGFI_LARGEICON : SHGFI_SMALLICON);
+                uint flags = SHGFI_ICON | (large ? SHGFI_LARGEICON : SHGFI_SMALLICON);
+                if (useFileAttributes)
+                    flags |= SHGFI_USEFILEATTRIBUTES;
                 uint attributes = isDirectory ? FILE_ATTRIBUTE_DIRECTORY : FILE_ATTRIBUTE_NORMAL;
 
                 IntPtr callResult = SHGetFileInfo(pathOrExtension, attributes, ref shinfo,
@@ -1349,7 +1344,8 @@ namespace FileExplorerApp.Forms
         /// <param name="key">ImageKey dung chung cho ca 2 ImageList.</param>
         /// <param name="pathOrExtension">Duong dan/phan mo rong dai dien truyen cho GetShellIconRaw.</param>
         /// <param name="isDirectory">True neu la icon thu muc.</param>
-        private void AddShellIconPair(string key, string pathOrExtension, bool isDirectory, Bitmap fallbackIcon = null)
+        private void AddShellIconPair(string key, string pathOrExtension, bool isDirectory,
+            Bitmap fallbackIcon = null, bool useFileAttributes = true)
         {
             // fallbackIcon: icon GDI+ du phong RIENG cho tung truong hop (VD
             // CreateFolderIcon() cho "folder", CreateFileTypeIcon(category) cho
@@ -1357,12 +1353,14 @@ namespace FileExplorerApp.Forms
             // (to giay trang trung tinh, hop ly cho file noi chung).
             using (Bitmap fallback = fallbackIcon ?? CreateFileIcon())
             {
-                using (Bitmap smallSource = GetShellIconRaw(pathOrExtension, isDirectory, large: false) ?? (Bitmap)fallback.Clone())
+                using (Bitmap smallSource = GetShellIconRaw(pathOrExtension, isDirectory,
+                    large: false, useFileAttributes: useFileAttributes) ?? (Bitmap)fallback.Clone())
                 {
                     imlIcons.Images.Add(key, ScaleIcon(smallSource, imlIcons.ImageSize.Width));
                 }
 
-                using (Bitmap largeSource = GetShellIconRaw(pathOrExtension, isDirectory, large: true) ?? (Bitmap)fallback.Clone())
+                using (Bitmap largeSource = GetShellIconRaw(pathOrExtension, isDirectory,
+                    large: true, useFileAttributes: useFileAttributes) ?? (Bitmap)fallback.Clone())
                 {
                     _imlIconsLarge.Images.Add(key, ScaleIcon(largeSource, _imlIconsLarge.ImageSize.Width));
                 }
@@ -1463,31 +1461,31 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Chon ImageKey trong imlIcons phu hop voi mot file, dua tren
-        /// FileHelper.GetFileIconCategory() (xac dinh theo phan mo rong). Nhom
-        /// Generic (khong khop nhom rieng nao) dung lai icon "file" trung tinh mac
-        /// dinh da co san, tranh ve them mot icon giong het no.
+        /// Cache Shell icons by extension for ordinary files. Executables,
+        /// shortcuts and icon files can each carry their own icon, so cache those
+        /// by full path. Both ImageLists receive the same key for every view mode.
         /// </summary>
-        private static string GetFileImageKey(string path)
+        private string GetFileImageKey(string path)
         {
-            switch (FileHelper.GetFileIconCategory(path))
+            string extension = Path.GetExtension(path);
+            if (string.IsNullOrEmpty(extension))
+                return "file";
+
+            bool hasOwnIcon = extension.Equals(".exe", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".ico", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase)
+                || extension.Equals(".url", StringComparison.OrdinalIgnoreCase);
+            string key = hasOwnIcon
+                ? "filePath:" + path
+                : "fileExtension:" + extension.ToLowerInvariant();
+            if (!imlIcons.Images.ContainsKey(key))
             {
-                case FileIconCategory.Image:
-                    return "fileImage";
-                case FileIconCategory.Document:
-                    return "fileDocument";
-                case FileIconCategory.Spreadsheet:
-                    return "fileSpreadsheet";
-                case FileIconCategory.Archive:
-                    return "fileArchive";
-                case FileIconCategory.Media:
-                    return "fileMedia";
-                case FileIconCategory.Code:
-                    return "fileCode";
-                case FileIconCategory.Generic:
-                default:
-                    return "file";
+                AddShellIconPair(key, hasOwnIcon ? path : extension, isDirectory: false,
+                    fallbackIcon: CreateFileTypeIcon(FileHelper.GetFileIconCategory(path)),
+                    useFileAttributes: !hasOwnIcon);
             }
+
+            return key;
         }
 
         /// <summary>
