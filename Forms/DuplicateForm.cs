@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
@@ -141,6 +142,7 @@ namespace FileExplorerApp.Forms
             using (_scanCts = new CancellationTokenSource())
             {
                 CancellationToken token = _scanCts.Token;
+                var stopwatch = Stopwatch.StartNew();
 
                 try
                 {
@@ -149,14 +151,26 @@ namespace FileExplorerApp.Forms
                         token);
 
                     PopulateResults(duplicateGroups);
+                    stopwatch.Stop();
+
+                    int duplicateFileCount = CountTotalFiles(duplicateGroups);
+                    _logService.LogOperation(
+                        FileOperationType.FindDuplicates, _rootFolder, null, OperationResult.Success,
+                        $"Tìm thấy {duplicateGroups.Count} nhóm trùng lặp; quét thư mục con: {(recursive ? "Có" : "Không")}",
+                        duplicateFileCount, stopwatch.Elapsed);
 
                     lblStatus.Text = duplicateGroups.Count == 0
-                        ? "Không tìm thấy tệp trùng lặp nào."
-                        : $"Tìm thấy {duplicateGroups.Count} nhóm trùng lặp ({CountTotalFiles(duplicateGroups)} tệp).";
+                        ? $"Không tìm thấy tệp trùng lặp nào ({FormatElapsed(stopwatch.Elapsed)})."
+                        : $"Tìm thấy {duplicateGroups.Count} nhóm trùng lặp ({duplicateFileCount} tệp) trong {FormatElapsed(stopwatch.Elapsed)}.";
                 }
                 catch (OperationCanceledException)
                 {
-                    lblStatus.Text = "Đã hủy quét.";
+                    stopwatch.Stop();
+                    _logService.LogOperation(
+                        FileOperationType.FindDuplicates, _rootFolder, null, OperationResult.Cancelled,
+                        $"Đã hủy quét; quét thư mục con: {(recursive ? "Có" : "Không")}",
+                        0, stopwatch.Elapsed);
+                    lblStatus.Text = $"Đã hủy quét sau {FormatElapsed(stopwatch.Elapsed)}.";
                 }
                 finally
                 {
@@ -211,6 +225,13 @@ namespace FileExplorerApp.Forms
                 total += group.Count;
             }
             return total;
+        }
+
+        private static string FormatElapsed(TimeSpan elapsed)
+        {
+            return elapsed.TotalSeconds < 1
+                ? $"{elapsed.TotalMilliseconds:0} ms"
+                : $"{elapsed.TotalSeconds:0.0} s";
         }
 
         /// <summary>
@@ -369,12 +390,15 @@ namespace FileExplorerApp.Forms
                 if (string.IsNullOrWhiteSpace(fullPath))
                     continue;
 
+                var deleteStopwatch = Stopwatch.StartNew();
                 OperationResult result = _recycleBinService.DeleteToRecycleBin(fullPath);
+                deleteStopwatch.Stop();
 
                 // Ghi log TUNG tep rieng le (khong gop 1 dong) vi moi tep co
                 // the co OperationResult khac nhau - giong nguyen tac
                 // MainForm.mnuEditDelete_Click da ap dung voi xoa hang loat.
-                _logService.LogOperation(FileOperationType.Delete, fullPath, null, result, "Xóa tệp trùng lặp (DuplicateForm)");
+                _logService.LogOperation(FileOperationType.Delete, fullPath, null, result,
+                    "Xóa tệp trùng lặp (DuplicateForm)", duration: deleteStopwatch.Elapsed);
 
                 if (result == OperationResult.Success)
                 {

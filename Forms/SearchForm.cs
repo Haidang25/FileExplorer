@@ -33,6 +33,7 @@ namespace FileExplorerApp.Forms
     public partial class SearchForm : Form
     {
         private readonly SearchService _searchService = new SearchService();
+        private readonly LogService _logService = new LogService();
 
         // Chi khac null trong luc dang co mot lan tim kiem dang chay - dung de nut
         // Huy (btnCancelSearch_Click) co the goi Cancel(); null lai ngay khi tim
@@ -278,6 +279,11 @@ namespace FileExplorerApp.Forms
                         onFoundProgress, onScannedProgress, token);
 
                     stopwatch.Stop();
+                    _logService.LogOperation(
+                        FileOperationType.Search, rootFolder, null, OperationResult.Success,
+                        $"Từ khóa: \"{keyword}\"; thư mục con: {(recursive ? "Có" : "Không")}; " +
+                        $"tệp ẩn: {(includeHidden ? "Có" : "Không")}",
+                        foundCount, stopwatch.Elapsed);
 
                     // Form da dong (X/nut Đóng/double-click ket qua) trong luc
                     // await ben tren dang cho - xem ghi chu day du tai
@@ -311,6 +317,10 @@ namespace FileExplorerApp.Forms
                     // lvwResults ngay luc tim thay (AddResultItem() trong onFoundProgress
                     // o tren) - khong mat gi ca, chi can bao trang thai.
                     stopwatch.Stop();
+                    _logService.LogOperation(
+                        FileOperationType.Search, rootFolder, null, OperationResult.Cancelled,
+                        $"Từ khóa: \"{keyword}\"; đã tìm thấy {foundCount} mục trước khi hủy",
+                        foundCount, stopwatch.Elapsed);
 
                     // IsDisposed: xem ghi chu tai constructor/SearchForm_FormClosing -
                     // truong hop Huy DUOC bam nhung nguoi dung cung dong luon

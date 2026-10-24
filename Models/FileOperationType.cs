@@ -43,6 +43,9 @@ namespace FileExplorerApp.Models
         /// <summary>Tim kiem file/thu muc theo ten hoac dieu kien.</summary>
         Search,
 
+        /// <summary>Quet va so sanh noi dung de tim cac tep trung lap.</summary>
+        FindDuplicates,
+
         /// <summary>Thao tac khac khong thuoc cac loai tren.</summary>
         Other
     }

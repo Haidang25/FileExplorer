@@ -363,9 +363,7 @@ namespace FileExplorerApp.Forms
                 item.SubItems.Add(entry.Destination ?? string.Empty);
                 item.SubItems.Add(GetResultDisplayText(entry.Result));
                 item.SubItems.Add(entry.ItemCount.ToString(CultureInfo.InvariantCulture));
-                item.SubItems.Add(entry.Duration.HasValue
-                    ? entry.Duration.Value.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture) + "s"
-                    : string.Empty);
+                item.SubItems.Add(FormatDuration(entry.Duration));
                 item.SubItems.Add(entry.Message ?? string.Empty);
 
                 // To mau dong theo ket qua (giong tinh than Success/Error cua
@@ -387,6 +385,19 @@ namespace FileExplorerApp.Forms
             {
                 lblStatus.Text = $"{entries.Count} dòng log";
             }
+        }
+
+        private static string FormatDuration(TimeSpan? duration)
+        {
+            if (!duration.HasValue)
+                return "—";
+
+            if (duration.Value.TotalMilliseconds < 1)
+                return "<1 ms";
+
+            return duration.Value.TotalSeconds < 1
+                ? duration.Value.TotalMilliseconds.ToString("0", CultureInfo.InvariantCulture) + " ms"
+                : duration.Value.TotalSeconds.ToString("0.##", CultureInfo.InvariantCulture) + " s";
         }
 
         /// <summary>

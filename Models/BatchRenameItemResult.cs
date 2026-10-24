@@ -1,3 +1,5 @@
+using System;
+
 namespace FileExplorerApp.Models
 {
     /// <summary>
@@ -20,5 +22,8 @@ namespace FileExplorerApp.Models
 
         /// <summary>Ket qua thuc te cua rieng muc nay (xem FileService.BatchRename).</summary>
         public OperationResult Result { get; set; }
+
+        /// <summary>Tong thoi gian thuc thi cac buoc doi ten cua rieng muc nay.</summary>
+        public TimeSpan? Duration { get; set; }
     }
 }

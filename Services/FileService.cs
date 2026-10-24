@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -633,7 +634,10 @@ namespace FileExplorerApp.Services
                     continue;
 
                 string tempName = GenerateUniqueTempName(paths[i]);
+                var itemStopwatch = Stopwatch.StartNew();
                 OperationResult tempResult = Rename(paths[i], tempName);
+                itemStopwatch.Stop();
+                itemResults[i].Duration = itemStopwatch.Elapsed;
                 if (tempResult != OperationResult.Success)
                 {
                     // Khong doi tam duoc (VD: dang bi khoa, khong co quyen) -
@@ -654,7 +658,10 @@ namespace FileExplorerApp.Services
                 if (tempPaths[i] == null)
                     continue; // Da bi NotFound hoac loi ngay o Giai doan 1.
 
+                var itemStopwatch = Stopwatch.StartNew();
                 OperationResult finalResult = Rename(tempPaths[i], targetNames[i]);
+                itemStopwatch.Stop();
+                itemResults[i].Duration = (itemResults[i].Duration ?? TimeSpan.Zero) + itemStopwatch.Elapsed;
                 if (finalResult == OperationResult.Success)
                 {
                     itemResults[i].Result = OperationResult.Success;
@@ -664,7 +671,10 @@ namespace FileExplorerApp.Services
                     // Co gang tra lai TEN GOC (best-effort - xem giai thich o
                     // phan <summary> cua ham) roi bao dung ket qua loi thuc te.
                     string originalName = Path.GetFileName(paths[i]);
+                    itemStopwatch.Restart();
                     Rename(tempPaths[i], originalName);
+                    itemStopwatch.Stop();
+                    itemResults[i].Duration = (itemResults[i].Duration ?? TimeSpan.Zero) + itemStopwatch.Elapsed;
                     itemResults[i].Result = finalResult;
                 }
             }

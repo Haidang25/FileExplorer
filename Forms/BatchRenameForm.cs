@@ -262,7 +262,8 @@ namespace FileExplorerApp.Forms
                 string oldName = Path.GetFileName(item.OriginalPath);
                 string newName = Path.GetFileName(item.NewPath);
                 _logService.LogOperation(FileOperationType.Rename, item.OriginalPath, item.NewPath,
-                    item.Result, $"đổi tên \"{oldName}\" thành \"{newName}\" (đổi tên hàng loạt)");
+                    item.Result, $"đổi tên \"{oldName}\" thành \"{newName}\" (đổi tên hàng loạt)",
+                    duration: item.Duration);
 
                 if (item.Result == OperationResult.Success)
                 {

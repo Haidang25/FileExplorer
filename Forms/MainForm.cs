@@ -501,6 +501,7 @@ namespace FileExplorerApp.Forms
             string actionDescription = $"nén thư mục \"{folderName}\" thành ZIP";
 
             CompressionOperationResult compressionResult;
+            var operationStopwatch = Stopwatch.StartNew();
 
             // cts + copyProgressForm: dung CHUNG co che voi mnuEditPaste_Click (xem
             // chu thich chi tiet o do) - cts.Cancel() duoc goi khi nguoi dung bam nut
@@ -528,6 +529,7 @@ namespace FileExplorerApp.Forms
                 }
                 finally
                 {
+                    operationStopwatch.Stop();
                     // Luon dong hop thoai + an lai thanh tien do, ke ca khi bi Huy hoac
                     // loi khong luong truoc - giong het finally cua mnuEditPaste_Click.
                     copyProgressForm.Close();
@@ -555,12 +557,14 @@ namespace FileExplorerApp.Forms
                 // Nguoi dung tu bam Huy - khong can hien MessageBox ket qua (da ro
                 // rang la do chinh nguoi dung yeu cau), giong huong xu ly Cancelled
                 // trong vong lap Dan cua mnuEditPaste_Click.
-                LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote);
+                LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote,
+                    duration: operationStopwatch.Elapsed);
                 return;
             }
 
             ShowOperationResultMessage(result, actionDescription);
-            LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote);
+            LogOperationResult(FileOperationType.Compress, path, zipPath, result, actionDescription, sizeNote,
+                duration: operationStopwatch.Elapsed);
 
             if (result == OperationResult.Success)
             {
@@ -661,6 +665,7 @@ namespace FileExplorerApp.Forms
 
             string actionDescription = $"giải nén \"{zipFileName}\"";
             CompressionOperationResult compressionResult;
+            var operationStopwatch = Stopwatch.StartNew();
 
             using (var cts = new CancellationTokenSource())
             using (var copyProgressForm = new CopyProgressForm())
@@ -684,6 +689,7 @@ namespace FileExplorerApp.Forms
                 }
                 finally
                 {
+                    operationStopwatch.Stop();
                     copyProgressForm.Close();
                     tspProgress.Visible = false;
                     tspProgress.Value = 0;
@@ -701,12 +707,14 @@ namespace FileExplorerApp.Forms
 
             if (result == OperationResult.Cancelled)
             {
-                LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote);
+                LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote,
+                    duration: operationStopwatch.Elapsed);
                 return;
             }
 
             ShowOperationResultMessage(result, actionDescription);
-            LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote);
+            LogOperationResult(FileOperationType.Extract, path, destPath, result, actionDescription, sizeNote,
+                duration: operationStopwatch.Elapsed);
 
             if (result == OperationResult.Success)
             {
@@ -1859,7 +1867,9 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            OperationResult result = _folderService.CreateFolder(_currentPath, name);
+            TimeSpan operationDuration;
+            OperationResult result = MeasureOperation(
+                () => _folderService.CreateFolder(_currentPath, name), out operationDuration);
             ShowOperationResultMessage(result, $"tao thu muc \"{name}\"");
 
             // Ghi log CA KHI thanh cong lan that bai (VD: trung ten, khong du
@@ -1867,7 +1877,8 @@ namespace FileExplorerApp.Forms
             // hien - xem LogOperationResult/BuildOperationResultMessage) khi that
             // bai, giup tra soat sau nay (VD: "tai sao thu muc X khong duoc tao
             // luc do") biet ngay NGUYEN NHAN thay vi chi thay ten enum tro tui.
-            LogOperationResult(FileOperationType.CreateFolder, newFolderPath, null, result, $"tạo thư mục \"{name}\"");
+            LogOperationResult(FileOperationType.CreateFolder, newFolderPath, null, result,
+                $"tạo thư mục \"{name}\"", duration: operationDuration);
 
             if (result == OperationResult.Success)
             {
@@ -1961,12 +1972,15 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            OperationResult result = _fileService.CreateFile(_currentPath, name);
+            TimeSpan operationDuration;
+            OperationResult result = MeasureOperation(
+                () => _fileService.CreateFile(_currentPath, name), out operationDuration);
             ShowOperationResultMessage(result, $"tao file \"{name}\"");
 
             // Ghi log ca khi thanh cong lan that bai, kem thong diep loi cu the -
             // xem ghi chu tuong tu tai mnuFileNewFolder_Click.
-            LogOperationResult(FileOperationType.CreateFile, newFilePath, null, result, $"tạo file \"{name}\"");
+            LogOperationResult(FileOperationType.CreateFile, newFilePath, null, result,
+                $"tạo file \"{name}\"", duration: operationDuration);
 
             if (result == OperationResult.Success)
             {
@@ -2133,7 +2147,9 @@ namespace FileExplorerApp.Forms
         /// diep loi bang dau gach ngang " - " thanh MOT dong Message duy nhat.
         /// </param>
         /// <param name="itemCount">So luong muc lien quan (mac dinh 1).</param>
-        private void LogOperationResult(FileOperationType operation, string source, string destination, OperationResult result, string actionDescription, string extraNote = null, int itemCount = 1)
+        private void LogOperationResult(FileOperationType operation, string source, string destination,
+            OperationResult result, string actionDescription, string extraNote = null,
+            int itemCount = 1, TimeSpan? duration = null)
         {
             string message;
             if (result == OperationResult.Success)
@@ -2146,7 +2162,21 @@ namespace FileExplorerApp.Forms
                 message = string.IsNullOrEmpty(extraNote) ? failureReason : $"{extraNote} - {failureReason}";
             }
 
-            _logService.LogOperation(operation, source, destination, result, message, itemCount);
+            _logService.LogOperation(operation, source, destination, result, message, itemCount, duration);
+        }
+
+        private static T MeasureOperation<T>(Func<T> operation, out TimeSpan duration)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                return operation();
+            }
+            finally
+            {
+                stopwatch.Stop();
+                duration = stopwatch.Elapsed;
+            }
         }
 
         private void mnuFileExit_Click(object sender, EventArgs e)
@@ -2349,22 +2379,23 @@ namespace FileExplorerApp.Forms
                         }
 
                         OperationResult result;
-                        if (isDirectory)
+                        var operationStopwatch = Stopwatch.StartNew();
+                        try
                         {
-                            if (_clipboardIsCut)
+                            if (isDirectory)
                             {
-                                result = _folderService.MoveFolder(sourcePath, destinationPath);
+                                if (_clipboardIsCut)
+                                {
+                                    result = _folderService.MoveFolder(sourcePath, destinationPath);
+                                }
+                                else
+                                {
+                                    var skippedPaths = new List<string>();
+                                    result = await _folderService.CopyFolderAsync(sourcePath, destinationPath, skippedPaths, pasteProgress, cts.Token);
+                                    allSkippedPaths.AddRange(skippedPaths);
+                                }
                             }
-                            else
-                            {
-                                var skippedPaths = new List<string>();
-                                result = await _folderService.CopyFolderAsync(sourcePath, destinationPath, skippedPaths, pasteProgress, cts.Token);
-                                allSkippedPaths.AddRange(skippedPaths);
-                            }
-                        }
-                        else
-                        {
-                            if (_clipboardIsCut)
+                            else if (_clipboardIsCut)
                             {
                                 result = _fileService.MoveFile(sourcePath, destinationPath);
                             }
@@ -2400,6 +2431,10 @@ namespace FileExplorerApp.Forms
                                 result = await _fileService.CopyFileAsync(sourcePath, destinationPath, overwriteFile, fileProgress, cts.Token);
                             }
                         }
+                        finally
+                        {
+                            operationStopwatch.Stop();
+                        }
 
                         // Ghi log tung muc rieng le (giong cach lam voi Delete o
                         // mnuEditDelete_Click/lvwFiles_KeyDown) - moi muc trong batch
@@ -2413,7 +2448,8 @@ namespace FileExplorerApp.Forms
                         // ("dán ...") khop voi cau ShowOperationResultMessage se
                         // hien ngay sau day, de MessageBox va log noi cung mot cau.
                         FileOperationType pasteOperationType = _clipboardIsCut ? FileOperationType.Move : FileOperationType.Copy;
-                        LogOperationResult(pasteOperationType, sourcePath, destinationPath, result, $"dán \"{name}\"");
+                        LogOperationResult(pasteOperationType, sourcePath, destinationPath, result,
+                            $"dán \"{name}\"", duration: operationStopwatch.Elapsed);
 
                         if (result == OperationResult.Cancelled)
                             break; // Nguoi dung bam Huy tren CopyProgressForm - dung ngay, khong hien thong bao ket qua cho muc dang do dang.
@@ -2479,7 +2515,9 @@ namespace FileExplorerApp.Forms
 
             foreach (string path in selected)
             {
-                OperationResult result = _recycleBinService.DeleteToRecycleBin(path);
+                TimeSpan operationDuration;
+                OperationResult result = MeasureOperation(
+                    () => _recycleBinService.DeleteToRecycleBin(path), out operationDuration);
                 ShowOperationResultMessage(result, $"xoa \"{Path.GetFileName(path)}\"");
 
                 // Ghi log tung muc rieng le (khong gop 1 dong ItemCount = selected.Count)
@@ -2489,7 +2527,8 @@ namespace FileExplorerApp.Forms
                 // phan biet voi nhanh xoa vinh vien (Shift+Delete) ben duoi, cung
                 // ghi FileOperationType.Delete nhung khac muc dich; khi that bai,
                 // LogOperationResult tu noi them thong diep loi cu the vao sau.
-                LogOperationResult(FileOperationType.Delete, path, null, result, $"xóa \"{Path.GetFileName(path)}\"", "Xóa vào Thùng rác");
+                LogOperationResult(FileOperationType.Delete, path, null, result,
+                    $"xóa \"{Path.GetFileName(path)}\"", "Xóa vào Thùng rác", duration: operationDuration);
             }
 
             mnuViewRefresh_Click(sender, e);
@@ -2539,7 +2578,9 @@ namespace FileExplorerApp.Forms
 
             foreach (string path in selected)
             {
-                OperationResult result = _fileService.DeletePermanently(path);
+                TimeSpan operationDuration;
+                OperationResult result = MeasureOperation(
+                    () => _fileService.DeletePermanently(path), out operationDuration);
                 ShowOperationResultMessage(result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"");
 
                 // Ghi log tung muc rieng le - xem ghi chu tuong tu tai
@@ -2547,7 +2588,9 @@ namespace FileExplorerApp.Forms
                 // tin QUAN TRONG can giu lai (khac voi xoa vao Thung rac van con
                 // co the khoi phuc duoc) vi FileOperationType khong co gia tri
                 // rieng cho xoa vinh vien.
-                LogOperationResult(FileOperationType.Delete, path, null, result, $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"", "Xóa vĩnh viễn (Shift+Delete)");
+                LogOperationResult(FileOperationType.Delete, path, null, result,
+                    $"xóa vĩnh viễn \"{Path.GetFileName(path)}\"", "Xóa vĩnh viễn (Shift+Delete)",
+                    duration: operationDuration);
             }
 
             mnuViewRefresh_Click(sender, e);
@@ -2606,6 +2649,8 @@ namespace FileExplorerApp.Forms
             if (string.IsNullOrWhiteSpace(newName) || newName == oldName)
                 return;
 
+            var operationStopwatch = Stopwatch.StartNew();
+
             // Kiem tra hop le ngay tai day (truoc khi goi Rename) de bao loi cu the
             // hon "khong the doi ten: co loi xay ra" chung chung cua nhanh default
             // trong ShowOperationResultMessage - nguoi dung biet ngay ly do (VD: chua
@@ -2619,6 +2664,7 @@ namespace FileExplorerApp.Forms
                 MessageBox.Show(
                     $"Tên \"{newName}\" không hợp lệ: {invalidNameMessage}",
                     "Tên không hợp lệ", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                operationStopwatch.Stop();
 
                 // Ghi log CA TRUONG HOP nay - tuy chua goi den _fileService.Rename
                 // (bi chan tu som boi FileHelper.IsValidFileName), day van la MOT
@@ -2626,12 +2672,14 @@ namespace FileExplorerApp.Forms
                 // vao lich su giong cac loai that bai khac (trung ten, file dang
                 // bi khoa...) thay vi bo sot rieng truong hop nay.
                 LogOperationResult(FileOperationType.Rename, path, null, OperationResult.Failed,
-                    $"đổi tên \"{oldName}\" thành \"{newName}\"", $"Tên mới không hợp lệ: {invalidNameMessage}");
+                    $"đổi tên \"{oldName}\" thành \"{newName}\"", $"Tên mới không hợp lệ: {invalidNameMessage}",
+                    duration: operationStopwatch.Elapsed);
 
                 return; // CancelEdit = true da khoi phuc lai ten cu tren o hien thi.
             }
 
             OperationResult result = _fileService.Rename(path, newName);
+            operationStopwatch.Stop();
             string renamedPath = Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, newName);
 
             // Ghi log ca khi thanh cong lan that bai (VD: trung ten, file dang bi
@@ -2642,7 +2690,8 @@ namespace FileExplorerApp.Forms
             // dan CU (truoc doi ten), Destination = duong dan MOI (sau doi ten) -
             // phan anh dung ban chat "truoc/sau" cua rename, giup GetLogs sau nay
             // hien duoc ca ten cu lan ten moi tren cung 1 dong.
-            LogOperationResult(FileOperationType.Rename, path, renamedPath, result, $"đổi tên \"{oldName}\" thành \"{newName}\"");
+            LogOperationResult(FileOperationType.Rename, path, renamedPath, result,
+                $"đổi tên \"{oldName}\" thành \"{newName}\"", duration: operationStopwatch.Elapsed);
 
             if (result == OperationResult.Success)
             {
@@ -3226,6 +3275,7 @@ namespace FileExplorerApp.Forms
                 string destinationPath = Path.Combine(destinationFolder, name);
 
                 OperationResult result;
+                var operationStopwatch = Stopwatch.StartNew();
                 if (isDirectory)
                 {
                     result = _folderService.CopyFolder(sourcePath, destinationPath, out List<string> folderSkipped);
@@ -3235,8 +3285,10 @@ namespace FileExplorerApp.Forms
                 {
                     result = _fileService.CopyFile(sourcePath, destinationPath);
                 }
+                operationStopwatch.Stop();
 
-                LogOperationResult(FileOperationType.Copy, sourcePath, destinationPath, result, $"kéo-thả \"{name}\" vào {destinationLabelForLog}");
+                LogOperationResult(FileOperationType.Copy, sourcePath, destinationPath, result,
+                    $"kéo-thả \"{name}\" vào {destinationLabelForLog}", duration: operationStopwatch.Elapsed);
 
                 if (result == OperationResult.Success)
                     successCount++;
@@ -3377,9 +3429,12 @@ namespace FileExplorerApp.Forms
                     continue;
                 }
 
-                bool saved = TrySaveOneFileContent(comDataObject, index, destinationPath);
+                TimeSpan operationDuration;
+                bool saved = MeasureOperation(
+                    () => TrySaveOneFileContent(comDataObject, index, destinationPath), out operationDuration);
                 LogOperationResult(FileOperationType.Copy, "(kéo từ ngoài ứng dụng, VD trình duyệt web)", destinationPath,
-                    saved ? OperationResult.Success : OperationResult.Failed, $"kéo-thả \"{name}\" vào {destinationLabelForLog}");
+                    saved ? OperationResult.Success : OperationResult.Failed,
+                    $"kéo-thả \"{name}\" vào {destinationLabelForLog}", duration: operationDuration);
 
                 if (saved)
                     successCount++;
@@ -3899,6 +3954,7 @@ namespace FileExplorerApp.Forms
                     continue; // Move vao dung thu muc dang chua no - khong can lam gi, khong tinh la loi.
 
                 OperationResult result;
+                var operationStopwatch = Stopwatch.StartNew();
                 if (isDirectory)
                 {
                     if (isCopy)
@@ -3917,6 +3973,7 @@ namespace FileExplorerApp.Forms
                         ? _fileService.CopyFile(sourcePath, destinationPath)
                         : _fileService.MoveFile(sourcePath, destinationPath);
                 }
+                operationStopwatch.Stop();
 
                 string actionVerb = isCopy ? "sao chép" : "di chuyển";
                 LogOperationResult(
@@ -3924,7 +3981,8 @@ namespace FileExplorerApp.Forms
                     sourcePath, destinationPath, result,
                     isCopy
                         ? $"kéo-thả \"{name}\" sang \"{targetDisplayName}\" (giữ Ctrl để sao chép)"
-                        : $"kéo-thả \"{name}\" sang \"{targetDisplayName}\"");
+                        : $"kéo-thả \"{name}\" sang \"{targetDisplayName}\"",
+                    duration: operationStopwatch.Elapsed);
 
                 if (result == OperationResult.Success)
                     successCount++;
