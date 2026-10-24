@@ -281,13 +281,29 @@ namespace FileExplorerApp.Forms
         /// phep spcFilesPreview co chieu rong nho hon tong 3 cot con lai).
         /// </summary>
         private const int MinNameColumnWidth = 120;
+        private const int GwlStyle = -16;
+        private const int WsVScroll = 0x00200000;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
         private void AutoSizeNameColumn()
         {
+            // Resize co the phat sinh them mot lan trong luc Form/ListView dang
+            // Dispose. Luc do khong con can can cot va viec cham vao Handle/Items
+            // co the nem loi do native control da bat dau bi huy.
+            if (IsDisposed || Disposing || lvwFiles.IsDisposed || lvwFiles.Disposing)
+                return;
+
             int otherColumnsWidth = colSize.Width + colType.Width + colModified.Width;
 
-            bool hasVerticalScrollBar = lvwFiles.Items.Count > 0
-                && lvwFiles.ClientSize.Height < lvwFiles.Items[lvwFiles.Items.Count - 1].Bounds.Bottom;
+            // Khong truy cap Items[Items.Count - 1] de suy ra thanh cuon: trong
+            // luc dong app, mot su kien layout/resize co the xen vao khi Items
+            // dang duoc Clear, lam chi so vua tinh xong khong con hop le. Doc co
+            // WS_VSCROLL tu native style cua ListView cho ket qua truc tiep va
+            // khong phu thuoc vao tinh trang danh sach dang thay doi.
+            bool hasVerticalScrollBar = lvwFiles.IsHandleCreated
+                && (GetWindowLong(lvwFiles.Handle, GwlStyle) & WsVScroll) != 0;
             int scrollBarWidth = hasVerticalScrollBar ? SystemInformation.VerticalScrollBarWidth : 0;
 
             int newNameWidth = lvwFiles.ClientSize.Width - otherColumnsWidth - scrollBarWidth;
