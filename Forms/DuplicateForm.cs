@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -38,6 +39,7 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
+            InitializeResponsiveLayout();
 
             _rootFolder = rootFolder;
             lblRootFolderValue.Text = rootFolder;
@@ -48,6 +50,58 @@ namespace FileExplorerApp.Forms
             // giu nguyen de quet LAI sau do (VD: sau khi da xoa vai file
             // trung lap, muon xem lai danh sach con lai).
             this.Load += async (sender, e) => await RunScanAsync();
+        }
+
+        private void InitializeResponsiveLayout()
+        {
+            FitToWorkingArea();
+            ClientSizeChanged += (sender, e) => LayoutControls();
+            Shown += (sender, e) => FitToWorkingArea();
+            LayoutControls();
+        }
+
+        private void FitToWorkingArea()
+        {
+            Rectangle area = Screen.FromControl(this).WorkingArea;
+            MinimumSize = new Size(
+                Math.Min(UiScale.Scale(560), area.Width),
+                Math.Min(UiScale.Scale(400), area.Height));
+            Size = new Size(Math.Min(Width, area.Width), Math.Min(Height, area.Height));
+            LayoutControls();
+        }
+
+        private void LayoutControls()
+        {
+            int margin = UiScale.Scale(16);
+            int gap = UiScale.Scale(8);
+            int right = ClientSize.Width - margin;
+
+            lblRootFolderCaption.Location = new Point(margin, margin);
+            int pathLeft = lblRootFolderCaption.Right + gap;
+            lblRootFolderValue.SetBounds(pathLeft, margin,
+                Math.Max(1, right - pathLeft), Math.Max(lblRootFolderCaption.Height, lblRootFolderValue.Height));
+
+            int optionsY = Math.Max(lblRootFolderCaption.Bottom, lblRootFolderValue.Bottom) + gap;
+            chkRecursive.Location = new Point(margin, optionsY);
+            int scanLeft = right - btnCancelScan.Width - gap - btnScan.Width;
+            int buttonsY = chkRecursive.Right + gap > scanLeft
+                ? chkRecursive.Bottom + gap
+                : optionsY;
+            btnScan.Location = new Point(scanLeft, buttonsY);
+            btnCancelScan.Location = new Point(btnScan.Right + gap, buttonsY);
+
+            int statusY = Math.Max(chkRecursive.Bottom,
+                Math.Max(btnScan.Bottom, btnCancelScan.Bottom)) + gap;
+            lblStatus.SetBounds(margin, statusY, Math.Max(1, right - margin), lblStatus.Height);
+            pgbScan.SetBounds(margin, lblStatus.Bottom + UiScale.Scale(4),
+                Math.Max(1, right - margin), pgbScan.Height);
+
+            int footerY = ClientSize.Height - margin - Math.Max(btnDeleteSelected.Height, btnClose.Height);
+            btnDeleteSelected.Location = new Point(margin, footerY);
+            btnClose.Location = new Point(right - btnClose.Width, footerY);
+            int listTop = pgbScan.Bottom + gap;
+            lvwDuplicates.SetBounds(margin, listTop, Math.Max(1, right - margin),
+                Math.Max(1, footerY - gap - listTop));
         }
 
         /// <summary>
