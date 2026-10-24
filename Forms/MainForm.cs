@@ -89,6 +89,13 @@ namespace FileExplorerApp.Forms
         /// </summary>
         private readonly System.Windows.Forms.Timer _watcherDebounceTimer = new System.Windows.Forms.Timer();
 
+        // FileSystemWatcher thuong phat nhieu Changed event cho mot lan Save
+        // (thay doi kich thuoc, LastWrite...). Luu moc event dau tien theo duong
+        // dan va chi ghi MOT dong log khi timer debounce het han.
+        private readonly object _pendingModifiedFilesLock = new object();
+        private readonly Dictionary<string, long> _pendingModifiedFiles =
+            new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Debounce rieng cho WM_DEVICECHANGE (xem WndProc) - Windows co the gui LIEN
         /// TIEP nhieu thong bao WM_DEVICECHANGE cho MOT lan cam/rut thiet bi (VD: mot
@@ -726,12 +733,10 @@ namespace FileExplorerApp.Forms
         /// <summary>
         /// Cau hinh timer debounce (Interval tu Settings.Default.WatcherDelayMs)
         /// va dang ky 4 su kien du lieu cua FileMonitorService (Created/Deleted/
-        /// Changed/Renamed) - tat ca deu chi lam MOT viec: (re)start
-        /// _watcherDebounceTimer, KHONG goi thang LoadListViewFiles() ngay lap
-        /// tuc (xem _watcherDebounceTimer). MonitorError duoc bo qua co y (khong
-        /// hien MessageBox) vi day la loi nen tang (VD: o dia rut giua chung) ma
-        /// nguoi dung khong the xu ly gi tu hop thoai - qua nhieu MessageBox bat
-        /// ngo khi dang thao tac se gay kho chiu hon la huu ich.
+        /// Changed/Renamed). Tat ca deu (re)start _watcherDebounceTimer; rieng
+        /// Changed con gom cac event lap theo duong dan de ghi nhat ky Modify.
+        /// Khong goi thang LoadListViewFiles() ngay lap tuc. MonitorError chi co
+        /// xu ly rieng khi tran bo dem; cac loi nen tang khac khong hien MessageBox.
         /// </summary>
         private void InitializeFolderMonitoring()
         {
@@ -740,7 +745,7 @@ namespace FileExplorerApp.Forms
 
             _fileMonitorService.FileCreated += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.FileDeleted += (sender, e) => OnExternalChangeDetected();
-            _fileMonitorService.FileChanged += (sender, e) => OnExternalChangeDetected();
+            _fileMonitorService.FileChanged += FileMonitorService_FileChanged;
             _fileMonitorService.FileRenamed += (sender, e) => OnExternalChangeDetected();
             _fileMonitorService.MonitorError += FileMonitorService_MonitorError;
         }
@@ -972,6 +977,7 @@ namespace FileExplorerApp.Forms
                     // Dung timer debounce dang cho (neu co) - khong can gop chung
                     // voi bat ky su kien le te nao khac, nap lai toan bo NGAY.
                     _watcherDebounceTimer.Stop();
+                    FlushPendingModifiedFileLogs();
                     LoadListViewFiles();
                 }));
             }
@@ -983,11 +989,10 @@ namespace FileExplorerApp.Forms
         }
 
         /// <summary>
-        /// Handler CHUNG cho ca 4 su kien Created/Deleted/Changed/Renamed - noi
-        /// dung xu ly giong het nhau (lam moi toan bo ListView), nen khong can
-        /// phan biet TUNG loai thay doi cu the o day (khac voi LogService, noi
-        /// tung loai thao tac can ghi log rieng - day chi la "co gi do thay doi,
-        /// nap lai cho chac"). Duoc goi tu luong THREADPOOL cua FileSystemWatcher
+        /// Handler chung de hen lam moi ListView sau cac su kien Created/Deleted/
+        /// Changed/Renamed. Rieng Changed da ghi nhan duong dan can log trong
+        /// FileMonitorService_FileChanged truoc khi goi ham nay. Duoc goi tu luong
+        /// THREADPOOL cua FileSystemWatcher
         /// (xem remarks tren cac su kien trong FileMonitorService), nen BAT BUOC
         /// phai qua BeginInvoke truoc khi dung _watcherDebounceTimer (mot Control/
         /// Component gan voi luong UI) - goi thang se nem
@@ -1020,9 +1025,57 @@ namespace FileExplorerApp.Forms
             }
         }
 
+        private void FileMonitorService_FileChanged(object sender, FileSystemEventArgs e)
+        {
+            if (e != null && !string.IsNullOrWhiteSpace(e.FullPath)
+                && !Directory.Exists(e.FullPath)
+                && string.Equals(Path.GetDirectoryName(e.FullPath), _currentPath,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                lock (_pendingModifiedFilesLock)
+                {
+                    if (!_pendingModifiedFiles.ContainsKey(e.FullPath))
+                        _pendingModifiedFiles[e.FullPath] = Stopwatch.GetTimestamp();
+                }
+            }
+
+            OnExternalChangeDetected();
+        }
+
+        private void FlushPendingModifiedFileLogs()
+        {
+            List<KeyValuePair<string, long>> pending;
+            lock (_pendingModifiedFilesLock)
+            {
+                pending = _pendingModifiedFiles.ToList();
+                _pendingModifiedFiles.Clear();
+            }
+
+            long completedTimestamp = Stopwatch.GetTimestamp();
+            foreach (KeyValuePair<string, long> change in pending)
+            {
+                // Neu tep da bi xoa trong cung dot su kien thi thao tac Delete/
+                // giám sát toàn vẹn se xu ly; khong ghi sai thanh Modify.
+                if (!File.Exists(change.Key))
+                    continue;
+
+                double elapsedSeconds = Math.Max(0,
+                    (completedTimestamp - change.Value) / (double)Stopwatch.Frequency);
+
+                _logService.LogOperation(
+                    FileOperationType.Modify,
+                    change.Key,
+                    null,
+                    OperationResult.Success,
+                    "Phát hiện tệp được sửa bởi FileMonitorService",
+                    duration: TimeSpan.FromSeconds(elapsedSeconds));
+            }
+        }
+
         private void WatcherDebounceTimer_Tick(object sender, EventArgs e)
         {
             _watcherDebounceTimer.Stop();
+            FlushPendingModifiedFileLogs();
 
             // Chi nap lai NOI DUNG (khong goi lai toan bo mnuViewRefresh_Click)
             // vi khong can dong bo lai txtPath (duong dan khong doi, chi noi
@@ -1043,6 +1096,8 @@ namespace FileExplorerApp.Forms
         {
             _watcherDebounceTimer.Stop();
             _fileMonitorService.StopMonitoring();
+            lock (_pendingModifiedFilesLock)
+                _pendingModifiedFiles.Clear();
 
             if (!Settings.Default.AutoRefreshEnabled)
                 return;

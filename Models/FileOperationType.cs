@@ -19,6 +19,9 @@ namespace FileExplorerApp.Models
         /// <summary>Doi ten file/thu muc.</summary>
         Rename,
 
+        /// <summary>Noi dung hoac thong tin ghi cua tep da duoc sua.</summary>
+        Modify,
+
         /// <summary>Tao file moi.</summary>
         CreateFile,
 
