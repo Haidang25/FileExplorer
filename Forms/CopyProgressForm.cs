@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using FileExplorerApp.Models;
 
@@ -25,6 +26,49 @@ namespace FileExplorerApp.Forms
         {
             InitializeComponent();
             FileExplorerApp.Helpers.UiScale.Apply(this); // Phong to giao dien de trinh chieu (xem Helpers/UiScale.cs).
+            ArrangeControlsAfterScaling();
+        }
+
+        /// <summary>
+        /// Sap xep lai noi dung sau khi UiScale va Windows DPI scaling da chay.
+        ///
+        /// Designer luu ClientSize theo kich thuoc 9pt. Tren Windows 10 co DPI cao,
+        /// cac control co the duoc phong lon hon chieu cao client cua Form, lam nut
+        /// Huy bi cat o mep duoi. Khong dung cac he so DPI co dinh o day; thay vao do
+        /// lay chinh kich thuoc/PreferredSize da scale cua tung control de tinh lai
+        /// kich thuoc cua so.
+        /// </summary>
+        private void ArrangeControlsAfterScaling()
+        {
+            int margin = Math.Max(16, Font.Height);
+            int gap = Math.Max(8, Font.Height / 2);
+
+            int labelHeight = Math.Max(lblCurrentItem.Height, lblCurrentItem.PreferredHeight);
+            int percentHeight = Math.Max(lblPercent.Height, lblPercent.PreferredHeight);
+            int progressHeight = Math.Max(progressBar.Height, Font.Height + gap);
+
+            Size preferredButtonSize = btnCancel.GetPreferredSize(Size.Empty);
+            int buttonWidth = Math.Max(btnCancel.Width, preferredButtonSize.Width + gap * 2);
+            int buttonHeight = Math.Max(btnCancel.Height, preferredButtonSize.Height + gap);
+
+            int contentWidth = Math.Max(progressBar.Width,
+                Math.Max(lblCurrentItem.Width, lblPercent.Width));
+            int clientWidth = Math.Max(ClientSize.Width, contentWidth + margin * 2);
+            int fullWidth = clientWidth - margin * 2;
+
+            int y = margin;
+            lblCurrentItem.SetBounds(margin, y, fullWidth, labelHeight);
+
+            y = lblCurrentItem.Bottom + gap;
+            progressBar.SetBounds(margin, y, fullWidth, progressHeight);
+
+            y = progressBar.Bottom + gap;
+            lblPercent.SetBounds(margin, y, fullWidth, percentHeight);
+
+            y = lblPercent.Bottom + gap;
+            btnCancel.SetBounds(clientWidth - margin - buttonWidth, y, buttonWidth, buttonHeight);
+
+            ClientSize = new Size(clientWidth, btnCancel.Bottom + margin);
         }
 
         private void btnCancel_Click(object sender, EventArgs e)
