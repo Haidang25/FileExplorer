@@ -1955,6 +1955,13 @@ namespace FileExplorerApp.Forms
             {
                 mnuViewRefresh_Click(sender, e);
 
+                // Danh sach ben phai da duoc nap lai o tren, nhung TreeView ben
+                // trai co cache rieng theo co che lazy-load nen se khong tu thay
+                // thu muc moi. Cap nhat truc tiep node cha de thu muc vua tao
+                // xuat hien ngay ma khong xoa/nap lai toan bo cay (tranh mat trang
+                // thai cac nhanh dang mo).
+                RefreshTreeAfterFolderCreated(_currentPath, newFolderPath);
+
                 // Chon san thu muc vua tao tren lvwFiles, giong hanh vi Windows Explorer
                 // (tao xong la thay ngay va co the doi ten/mo luon khong can tu tim).
                 SelectAndFocusListViewItem(newFolderPath);
@@ -4867,6 +4874,183 @@ namespace FileExplorerApp.Forms
         private const string LazyLoadPlaceholder = "...";
 
         /// <summary>
+        /// Tao TreeNode thong nhat cho mot thu muc con. Dung chung cho lan nap lazy
+        /// ban dau va cho truong hop vua tao thu muc moi, tranh hai nhanh cap nhat
+        /// TreeView gan icon/placeholder khac nhau.
+        /// </summary>
+        private static TreeNode CreateFolderTreeNode(FolderItemModel folder)
+        {
+            var node = new TreeNode(folder.Name) { Tag = folder.FullPath };
+            node.ImageKey = "folder";
+            node.SelectedImageKey = "folder";
+
+            if (folder.HasSubFolders)
+                node.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
+
+            return node;
+        }
+
+        /// <summary>Node chi dang chua dau "..." de cho nap lazy hay khong.</summary>
+        private static bool HasLazyLoadPlaceholder(TreeNode node)
+        {
+            return node != null
+                && node.Nodes.Count == 1
+                && node.Nodes[0].Text == LazyLoadPlaceholder
+                && node.Nodes[0].Tag == null;
+        }
+
+        /// <summary>
+        /// So sanh hai duong dan thu muc khong phan biet hoa/thuong va dau gach
+        /// cheo cuoi. Khong goi Path.GetFullPath de tranh nem loi neu o dia vua bi
+        /// thao ra trong luc TreeView dang cap nhat.
+        /// </summary>
+        private static bool AreSameTreePath(string first, string second)
+        {
+            if (string.IsNullOrWhiteSpace(first) || string.IsNullOrWhiteSpace(second))
+                return false;
+
+            return string.Equals(first.TrimEnd('\\', '/'), second.TrimEnd('\\', '/'),
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Thay placeholder/noi dung cu cua mot node bang danh sach thu muc con moi
+        /// nhat. FolderService tu xu ly loi quyen/IO va tra danh sach rong an toan.
+        /// </summary>
+        private void LoadTreeNodeChildren(TreeNode node, string path)
+        {
+            List<FolderItemModel> subFolders = _folderService.GetSubFolders(path, _showHiddenItems);
+
+            node.Nodes.Clear();
+            foreach (FolderItemModel subFolder in subFolders)
+                node.Nodes.Add(CreateFolderTreeNode(subFolder));
+        }
+
+        /// <summary>
+        /// Tim node theo duong dan trong phan cay da nap. Neu mot nhanh can di qua
+        /// van con placeholder lazy-load thi chi nap nhanh do, khong nap lai toan
+        /// bo TreeView.
+        /// </summary>
+        private TreeNode FindOrLoadTreeNodeForPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return null;
+
+            string rootPath;
+            try
+            {
+                rootPath = Path.GetPathRoot(path);
+            }
+            catch (ArgumentException)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(rootPath))
+                return null;
+
+            TreeNode currentNode = trvFolders.Nodes.Cast<TreeNode>()
+                .FirstOrDefault(node => node.Tag is string nodePath
+                    && AreSameTreePath(nodePath, rootPath));
+            if (currentNode == null)
+                return null;
+
+            string relativePath = path.Substring(Math.Min(rootPath.Length, path.Length))
+                .Trim('\\', '/');
+            if (relativePath.Length == 0)
+                return currentNode;
+
+            string currentPath = rootPath;
+            foreach (string segment in relativePath.Split(new[] { '\\', '/' },
+                StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (HasLazyLoadPlaceholder(currentNode))
+                    LoadTreeNodeChildren(currentNode, currentPath);
+
+                string childPath = Path.Combine(currentPath, segment);
+                TreeNode childNode = currentNode.Nodes.Cast<TreeNode>()
+                    .FirstOrDefault(node => node.Tag is string nodePath
+                        && AreSameTreePath(nodePath, childPath));
+
+                if (childNode == null)
+                {
+                    // Noi dung node co the da cu (VD: dieu huong bang thanh dia chi
+                    // sau khi thu muc duoc tao boi chuong trinh khac). Nap lai rieng
+                    // cap nay mot lan roi tim lai.
+                    LoadTreeNodeChildren(currentNode, currentPath);
+                    childNode = currentNode.Nodes.Cast<TreeNode>()
+                        .FirstOrDefault(node => node.Tag is string nodePath
+                            && AreSameTreePath(nodePath, childPath));
+                }
+
+                if (childNode == null)
+                    return null;
+
+                currentNode = childNode;
+                currentPath = childPath;
+            }
+
+            return currentNode;
+        }
+
+        /// <summary>
+        /// Them thu muc vua tao vao dung node cha tren TreeView. Neu node cha chua
+        /// tung duoc nap (chi co placeholder), nap day du cac thu muc con de khong
+        /// lam mat cac anh em cua thu muc moi. Neu da nap, chi chen mot node moi de
+        /// giu nguyen trang thai mo rong cua cac node con hien co.
+        /// </summary>
+        private void RefreshTreeAfterFolderCreated(string parentPath, string createdPath)
+        {
+            trvFolders.BeginUpdate();
+            try
+            {
+                TreeNode parentNode = FindOrLoadTreeNodeForPath(parentPath);
+                if (parentNode == null)
+                    return;
+
+                if (HasLazyLoadPlaceholder(parentNode))
+                {
+                    LoadTreeNodeChildren(parentNode, parentPath);
+                }
+                else
+                {
+                    bool alreadyExists = parentNode.Nodes.Cast<TreeNode>()
+                        .Any(node => node.Tag is string nodePath
+                            && AreSameTreePath(nodePath, createdPath));
+
+                    if (!alreadyExists)
+                    {
+                        FolderItemModel createdFolder = _folderService
+                            .GetSubFolders(parentPath, _showHiddenItems)
+                            .FirstOrDefault(folder => AreSameTreePath(folder.FullPath, createdPath));
+
+                        if (createdFolder != null)
+                        {
+                            TreeNode createdNode = CreateFolderTreeNode(createdFolder);
+                            int insertIndex = 0;
+                            while (insertIndex < parentNode.Nodes.Count
+                                && string.Compare(parentNode.Nodes[insertIndex].Text,
+                                    createdNode.Text, StringComparison.OrdinalIgnoreCase) < 0)
+                            {
+                                insertIndex++;
+                            }
+
+                            parentNode.Nodes.Insert(insertIndex, createdNode);
+                        }
+                    }
+                }
+
+                // Hien ngay node moi tren cay, ke ca khi node cha truoc do dang thu gon.
+                parentNode.Expand();
+                parentNode.EnsureVisible();
+            }
+            finally
+            {
+                trvFolders.EndUpdate();
+            }
+        }
+
+        /// <summary>
         /// Nap danh sach o dia lam node goc cua trvFolders, dung
         /// FolderService.GetDrives() (bao gom ca o dia chua san sang - VD: o CD
         /// rong, o mang mat ket noi - de giong Windows Explorer, thay vi an di).
@@ -5036,9 +5220,7 @@ namespace FileExplorerApp.Forms
                 return;
             }
 
-            bool isLazyPlaceholder = node.Nodes.Count == 1
-                && node.Nodes[0].Text == LazyLoadPlaceholder
-                && node.Nodes[0].Tag == null;
+            bool isLazyPlaceholder = HasLazyLoadPlaceholder(node);
 
             if (!isLazyPlaceholder)
                 return; // Da nap that roi (hoac khong co thu muc con), khong can lam lai.
@@ -5054,26 +5236,11 @@ namespace FileExplorerApp.Forms
             trvFolders.BeginUpdate();
             try
             {
-                node.Nodes.Clear();
-
                 // Dung FolderService.GetSubFolders() thay vi tu Directory.GetDirectories()
                 // de tan dung viec loc file/thu muc an co san (includeHidden) va HasSubFolders
                 // da duoc tinh san (FolderItemModel.FromDirectoryInfo) - tranh phai goi rieng
                 // EnumerateDirectories().Any() cho tung thu muc con o day.
-                foreach (FolderItemModel subFolder in _folderService.GetSubFolders(path, _showHiddenItems))
-                {
-                    var childNode = new TreeNode(subFolder.Name) { Tag = subFolder.FullPath };
-                    childNode.ImageKey = "folder";
-                    childNode.SelectedImageKey = "folder";
-
-                    // Chi them node "gia" (placeholder) neu thu muc nay thuc su co thu
-                    // muc con - tranh hien dau (+) tren thu muc rong (leaf), bam vao se
-                    // chi thay mot node trong khong co y nghia.
-                    if (subFolder.HasSubFolders)
-                        childNode.Nodes.Add(new TreeNode(LazyLoadPlaceholder));
-
-                    node.Nodes.Add(childNode);
-                }
+                LoadTreeNodeChildren(node, path);
             }
             catch (UnauthorizedAccessException)
             {
@@ -5254,9 +5421,20 @@ namespace FileExplorerApp.Forms
         /// <param name="path">Duong dan can dong bo len trvFolders.</param>
         private void SelectTreeViewNodeForPath(string path)
         {
-            // TODO: hien tai chi la khung don gian, chua tu mo rong (expand) cac node
-            // cha con thieu de lam lo node dich khi duong dan nam sau trong cay. Se
-            // hoan thien khi can dong bo chinh xac hai chieu giua txtPath/ListView/TreeView.
+            TreeNode node = FindOrLoadTreeNodeForPath(path);
+            if (node == null)
+                return;
+
+            _isSyncingTreeView = true;
+            try
+            {
+                trvFolders.SelectedNode = node;
+                node.EnsureVisible();
+            }
+            finally
+            {
+                _isSyncingTreeView = false;
+            }
         }
 
         #endregion
