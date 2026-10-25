@@ -28,6 +28,27 @@ namespace FileExplorerApp.Forms
     /// </remarks>
     public partial class LogForm : Form
     {
+        /// <summary>
+        /// Giu nguyen gia tri enum dung cho loc du lieu, nhung hien thi nhan
+        /// tieng Viet trong ComboBox thay vi ten enum tieng Anh.
+        /// </summary>
+        private sealed class FilterOption<T>
+        {
+            public T Value { get; }
+            private string DisplayText { get; }
+
+            public FilterOption(T value, string displayText)
+            {
+                Value = value;
+                DisplayText = displayText;
+            }
+
+            public override string ToString()
+            {
+                return DisplayText;
+            }
+        }
+
         private readonly LogService _logService = new LogService();
         private List<LogEntryModel> _allLogs = new List<LogEntryModel>();
 
@@ -294,14 +315,16 @@ namespace FileExplorerApp.Forms
             cboFilterOperation.Items.Add("Tất cả");
             foreach (FileOperationType operation in Enum.GetValues(typeof(FileOperationType)))
             {
-                cboFilterOperation.Items.Add(operation);
+                cboFilterOperation.Items.Add(
+                    new FilterOption<FileOperationType>(operation, GetOperationDisplayText(operation)));
             }
             cboFilterOperation.SelectedIndex = 0;
 
             cboFilterResult.Items.Add("Tất cả");
             foreach (OperationResult result in Enum.GetValues(typeof(OperationResult)))
             {
-                cboFilterResult.Items.Add(result);
+                cboFilterResult.Items.Add(
+                    new FilterOption<OperationResult>(result, GetResultDisplayText(result)));
             }
             cboFilterResult.SelectedIndex = 0;
 
@@ -334,8 +357,12 @@ namespace FileExplorerApp.Forms
 
             bool filterByOperation = cboFilterOperation.SelectedIndex > 0;
             bool filterByResult = cboFilterResult.SelectedIndex > 0;
-            FileOperationType selectedOperation = filterByOperation ? (FileOperationType)cboFilterOperation.SelectedItem : default;
-            OperationResult selectedResult = filterByResult ? (OperationResult)cboFilterResult.SelectedItem : default;
+            FileOperationType selectedOperation = filterByOperation
+                ? ((FilterOption<FileOperationType>)cboFilterOperation.SelectedItem).Value
+                : default;
+            OperationResult selectedResult = filterByResult
+                ? ((FilterOption<OperationResult>)cboFilterResult.SelectedItem).Value
+                : default;
 
             var filtered = _allLogs.FindAll(entry =>
                 entry.Timestamp >= fromDate && entry.Timestamp <= toDate
@@ -358,7 +385,7 @@ namespace FileExplorerApp.Forms
             foreach (LogEntryModel entry in entries)
             {
                 var item = new ListViewItem(entry.Timestamp.ToString("dd/MM/yyyy HH:mm:ss", CultureInfo.InvariantCulture));
-                item.SubItems.Add(entry.Operation.ToString());
+                item.SubItems.Add(GetOperationDisplayText(entry.Operation));
                 item.SubItems.Add(entry.Source ?? string.Empty);
                 item.SubItems.Add(entry.Destination ?? string.Empty);
                 item.SubItems.Add(GetResultDisplayText(entry.Result));
@@ -497,7 +524,36 @@ namespace FileExplorerApp.Forms
                 case OperationResult.NotFound: return "Không tìm thấy";
                 case OperationResult.FileInUse: return "Tệp đang sử dụng";
                 case OperationResult.InvalidDestination: return "Đích không hợp lệ";
+                case OperationResult.CorruptedArchive: return "Tệp nén bị hỏng";
+                case OperationResult.PathTooLong: return "Đường dẫn quá dài";
                 default: return result.ToString();
+            }
+        }
+
+        /// <summary>
+        /// Chuoi hien thi tieng Viet cho tung gia tri FileOperationType.
+        /// Dung chung cho bo loc va cot "Thao tác" trong danh sach nhat ky.
+        /// </summary>
+        private static string GetOperationDisplayText(FileOperationType operation)
+        {
+            switch (operation)
+            {
+                case FileOperationType.Copy: return "Sao chép";
+                case FileOperationType.Move: return "Di chuyển";
+                case FileOperationType.Delete: return "Xóa";
+                case FileOperationType.Rename: return "Đổi tên";
+                case FileOperationType.Modify: return "Chỉnh sửa";
+                case FileOperationType.CreateFile: return "Tạo tệp";
+                case FileOperationType.CreateFolder: return "Tạo thư mục";
+                case FileOperationType.Cut: return "Cắt";
+                case FileOperationType.Paste: return "Dán";
+                case FileOperationType.Compress: return "Nén";
+                case FileOperationType.Extract: return "Giải nén";
+                case FileOperationType.Open: return "Mở";
+                case FileOperationType.Search: return "Tìm kiếm";
+                case FileOperationType.FindDuplicates: return "Tìm tệp trùng lặp";
+                case FileOperationType.Other: return "Khác";
+                default: return operation.ToString();
             }
         }
 
